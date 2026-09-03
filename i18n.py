@@ -1,0 +1,284 @@
+"""ToneMatch TMP의 한국어/영어 표시 문자열과 선택값 변환 도구."""
+
+from __future__ import annotations
+
+
+LANGUAGE_LABELS = {"ko": "한국어", "en": "English"}
+
+
+TEXT: dict[str, dict[str, str]] = {
+    "app.subtitle": {"ko": "오디오 특징을 Tone Master Pro 시작점으로 바꿉니다.", "en": "Turn audio features into Tone Master Pro starting points."},
+    "app.unofficial": {"ko": "비공식 톤 레시피", "en": "UNOFFICIAL TONE RECIPE"},
+    "ui.language": {"ko": "언어", "en": "Language"},
+    "ui.developer": {"ko": "개발자 옵션", "en": "Developer options"},
+    "ui.device": {"ko": "멀티이펙터 선택", "en": "Multi-effects unit"},
+    "ui.audio_section": {"ko": "분석할 오디오", "en": "Audio to analyze"},
+    "ui.audio_rights": {"ko": "직접 보유하거나 분석 권한이 있는 파일을 선택하세요.", "en": "Choose a local file you own or have permission to analyze."},
+    "ui.choose_file": {"ko": "파일 선택", "en": "Choose file"},
+    "ui.youtube_reference": {"ko": "YouTube 참고 URL · 브라우저 열기/출처 기록", "en": "YouTube reference URL · open/store reference"},
+    "ui.open_browser": {"ko": "브라우저로 열기", "en": "Open in browser"},
+    "ui.start_seconds": {"ko": "시작 (초)", "en": "Start (seconds)"},
+    "ui.end_seconds": {"ko": "끝 (초) · 0/빈칸=전체, 최대 20분", "en": "End (seconds) · 0/blank=full, max 20 min"},
+    "ui.pickup": {"ko": "내 기타 픽업", "en": "My guitar pickup"},
+    "ui.mix": {"ko": "소스 구성", "en": "Source type"},
+    "ui.output": {"ko": "멀티이펙터 출력 연결", "en": "Multi-effects output connection"},
+    "ui.analyze": {"ko": "톤 분석 시작", "en": "Analyze tone"},
+    "ui.analyzing": {"ko": "분석 중…", "en": "Analyzing…"},
+    "ui.analyze_again": {"ko": "다시 분석", "en": "Analyze again"},
+    "ui.result": {"ko": "분석 결과", "en": "Analysis results"},
+    "ui.save_json": {"ko": "JSON 저장", "en": "Save JSON"},
+    "ui.html_report": {"ko": "HTML 리포트", "en": "HTML report"},
+    "ui.copy_recipe": {"ko": "현재 탭 복사", "en": "Copy current tab"},
+    "ui.empty_summary": {"ko": "파일을 분석하면 TMP 블록 순서와 노브 시작값을 담은 추천 3가지를 보여드립니다.", "en": "Analyze a file to see three TMP block chains and suggested knob starting values."},
+    "ui.recipe_tab": {"ko": "추천 {rank}", "en": "Recipe {rank}"},
+    "ui.diagnostics": {"ko": "DSP 진단", "en": "DSP diagnostics"},
+    "ui.debug_tab": {"ko": "개발자 디버그", "en": "Developer debug"},
+    "ui.changelog_tab": {"ko": "변경 기록", "en": "Changelog"},
+    "ui.pipeline": {"ko": "처리 시퀀스", "en": "Processing sequence"},
+    "ui.click_block": {"ko": "블록을 누르면 실제 배포 코드를 표시합니다.", "en": "Click a block to view the actual bundled source."},
+    "ui.runtime_log": {"ko": "실시간 처리 로그", "en": "Live processing log"},
+    "ui.metric": {"ko": "측정 항목", "en": "Metric"},
+    "ui.value": {"ko": "측정값", "en": "Value"},
+    "ui.footer": {"ko": "Fender와 무관한 비공식 도구 · 추천값은 프리셋의 안전한 출발점입니다.", "en": "Unofficial and unaffiliated with Fender · Recommendations are safe starting points."},
+    "ui.tip": {"ko": "팁 · 풀믹스/영상은 AI가 기타 stem만 분리한 뒤 분석합니다. 5분 이상 전체 곡도 가능하지만 CPU에서는 오래 걸릴 수 있습니다.\n파일이 없으면 PC 재생음 녹음을 선택하고 YouTube를 정상 재생하세요.", "en": "TIP · Full mixes/videos are analyzed only after AI guitar-stem separation. Full songs over 5 minutes work, but CPU processing can take a while.\nWithout a file, choose PC playback recording and play YouTube normally."},
+    "status.choose_file": {"ko": "오디오 파일을 선택하면 준비가 끝납니다.", "en": "Choose an audio file to get started."},
+    "status.ready": {"ko": "준비됨 · 끝을 0으로 두면 최대 20분까지 전체를 분석합니다.", "en": "Ready · Set End to 0 to analyze the full item, up to 20 minutes."},
+    "status.unsupported_device": {"ko": "이 장치는 아직 미구현입니다. 현재 Tone Master Pro만 지원합니다.", "en": "This device is not implemented yet. Tone Master Pro is currently the only supported unit."},
+    "status.preparing": {"ko": "분석 준비 중…", "en": "Preparing analysis…"},
+    "status.failed": {"ko": "분석 실패 · 입력 파일과 구간을 확인해 주세요.", "en": "Analysis failed · Check the input file and time range."},
+    "status.complete": {"ko": "분석 완료 · 상위 추천 3개를 비교해 보세요.", "en": "Analysis complete · Compare the top three recipes."},
+    "status.json_saved": {"ko": "JSON 저장 완료 · {path}", "en": "JSON saved · {path}"},
+    "status.html_saved": {"ko": "HTML 리포트 저장 완료 · {path}", "en": "HTML report saved · {path}"},
+    "status.copied": {"ko": "추천 {rank}을 클립보드에 복사했습니다.", "en": "Recipe {rank} copied to the clipboard."},
+    "status.tab_copied": {"ko": "{tab} 내용을 클립보드에 복사했습니다.", "en": "Copied {tab} to the clipboard."},
+    "dialog.enter_url": {"ko": "먼저 참고 URL을 입력해 주세요.", "en": "Enter a reference URL first."},
+    "dialog.choose_audio_title": {"ko": "분석할 오디오 선택", "en": "Choose audio to analyze"},
+    "dialog.audio_files": {"ko": "오디오 파일", "en": "Audio files"},
+    "dialog.all_files": {"ko": "모든 파일", "en": "All files"},
+    "dialog.save_json_title": {"ko": "분석 결과 JSON 저장", "en": "Save analysis JSON"},
+    "dialog.save_html_title": {"ko": "분석 리포트 HTML 저장", "en": "Save analysis HTML report"},
+    "dialog.open_report": {"ko": "HTML 리포트를 저장했습니다. 지금 열까요?", "en": "The HTML report was saved. Open it now?"},
+    "dialog.save_failed": {"ko": "파일을 저장하지 못했습니다.\n\n{error}", "en": "Could not save the file.\n\n{error}"},
+    "dialog.unexpected": {"ko": "예상하지 못한 오류가 발생했습니다.\n\n{error}", "en": "An unexpected error occurred.\n\n{error}"},
+    "error.choose_file": {"ko": "분석할 로컬 오디오 파일을 선택해 주세요.", "en": "Choose a local audio file to analyze."},
+    "error.time_number": {"ko": "시작과 끝 시간은 초 단위 숫자로 입력해 주세요.", "en": "Enter numeric start and end times in seconds."},
+    "error.time_positive": {"ko": "시작과 끝 시간은 0 이상의 숫자로 입력해 주세요.", "en": "Enter valid non-negative times."},
+    "error.end_after_start": {"ko": "끝은 0(전체)이거나 시작 시간보다 커야 합니다.", "en": "End must be 0 (full item) or greater than Start."},
+    "error.minimum_segment": {"ko": "분석 구간은 최소 3초 이상이어야 합니다.", "en": "The analysis segment must be at least 3 seconds."},
+    "error.unsupported_device": {"ko": "선택한 장치는 아직 미구현입니다. Tone Master Pro를 선택해 주세요.", "en": "The selected device is not implemented. Choose Tone Master Pro."},
+    "error.file_missing": {"ko": "선택한 오디오 파일을 찾을 수 없습니다.", "en": "The selected audio file could not be found."},
+    "error.decoder_missing": {"ko": "내장 오디오 디코더(ffmpeg.exe)를 찾을 수 없습니다.", "en": "The bundled audio decoder (ffmpeg.exe) could not be found."},
+    "error.decode_failed": {"ko": "오디오 변환 실패: {detail}", "en": "Audio conversion failed: {detail}"},
+    "error.unknown": {"ko": "알 수 없는 오류", "en": "Unknown error"},
+    "error.audio_read": {"ko": "오디오를 읽지 못했습니다.", "en": "Could not read the audio."},
+    "error.too_short": {"ko": "선택 구간에 분석할 오디오가 3초 미만입니다.", "en": "The selected segment contains less than 3 seconds of audio."},
+    "error.bit_depth": {"ko": "지원하지 않는 WAV 비트 깊이입니다: {bits}비트", "en": "Unsupported WAV bit depth: {bits}-bit"},
+    "error.no_channels": {"ko": "오디오 채널을 찾을 수 없습니다.", "en": "No audio channels were found."},
+    "error.pcm_shape": {"ko": "스테레오 또는 모노 PCM 배열이 필요합니다.", "en": "A stereo or mono PCM array is required."},
+    "error.silence": {"ko": "선택 구간이 거의 무음입니다. 기타가 들리는 구간을 선택해 주세요.", "en": "The selected segment is nearly silent. Choose a passage where the guitar is audible."},
+    "progress.decode": {"ko": "선택한 전체 구간을 PCM 오디오로 변환하는 중…", "en": "Converting the selected full range to PCM audio…"},
+    "progress.decode_done": {"ko": "PCM 변환 완료 · 분석 버퍼를 확인하는 중…", "en": "PCM conversion complete · Checking the analysis buffer…"},
+    "progress.features": {"ko": "스펙트럼·다이내믹·공간 특징을 계산하는 중…", "en": "Calculating spectral, dynamic, and spatial features…"},
+    "progress.features_done": {"ko": "DSP 톤 지문 계산 완료", "en": "DSP tone fingerprint complete"},
+    "progress.correction": {"ko": "선택한 소스 구성에 따른 풀믹스 영향을 보정하는 중…", "en": "Correcting full-mix influence for the selected source type…"},
+    "progress.matching": {"ko": "Tone Master Pro 1.8.58 모델 후보를 매칭하는 중…", "en": "Matching Tone Master Pro 1.8.58 model candidates…"},
+    "progress.recipe": {"ko": "상위 후보를 TMP 블록과 파라미터로 변환하는 중…", "en": "Converting top candidates to TMP blocks and parameters…"},
+    "progress.assembling": {"ko": "추천 레시피와 진단 내용을 정리하는 중…", "en": "Assembling recipes and diagnostics…"},
+    "progress.complete": {"ko": "분석 완료", "en": "Analysis complete"},
+    "recipe.match": {"ko": "매칭 {value}%", "en": "Match {value}%"},
+    "recipe.pickup_correction": {"ko": "픽업 보정", "en": "Pickup correction"},
+    "recipe.reason": {"ko": "이유", "en": "Reason"},
+    "recipe.caution": {"ko": "주의", "en": "Caution"},
+    "result.feature_summary": {"ko": "포화도 {sat:.0f}% · 밝기 {bright:.0f}% · 바디 {body:.0f}% · 공간감 {amb:.0f}% · 분석 신뢰도 {conf:.0f}%", "en": "Saturation {sat:.0f}% · Brightness {bright:.0f}% · Body {body:.0f}% · Ambience {amb:.0f}% · Confidence {conf:.0f}%"},
+    "category.Dynamics": {"ko": "다이내믹", "en": "Dynamics"},
+    "category.Stompbox": {"ko": "스톰프박스", "en": "Stompbox"},
+    "category.Amp Head": {"ko": "앰프 헤드", "en": "Amp Head"},
+    "category.Cabinet": {"ko": "캐비닛", "en": "Cabinet"},
+    "category.Modulation": {"ko": "모듈레이션", "en": "Modulation"},
+    "category.Delay": {"ko": "딜레이", "en": "Delay"},
+    "category.Reverb": {"ko": "리버브", "en": "Reverb"},
+    "category.EQ": {"ko": "EQ", "en": "EQ"},
+    "reason.gate": {"ko": "하이게인 노이즈와 풀믹스 저역 오검출 억제", "en": "Suppress high-gain noise and low-frequency false positives from a full mix"},
+    "reason.compressor": {"ko": "클린 어택을 유지하면서 다이내믹 정리", "en": "Control dynamics while preserving clean attack"},
+    "reason.drive": {"ko": "분석된 포화도와 어택에 맞춘 프런트엔드", "en": "Front end adjusted to the measured saturation and attack"},
+    "reason.amp": {"ko": "코어 게인·EQ·다이내믹을 담당", "en": "Provides the core gain, EQ, and dynamics"},
+    "reason.cab": {"ko": "TMP 캐비닛 모델, 마이크 위치와 컷 필터로 최종 캐릭터 구성", "en": "Shapes the final character with the TMP cabinet model, mic position, and cut filters"},
+    "reason.mod": {"ko": "주기적 레벨 변화와 스테레오 폭 추정치 반영", "en": "Reflects periodic level movement and estimated stereo width"},
+    "reason.delay": {"ko": "온셋 자기상관에서 추정한 반복 시간과 공간감 반영", "en": "Uses repeat timing and ambience estimated from onset autocorrelation"},
+    "reason.reverb": {"ko": "잔향 꼬리·스테레오 폭 추정치 반영", "en": "Reflects the estimated decay tail and stereo width"},
+    "reason.eq": {"ko": "풀믹스의 불필요한 저역·초고역을 안전하게 정리", "en": "Safely removes unnecessary lows and extreme highs from the full mix"},
+    "limit.full_mix": {"ko": "풀믹스 영향이 커서 게인·리버브 수치는 넓은 범위의 시작점입니다.", "en": "Full-mix influence is high, so gain and reverb values are broad starting points."},
+    "limit.real_cab": {"ko": "실제 캐비닛을 사용하므로 Cabinet/IR 블록을 제외했습니다.", "en": "The Cabinet/IR block is omitted because a real guitar cabinet is in use."},
+    "limit.amp_front": {"ko": "앰프 전면 입력에서는 코어 앰프 톤을 복원할 수 없어 이펙트 중심으로 추천합니다.", "en": "An amp's front input cannot reproduce the core amp model, so this recipe focuses on effects."},
+    "warning.inference": {"ko": "이 결과는 원 장비를 식별한 것이 아니라, 측정 특징에 가까운 Tone Master Pro 시작점을 추천합니다.", "en": "This does not identify the original equipment; it recommends Tone Master Pro starting points close to the measured features."},
+    "warning.manual_apply": {"ko": "프리셋 자동 쓰기 API가 공개되지 않아 Pro Control 또는 본체에서 값을 수동 입력해야 합니다.", "en": "Because no public preset-writing API is available, enter the values manually in Pro Control or on the unit."},
+    "warning.full_mix": {"ko": "드럼·베이스·심벌 등 풀믹스의 영향 가능성이 감지되었습니다. 기타가 단독으로 들리는 10–30초 구간을 쓰면 정확도가 올라갑니다.", "en": "Possible influence from drums, bass, cymbals, or the full mix was detected. A 10–30 second isolated-guitar passage will improve accuracy."},
+    "warning.clipping": {"ko": "원본 클리핑이 감지되어 포화도 추정 오차가 커질 수 있습니다.", "en": "Source clipping was detected and may increase saturation-estimation error."},
+    "warning.short": {"ko": "분석 구간이 매우 짧습니다. 여러 코드와 어택이 포함된 더 긴 구간을 권장합니다.", "en": "The analyzed range is very short. Use a longer passage containing varied chords and attacks."},
+    "step.new_preset": {"ko": "Tone Master Pro 또는 Pro Control에서 새 프리셋을 만듭니다.", "en": "Create a new preset on Tone Master Pro or in Pro Control."},
+    "step.series": {"ko": "Instrument Series 경로에 추천 블록을 위에서부터 순서대로 추가합니다.", "en": "Add the recommended blocks from top to bottom in an Instrument Series path."},
+    "step.amp_only": {"ko": "Amp는 Amp Only(헤드) 변형을 선택하고 별도 Cabinet 블록을 사용합니다.", "en": "Choose the Amp Only (head) variant and use a separate Cabinet block."},
+    "step.parameters": {"ko": "각 파라미터를 표시값에 맞춘 뒤 프리셋 볼륨으로 최종 음량만 맞춥니다.", "en": "Enter the displayed parameters, then use preset volume only for final level matching."},
+    "step.ab": {"ko": "원곡과 같은 음량으로 A/B하고 Gain → Cab/Mic → EQ → 공간계 순으로 미세 조정합니다.", "en": "Level-match and A/B against the reference, then fine-tune Gain → Cab/Mic → EQ → ambience."},
+    "pickup.strat_bridge": {"ko": "Strat 싱글코일 - 브리지", "en": "Strat single-coil - bridge"},
+    "pickup.strat_neck": {"ko": "Strat 싱글코일 - 넥", "en": "Strat single-coil - neck"},
+    "pickup.tele_bridge": {"ko": "Tele 싱글코일 - 브리지", "en": "Tele single-coil - bridge"},
+    "pickup.p90": {"ko": "P-90", "en": "P-90"},
+    "pickup.humbucker_bridge": {"ko": "험버커 - 브리지", "en": "Humbucker - bridge"},
+    "pickup.humbucker_neck": {"ko": "험버커 - 넥", "en": "Humbucker - neck"},
+    "pickup.unknown": {"ko": "직접 입력/모름", "en": "Direct input / Unknown"},
+    "pickup_note.strat_bridge": {"ko": "낮은 출력과 밝은 브리지 싱글코일 보정", "en": "Corrects for a lower-output, bright bridge single-coil"},
+    "pickup_note.strat_neck": {"ko": "낮은 출력과 넥 픽업의 두꺼운 저역 보정", "en": "Corrects for lower output and thicker neck-pickup lows"},
+    "pickup_note.tele_bridge": {"ko": "강한 어택과 밝은 브리지 픽업 보정", "en": "Corrects for a sharp attack and bright bridge pickup"},
+    "pickup_note.p90": {"ko": "중간 출력 P-90 기준", "en": "Uses a medium-output P-90 reference"},
+    "pickup_note.humbucker_bridge": {"ko": "높은 출력과 어두운 브리지 험버커 보정", "en": "Corrects for a higher-output, darker bridge humbucker"},
+    "pickup_note.humbucker_neck": {"ko": "높은 출력과 넥 픽업의 풍부한 저역 보정", "en": "Corrects for high output and full neck-pickup lows"},
+    "pickup_note.unknown": {"ko": "픽업 보정 없음", "en": "No pickup correction"},
+    "mix.auto": {"ko": "풀믹스/영상 → AI 기타 분리 (권장)", "en": "Full mix/video → AI guitar isolation (recommended)"},
+    "mix.isolated": {"ko": "이미 기타만 있는 파일 → 분리 생략", "en": "Guitar-only file → skip separation"},
+    "mix.full_mix": {"ko": "풀믹스 → AI 기타 분리 (호환 모드)", "en": "Full mix → AI guitar isolation (compatibility mode)"},
+    "output.frfr": {"ko": "FRFR / 헤드폰 / USB / PA", "en": "FRFR / headphones / USB / PA"},
+    "output.power_amp_cab": {"ko": "파워앰프 + 실제 기타 캐비닛 (캐비닛 제외)", "en": "Power amp + real guitar cabinet (omit cab block)"},
+    "output.amp_front": {"ko": "기타 앰프 전면 입력 (앰프/캐비닛 제외)", "en": "Guitar amp front input (omit amp/cab blocks)"},
+    "feature.saturation": {"ko": "포화도", "en": "Saturation"},
+    "feature.brightness": {"ko": "밝기", "en": "Brightness"},
+    "feature.body": {"ko": "바디", "en": "Body"},
+    "feature.compression": {"ko": "압축감", "en": "Compression"},
+    "feature.ambience": {"ko": "공간감", "en": "Ambience"},
+    "feature.modulation": {"ko": "모듈레이션", "en": "Modulation"},
+    "feature.delay": {"ko": "딜레이 단서", "en": "Delay evidence"},
+    "feature.stereo_width": {"ko": "스테레오 폭", "en": "Stereo width"},
+    "feature.contamination": {"ko": "풀믹스 영향", "en": "Full-mix influence"},
+    "feature.confidence": {"ko": "분석 신뢰도", "en": "Analysis confidence"},
+    "feature.bpm": {"ko": "추정 BPM", "en": "Estimated BPM"},
+    "feature.delay_ms": {"ko": "반복 시간 후보", "en": "Repeat-time candidate"},
+    "feature.centroid": {"ko": "스펙트럼 중심", "en": "Spectral centroid"},
+    "feature.dynamic_range": {"ko": "다이내믹 범위", "en": "Dynamic range"},
+    "feature.rms": {"ko": "RMS", "en": "RMS"},
+    "feature.peak": {"ko": "Peak", "en": "Peak"},
+    "ui.input_method": {"ko": "입력 방법", "en": "Input method"},
+    "input.local": {"ko": "로컬 오디오/영상 파일", "en": "Local audio/video file"},
+    "input.record": {"ko": "PC 재생음 또는 오디오 입력 녹음", "en": "Record PC playback or audio input"},
+    "ui.record_device": {"ko": "녹음 장치", "en": "Recording device"},
+    "ui.refresh_devices": {"ko": "새로고침", "en": "Refresh"},
+    "ui.record_limit": {"ko": "최대 녹음 시간 (초)", "en": "Maximum recording time (seconds)"},
+    "ui.start_record": {"ko": "재생음 녹음 시작", "en": "Start playback recording"},
+    "ui.stop_record": {"ko": "녹음 중지", "en": "Stop recording"},
+    "ui.cancel_analysis": {"ko": "분석 취소", "en": "Cancel analysis"},
+    "ui.source_section": {"ko": "1 · 입력 소스", "en": "1 · Input source"},
+    "ui.tone_section": {"ko": "2 · 기타 및 출력 조건", "en": "2 · Guitar and output settings"},
+    "ui.record_notice": {"ko": "PC 재생음은 출력 장치(loopback)를 고르세요. 저작권·서비스 이용 조건을 지킬 책임은 사용자에게 있습니다.", "en": "For PC playback, choose an output (loopback) device. You are responsible for copyright and service terms."},
+    "record.loopback": {"ko": "PC 재생음", "en": "PC playback"},
+    "record.input": {"ko": "오디오 입력", "en": "Audio input"},
+    "status.recording_ready": {"ko": "재생할 곡을 준비한 뒤 녹음을 시작하세요.", "en": "Prepare playback, then start recording."},
+    "status.recording_complete": {"ko": "녹음 완료 · {seconds:.1f}초 · 이제 톤 분석을 시작할 수 있습니다.", "en": "Recording complete · {seconds:.1f}s · Ready for tone analysis."},
+    "status.recording_stopped": {"ko": "녹음을 중지하는 중…", "en": "Stopping recording…"},
+    "status.cancelling": {"ko": "현재 AI 조각이 끝나는 대로 분석을 취소합니다…", "en": "Cancelling after the current AI chunk finishes…"},
+    "error.no_capture_devices": {"ko": "사용 가능한 녹음 장치를 찾지 못했습니다.", "en": "No recording devices were found."},
+    "error.record_device": {"ko": "녹음 장치를 열지 못했습니다: {detail}", "en": "Could not open the recording device: {detail}"},
+    "error.record_device_missing": {"ko": "선택한 녹음 장치를 더 이상 찾을 수 없습니다.", "en": "The selected recording device is no longer available."},
+    "error.record_failed": {"ko": "녹음 실패: {detail}", "en": "Recording failed: {detail}"},
+    "error.record_too_short": {"ko": "녹음이 3초 미만이라 분석할 수 없습니다.", "en": "The recording is shorter than 3 seconds and cannot be analyzed."},
+    "error.cancelled": {"ko": "사용자가 분석을 취소했습니다.", "en": "Analysis was cancelled by the user."},
+    "error.separator_runtime": {"ko": "AI 기타 분리 런타임을 불러오지 못했습니다: {detail}", "en": "Could not load the AI guitar-separation runtime: {detail}"},
+    "error.separator_model": {"ko": "AI 기타 분리 모델을 준비하지 못했습니다. 첫 실행은 인터넷 연결이 필요합니다: {detail}", "en": "Could not prepare the AI guitar-separation model. The first run needs internet access: {detail}"},
+    "error.separator_no_guitar": {"ko": "선택한 AI 모델에 guitar stem 출력이 없습니다.", "en": "The selected AI model has no guitar-stem output."},
+    "error.separator_format": {"ko": "AI 분리 입력은 44.1 kHz 16-bit PCM이어야 합니다.", "en": "AI separation input must be 44.1 kHz 16-bit PCM."},
+    "error.separation_failed": {"ko": "AI 기타 분리 실패: {detail}", "en": "AI guitar separation failed: {detail}"},
+    "error.separation_empty": {"ko": "AI가 기타 stem을 만들지 못했습니다.", "en": "The AI did not produce a guitar stem."},
+    "error.guitar_not_found": {"ko": "분리된 guitar stem이 거의 무음입니다. 기타가 실제로 들리는 곡인지 확인해 주세요.", "en": "The separated guitar stem is nearly silent. Check that the source contains audible guitar."},
+    "progress.separator_model": {"ko": "Demucs 기타 분리 모델 준비 중 · 첫 실행이면 모델을 내려받습니다…", "en": "Preparing the Demucs guitar model · the first run downloads the model…"},
+    "progress.separating_chunk": {"ko": "건반·베이스·드럼 등을 제외하고 기타 분리 중 · {current}/{total} 조각", "en": "Isolating guitar from keys, bass, drums, and other sounds · chunk {current}/{total}"},
+    "progress.separation_done": {"ko": "guitar stem 분리 완료 · 이제 기타 소리만 분석합니다.", "en": "Guitar stem isolated · only the guitar audio will now be analyzed."},
+    "progress.separation_skipped": {"ko": "사용자 지정: 이미 기타 단독인 파일이라 AI 분리를 생략했습니다.", "en": "User setting: skipped AI separation because the file is already guitar-only."},
+    "progress.recording": {"ko": "녹음 중 · {elapsed:.1f}/{limit:.0f}초", "en": "Recording · {elapsed:.1f}/{limit:.0f}s"},
+    "warning.separation_experimental": {"ko": "추천값은 AI로 분리한 guitar stem만 사용했습니다. 다만 소스 분리는 잔여 악기 누출이나 인공음을 만들 수 있습니다.", "en": "Recommendations use only the AI-isolated guitar stem, but source separation can leave bleed or artifacts."},
+    "value.level_match": {"ko": "{value} (레벨 매칭용)", "en": "{value} (for level matching)"},
+    "ui.debug_bundle": {"ko": "디버그 번들 ZIP", "en": "Debug bundle ZIP"},
+    "ui.guitar_source": {"ko": "분석 오디오", "en": "Analyzed audio"},
+    "ui.guitar_stem_only": {"ko": "AI 분리 guitar stem만 사용", "en": "AI-isolated guitar stem only"},
+    "ui.separator_model": {"ko": "기타 분리 모델", "en": "Guitar-isolation model"},
+    "ui.voicing_tab": {"ko": "코드 보이싱 · 실험", "en": "Chord voicing · Experimental"},
+    "ui.voicing_intro": {"ko": "guitar stem에서 추정한 시간대별 화음입니다. 정확한 현·프렛 검출이 아니며 운지는 연주 후보입니다.", "en": "Time-based harmony estimated from the guitar stem. Strings/frets are not detected; shapes are playable candidates."},
+    "ui.voicing_empty": {"ko": "신뢰할 수 있는 코드 구간을 찾지 못했습니다.", "en": "No sufficiently reliable chord segment was found."},
+    "ui.voicing_time": {"ko": "시간", "en": "Time"},
+    "ui.voicing_chord": {"ko": "추정 코드", "en": "Estimated chord"},
+    "ui.voicing_notes": {"ko": "구성음 후보", "en": "Candidate pitch classes"},
+    "ui.voicing_profile": {"ko": "보이싱 특성", "en": "Voicing profile"},
+    "ui.voicing_confidence": {"ko": "신뢰도", "en": "Confidence"},
+    "ui.playable_shapes": {"ko": "연주 후보(검출 아님)", "en": "Playable candidates (not detected)"},
+    "ui.voicing_limit": {"ko": "한계 · 음원만으로 정확한 현/프렛은 유일하게 알 수 없습니다. 퍼즈·피치 이펙트·빠른 리프·카포·드롭 튜닝·분리 누출은 직접 확인하세요.", "en": "Limit · Exact strings/frets are not uniquely recoverable from audio. Manually check fuzz, pitch effects, fast riffs, capo/drop tunings, and separation bleed."},
+    "voicing.register.low": {"ko": "낮은 음역", "en": "low register"},
+    "voicing.register.mid": {"ko": "중간 음역", "en": "mid register"},
+    "voicing.register.high": {"ko": "높은 음역", "en": "high register"},
+    "voicing.register.unknown": {"ko": "음역 불명", "en": "register unknown"},
+    "voicing.spacing.close": {"ko": "좁은 간격", "en": "close spacing"},
+    "voicing.spacing.medium": {"ko": "중간 간격", "en": "medium spacing"},
+    "voicing.spacing.wide": {"ko": "넓은 간격", "en": "wide spacing"},
+    "voicing.spacing.unknown": {"ko": "간격 불명", "en": "spacing unknown"},
+    "voicing.inversion.root": {"ko": "근음 베이스", "en": "root in bass"},
+    "voicing.inversion.inversion": {"ko": "역위 가능", "en": "possible inversion"},
+    "voicing.inversion.uncertain": {"ko": "베이스 불확실", "en": "bass uncertain"},
+    "voicing.inversion.unknown": {"ko": "역위 불명", "en": "inversion unknown"},
+    "progress.voicing": {"ko": "guitar stem에서 시간대별 코드·보이싱 특성을 추정하는 중…", "en": "Estimating time-based chord and voicing characteristics from the guitar stem…"},
+    "progress.voicing_done": {"ko": "코드 보이싱 타임라인 계산 완료", "en": "Chord-voicing timeline complete"},
+    "dialog.wait_for_task": {"ko": "녹음 또는 분석이 끝난 뒤 언어를 바꿔 주세요.", "en": "Change language after recording or analysis finishes."},
+    "dialog.debug_bundle_title": {"ko": "다른 PC용 디버그 번들 저장", "en": "Save debug bundle for another PC"},
+    "status.debug_bundle_saved": {"ko": "디버그 번들 저장 완료 · {path}", "en": "Debug bundle saved · {path}"},
+}
+
+
+CHOICE_KEYS: dict[str, tuple[str, ...]] = {
+    "pickup": ("strat_bridge", "strat_neck", "tele_bridge", "p90", "humbucker_bridge", "humbucker_neck", "unknown"),
+    "mix": ("auto", "isolated"),
+    "output": ("frfr", "power_amp_cab", "amp_front"),
+}
+
+CHOICE_DEFAULTS: dict[str, str] = {
+    "pickup": "unknown",
+    "mix": "auto",
+    "output": "frfr",
+}
+
+
+def tr(key: str, language: str = "ko", **values: object) -> str:
+    """문자열 키를 선택 언어로 번역하고 선택적인 자리표시자를 채운다."""
+    localized = TEXT.get(key, {}).get(language)
+    if localized is None:
+        localized = TEXT.get(key, {}).get("ko", key)
+    try:
+        return localized.format(**values)
+    except (KeyError, ValueError):
+        return localized
+
+
+def choice_label(group: str, code: str, language: str = "ko") -> str:
+    """안정적인 선택 코드에 대응하는 현재 언어의 콤보박스 라벨을 만든다."""
+    return tr(f"{group}.{code}", language)
+
+
+def choice_values(group: str, language: str = "ko") -> tuple[str, ...]:
+    """한 선택 그룹에 속한 모든 현재 언어 라벨을 정의 순서대로 반환한다."""
+    return tuple(choice_label(group, code, language) for code in CHOICE_KEYS[group])
+
+
+def choice_code(group: str, label: str) -> str:
+    """한국어 또는 영어 라벨을 언어 독립적인 선택 코드로 되돌린다."""
+    for code in CHOICE_KEYS[group]:
+        if label in {choice_label(group, code, "ko"), choice_label(group, code, "en")}:
+            return code
+    if group == "mix" and label in {"밴드 풀믹스", "Full band mix", "full_mix"}:
+        return "auto"
+    if group == "mix" and label in {"기타 단독/타브 영상", "Isolated guitar / tab video"}:
+        return "isolated"
+    if label in CHOICE_KEYS[group]:
+        return label
+    return CHOICE_DEFAULTS[group]
+
+
+def language_code(label: str) -> str:
+    """언어 콤보박스 라벨을 ``ko`` 또는 ``en`` 코드로 변환한다."""
+    for code, visible in LANGUAGE_LABELS.items():
+        if visible == label:
+            return code
+    return "ko"

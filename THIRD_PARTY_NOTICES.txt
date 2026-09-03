@@ -1,0 +1,90 @@
+ToneMatch TMP 0.0.03 - Third-Party Notices
+===========================================
+
+ToneMatch TMP application source
+--------------------------------
+License: MIT (see LICENSE.txt)
+
+FFmpeg 9.0.1 essentials_build-www.gyan.dev
+-----------------------------------------
+Copyright (c) 2000-2026 the FFmpeg developers.
+This build is configured with --enable-gpl --enable-version3 and is distributed
+under GNU General Public License version 3. The program invokes ffmpeg.exe as a
+separate process for local decoding.
+
+License text: licenses/FFmpeg-GPL-3.0.txt
+Upstream source: https://ffmpeg.org/releases/ffmpeg-9.0.1.tar.xz
+FFmpeg project: https://ffmpeg.org/
+Windows build provider: https://www.gyan.dev/ffmpeg/builds/
+Build archive used: ffmpeg-release-essentials.zip
+
+NumPy 2.2.6
+-----------
+Copyright (c) 2005-2024, NumPy Developers.
+License: BSD 3-Clause and bundled third-party licenses.
+License text: licenses/NumPy-LICENSE.txt
+Project/source: https://numpy.org/ and https://github.com/numpy/numpy
+
+Python 3 runtime
+----------------
+Copyright (c) Python Software Foundation.
+License: Python Software Foundation License Version 2 and bundled notices.
+License text: licenses/PYTHON-LICENSE.txt
+Project/source: https://www.python.org/
+
+PyInstaller 6.15.0 bootloader
+-----------------------------
+PyInstaller is distributed under GPL 2.0-or-later with a special exception
+allowing distribution of bundled applications. The application itself remains
+under the license selected by its author.
+License text: licenses/PyInstaller-COPYING.txt
+Project/source: https://pyinstaller.org/ and https://github.com/pyinstaller/pyinstaller
+
+Demucs 4.1.0
+------------
+Copyright (c) 2019-present Facebook, Inc. and contributors.
+License: MIT.
+The application uses the experimental htdemucs_6s guitar source output. Model
+weights are downloaded on first use and are not redistributed in this archive.
+License text: licenses/runtime/demucs-4.1.0/LICENSE
+Project/source: https://github.com/facebookresearch/demucs
+Model files: https://huggingface.co/adefossez/HTDemucs-6s
+
+PyTorch 2.13.0
+--------------
+Copyright (c) PyTorch contributors.
+License: BSD-style license with bundled third-party notices.
+License text and notices: licenses/runtime/torch-2.13.0/
+Project/source: https://pytorch.org/ and https://github.com/pytorch/pytorch
+
+SoundCard 0.4.5
+---------------
+Copyright (c) Bastibe and contributors.
+License: BSD 3-Clause.
+License text: licenses/runtime/SoundCard-0.4.5/LICENSE
+Project/source: https://github.com/bastibe/SoundCard
+
+Hugging Face Hub 1.29.0 and safetensors 0.8.0
+------------------------------------------------
+Licenses: Apache License 2.0.
+These libraries retrieve and load the separately hosted Demucs weights.
+License texts: licenses/runtime/huggingface_hub-1.29.0/LICENSE and
+licenses/runtime/safetensors-0.8.0/LICENSE
+Projects: https://github.com/huggingface/huggingface_hub and
+https://github.com/huggingface/safetensors
+
+Additional Python runtime components
+------------------------------------
+Pinned dependency names, versions, project URLs, metadata license expressions,
+and copied wheel license files are listed in THIRD_PARTY_RUNTIME_INVENTORY.txt
+and licenses/runtime/. This includes cffi, HTTPX, sphn, lameenc, Julius, Einops,
+PyYAML, tqdm, SymPy, NetworkX, Jinja2 and their supporting packages.
+
+Fender compatibility notice
+----------------------------
+Fender, Tone Master, Tone Master Pro, Pro Control and referenced model names
+are trademarks or product identifiers of their respective owners. They are
+used only to describe compatibility. This project is not affiliated with,
+endorsed by, sponsored by, or approved by Fender Musical Instruments
+Corporation. No Fender firmware, modeled DSP, proprietary preset, or private
+model identifier is included.

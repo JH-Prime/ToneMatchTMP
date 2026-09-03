@@ -1,0 +1,58 @@
+# Python / test cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+
+# Local virtual environments and AI model caches
+.venv/
+venv/
+.cache/
+*.safetensors
+*.ckpt
+*.pth
+*.pt
+*.th
+*.onnx
+*.bin
+*.pkl
+
+# Local secrets and signing material
+.env
+.env.*
+!.env.example
+*.pem
+*.pfx
+*.key
+*.crt
+credentials.json
+secrets.json
+
+# Build, release, and runtime state
+build/
+dist/
+release/
+data/
+captures/
+*.log
+*.zip
+*.exe
+
+# Audio/video belongs to the user and must not be committed accidentally
+*.wav
+*.wave
+*.mp3
+*.flac
+*.m4a
+*.aac
+*.ogg
+*.mp4
+*.mkv
+*.mov
+*.webm
+
+# Windows/editor files
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/

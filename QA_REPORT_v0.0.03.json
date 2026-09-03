@@ -1,0 +1,46 @@
+{
+  "schema": "tonematch-qa/v1",
+  "app_version": "0.0.03",
+  "tested_at": "2026-09-03T09:31:00+09:00",
+  "platform": "Windows x64 / Python 3.12.13",
+  "checks": {
+    "compileall": "passed",
+    "unit_tests": {
+      "status": "passed",
+      "count": 16
+    },
+    "source_self_test": {
+      "status": "passed",
+      "recipes": 3,
+      "developer_blocks": 11,
+      "english_localization": true,
+      "ffmpeg_analysis": true
+    },
+    "demucs_runtime": {
+      "status": "passed",
+      "demucs": "4.1.0",
+      "torch": "2.13.0+cpu",
+      "model": "htdemucs_6s",
+      "input_seconds": 8.0,
+      "processed_chunks": 1,
+      "guitar_rms_dbfs": -41.7782,
+      "guitar_peak_dbfs": -18.8307,
+      "end_to_end_recipe_result": true
+    },
+    "capture_device_enumeration": {
+      "status": "passed",
+      "loopback_devices": 2,
+      "audio_inputs": 1
+    },
+    "chord_voicing_synthetic_tests": {
+      "status": "passed",
+      "cases": ["C", "Am", "E5", "C/E", "C-G-Am timeline", "silence/unknown", "determinism"]
+    }
+  },
+  "not_run": [
+    "A real copyrighted YouTube stream was not downloaded or extracted.",
+    "A live loopback recording was not captured to avoid recording private system audio without a deliberate manual test.",
+    "GPU inference is not supported; the release uses CPU inference.",
+    "Code signing was not performed."
+  ]
+}
