@@ -1,4 +1,4 @@
-"""ToneMatch TMP v0.0.04 데스크톱 애플리케이션.
+"""ToneMatch TMP v0.0.05 데스크톱 애플리케이션.
 
 로컬 오디오·영상 또는 Windows PC 재생음 녹음을 받아 AI로 guitar stem만
 분리하고, Tone Master Pro에 수동 적용할 설명 가능한 톤 체인을 추천한다.
@@ -60,10 +60,12 @@ from recorder import (
     RecordingError,
     capture_device_label,
     list_capture_devices,
+    monitor_capture_device,
     record_device_to_wav,
 )
 from report import recipe_as_text, save_html
 from separator import separator_runtime_status
+from spectrum import SpectrumFrame, SpectrumSmoother, analyze_spectrum_frame
 from voicing import pitch_class_names
 
 
@@ -150,9 +152,16 @@ class ToneMatchApp:
         self.result: dict | None = None
         self.worker: threading.Thread | None = None
         self.record_worker: threading.Thread | None = None
+        self.spectrum_worker: threading.Thread | None = None
+        self.spectrum_stop_event: threading.Event | None = None
+        self.spectrum_session_id = 0
+        self.spectrum_stop_requested = False
+        self.spectrum_frames: queue.Queue[tuple[int, SpectrumFrame]] = queue.Queue(maxsize=1)
+        self.last_spectrum_frame: SpectrumFrame | None = None
         self.events: queue.Queue[tuple] = queue.Queue()
         self.analysis_cancel_event = threading.Event()
         self.record_stop_event = threading.Event()
+        self.closing = False
         self.temporary_recordings: set[Path] = set()
         self.capture_devices: list[CaptureDevice] = []
         self.capture_label_map: dict[str, CaptureDevice] = {}
@@ -192,6 +201,7 @@ class ToneMatchApp:
         self._configure_style()
         self._build_ui()
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
+        self.root.after(50, self._drain_spectrum_frames)
         self.root.after(80, self._drain_events)
         self.root.after(180, self._start_hardware_probe)
 
@@ -488,6 +498,8 @@ class ToneMatchApp:
         self.voicing_text.tag_configure("detail", foreground=COLORS["text"], lmargin1=18, lmargin2=18)
         self.voicing_text.tag_configure("warning", foreground=COLORS["warning"], spacing1=10)
 
+        self._build_spectrum_tab()
+
         self.diag_tab = ttk.Frame(self.notebook, style="Alt.TFrame", padding=12)
         self.notebook.add(self.diag_tab, text=tr("ui.diagnostics", self.language))
         self.diag_tab.rowconfigure(2, weight=1)
@@ -536,6 +548,8 @@ class ToneMatchApp:
         self._update_analysis_availability()
         if self.result:
             self._show_result(self.result, reset_notebook=False)
+        if self.last_spectrum_frame is not None:
+            self._apply_spectrum_frame(self.last_spectrum_frame)
 
     def _build_debug_tab(self) -> None:
         """처리 순서도, 클릭형 실제 소스, 런타임 로그와 디버그 번들 버튼을 만든다."""
@@ -591,9 +605,412 @@ class ToneMatchApp:
         self.changelog_text.insert("1.0", changelog_as_text(CHANGELOG, self.language))
         self.changelog_text.configure(state="disabled")
 
+    def _build_spectrum_tab(self) -> None:
+        """선택한 입력 장치의 파형·주파수·레벨을 보여주는 실시간 탭을 만든다."""
+        self.spectrum_tab = ttk.Frame(self.notebook, style="Alt.TFrame", padding=12)
+        self.notebook.add(self.spectrum_tab, text=tr("ui.spectrum_tab", self.language))
+        self.spectrum_tab.columnconfigure(0, weight=1)
+        self.spectrum_tab.rowconfigure(4, weight=2)
+        self.spectrum_tab.rowconfigure(6, weight=3)
+
+        controls = ttk.Frame(self.spectrum_tab, style="Alt.TFrame")
+        controls.grid(row=0, column=0, sticky="ew", pady=(0, 5))
+        controls.columnconfigure(1, weight=1)
+        ttk.Label(
+            controls,
+            text=tr("ui.spectrum_device", self.language),
+            background=COLORS["panel_alt"],
+            foreground=COLORS["text"],
+            font=(self.ui_font, 10, "bold"),
+        ).grid(row=0, column=0, sticky="w", padx=(0, 9))
+        self.spectrum_capture_combo = ttk.Combobox(controls, textvariable=self.capture_var, state="readonly")
+        self.spectrum_capture_combo.grid(row=0, column=1, sticky="ew")
+        self.spectrum_capture_combo.bind("<<ComboboxSelected>>", self._capture_device_changed)
+        self.spectrum_refresh_button = ttk.Button(
+            controls,
+            text=tr("ui.refresh_devices", self.language),
+            command=self._refresh_capture_devices,
+        )
+        self.spectrum_refresh_button.grid(row=0, column=2, padx=(7, 0))
+        self.spectrum_button = ttk.Button(
+            controls,
+            text=tr("ui.start_spectrum", self.language),
+            style="Accent.TButton",
+            command=self._toggle_spectrum_monitor,
+        )
+        self.spectrum_button.grid(row=0, column=3, padx=(7, 0))
+
+        self.spectrum_status_var = tk.StringVar(value=tr("status.spectrum_ready", self.language))
+        ttk.Label(
+            self.spectrum_tab,
+            textvariable=self.spectrum_status_var,
+            background=COLORS["panel_alt"],
+            foreground=COLORS["muted"],
+            font=(self.ui_font, 9),
+            wraplength=720,
+            justify="left",
+        ).grid(row=1, column=0, sticky="ew", pady=(0, 8))
+
+        metrics = ttk.Frame(self.spectrum_tab, style="Alt.TFrame")
+        metrics.grid(row=2, column=0, sticky="ew", pady=(0, 8))
+        metrics.columnconfigure((0, 1, 2), weight=1)
+        self.spectrum_rms_var = tk.StringVar(value="-120.0 dBFS")
+        self.spectrum_peak_var = tk.StringVar(value="-120.0 dBFS")
+        self.spectrum_centroid_var = tk.StringVar(value="—")
+        metric_items = (
+            ("feature.rms", self.spectrum_rms_var),
+            ("feature.peak", self.spectrum_peak_var),
+            ("feature.centroid", self.spectrum_centroid_var),
+        )
+        for column, (label_key, variable) in enumerate(metric_items):
+            card = tk.Frame(metrics, bg="#101a22", highlightbackground=COLORS["border"], highlightthickness=1)
+            card.grid(row=0, column=column, sticky="ew", padx=(0 if column == 0 else 4, 0 if column == 2 else 4))
+            tk.Label(card, text=tr(label_key, self.language), bg="#101a22", fg=COLORS["muted"], font=(self.ui_font, 8)).pack(anchor="w", padx=10, pady=(7, 0))
+            tk.Label(card, textvariable=variable, bg="#101a22", fg=COLORS["accent"], font=("Consolas", 13, "bold")).pack(anchor="w", padx=10, pady=(1, 7))
+
+        ttk.Label(
+            self.spectrum_tab,
+            text=tr("ui.waveform", self.language),
+            background=COLORS["panel_alt"],
+            foreground=COLORS["text"],
+            font=(self.ui_font, 9, "bold"),
+        ).grid(row=3, column=0, sticky="w")
+        self.waveform_canvas = tk.Canvas(self.spectrum_tab, height=130, bg="#081017", highlightbackground=COLORS["border"], highlightthickness=1, bd=0)
+        self.waveform_canvas.grid(row=4, column=0, sticky="nsew", pady=(3, 8))
+        self.waveform_canvas.bind("<Configure>", self._spectrum_canvas_resized)
+
+        ttk.Label(
+            self.spectrum_tab,
+            text=tr("ui.frequency_spectrum", self.language),
+            background=COLORS["panel_alt"],
+            foreground=COLORS["text"],
+            font=(self.ui_font, 9, "bold"),
+        ).grid(row=5, column=0, sticky="w")
+        self.spectrum_canvas = tk.Canvas(self.spectrum_tab, height=250, bg="#081017", highlightbackground=COLORS["border"], highlightthickness=1, bd=0)
+        self.spectrum_canvas.grid(row=6, column=0, sticky="nsew", pady=(3, 0))
+        self.spectrum_canvas.bind("<Configure>", self._spectrum_canvas_resized)
+
+    def _spectrum_is_running(self) -> bool:
+        """실시간 스펙트럼 세션이 종료 이벤트 처리 전까지 활성인지 반환한다."""
+        return self.spectrum_worker is not None
+
+    @staticmethod
+    def _spectrum_plot_x(frequency_hz: float, width: int) -> float:
+        """20 Hz~20 kHz 로그 축의 주파수를 캔버스 가로 좌표로 바꾼다."""
+        left = 46.0
+        right = max(left + 1.0, float(width) - 11.0)
+        frequency = min(20_000.0, max(20.0, float(frequency_hz)))
+        ratio = math.log10(frequency / 20.0) / math.log10(20_000.0 / 20.0)
+        return left + ratio * (right - left)
+
+    @staticmethod
+    def _spectrum_plot_y(level_dbfs: float, height: int) -> float:
+        """-120~0 dBFS 레벨을 스펙트럼 캔버스 세로 좌표로 바꾼다."""
+        top = 9.0
+        bottom = max(top + 1.0, float(height) - 25.0)
+        level = min(0.0, max(-120.0, float(level_dbfs)))
+        return top + (-level / 120.0) * (bottom - top)
+
+    def _spectrum_canvas_resized(self, _event: object | None = None) -> None:
+        """스펙트럼 탭 크기가 바뀌면 축과 마지막 측정 프레임을 다시 그린다."""
+        if self.closing:
+            return
+        self._draw_waveform_grid()
+        self._draw_spectrum_grid()
+        if self.last_spectrum_frame is not None:
+            self._draw_waveform(self.last_spectrum_frame)
+            self._draw_spectrum(self.last_spectrum_frame)
+
+    def _draw_waveform_grid(self) -> None:
+        """파형 캔버스에 기준 레벨과 시간 방향 보조선을 그린다."""
+        if not hasattr(self, "waveform_canvas") or not self.waveform_canvas.winfo_exists():
+            return
+        canvas = self.waveform_canvas
+        width = canvas.winfo_width()
+        height = canvas.winfo_height()
+        canvas.delete("grid")
+        if width < 70 or height < 45:
+            return
+        left, right = 37.0, float(width) - 9.0
+        top, bottom = 8.0, float(height) - 15.0
+        for level, label in ((1.0, "+1"), (0.0, "0"), (-1.0, "-1")):
+            y = top + (1.0 - (level + 1.0) / 2.0) * (bottom - top)
+            canvas.create_line(left, y, right, y, fill="#20303b", width=1, tags=("grid",))
+            canvas.create_text(31, y, text=label, fill=COLORS["muted"], anchor="e", font=("Consolas", 7), tags=("grid",))
+        for fraction in (0.25, 0.5, 0.75):
+            x = left + fraction * (right - left)
+            canvas.create_line(x, top, x, bottom, fill="#15232c", width=1, tags=("grid",))
+
+    def _draw_spectrum_grid(self) -> None:
+        """주파수 캔버스에 로그 주파수축과 dBFS 기준선을 그린다."""
+        if not hasattr(self, "spectrum_canvas") or not self.spectrum_canvas.winfo_exists():
+            return
+        canvas = self.spectrum_canvas
+        width = canvas.winfo_width()
+        height = canvas.winfo_height()
+        canvas.delete("grid")
+        if width < 100 or height < 70:
+            return
+        left, right = 46.0, float(width) - 11.0
+        top, bottom = 9.0, float(height) - 25.0
+        for level in (0, -24, -48, -72, -96, -120):
+            y = self._spectrum_plot_y(float(level), height)
+            canvas.create_line(left, y, right, y, fill="#20303b", width=1, tags=("grid",))
+            canvas.create_text(40, y, text=str(level), fill=COLORS["muted"], anchor="e", font=("Consolas", 7), tags=("grid",))
+        frequency_ticks = (
+            (20, "20"),
+            (50, "50"),
+            (100, "100"),
+            (200, "200"),
+            (500, "500"),
+            (1_000, "1k"),
+            (2_000, "2k"),
+            (5_000, "5k"),
+            (10_000, "10k"),
+            (20_000, "20k"),
+        )
+        for frequency, label in frequency_ticks:
+            x = self._spectrum_plot_x(float(frequency), width)
+            canvas.create_line(x, top, x, bottom, fill="#15232c", width=1, tags=("grid",))
+            canvas.create_text(x, float(height) - 13.0, text=label, fill=COLORS["muted"], anchor="center", font=("Consolas", 7), tags=("grid",))
+        canvas.create_text(left, 2, text="dBFS", fill=COLORS["muted"], anchor="nw", font=("Consolas", 7), tags=("grid",))
+
+    def _draw_waveform(self, frame: SpectrumFrame) -> None:
+        """최신 PCM 파형을 현재 캔버스 폭에 맞춰 줄여 그린다."""
+        if not hasattr(self, "waveform_canvas") or not self.waveform_canvas.winfo_exists():
+            return
+        canvas = self.waveform_canvas
+        canvas.delete("dynamic")
+        width = canvas.winfo_width()
+        height = canvas.winfo_height()
+        if width < 70 or height < 45:
+            return
+        values = np.asarray(frame.waveform, dtype=np.float64)
+        if values.size < 2:
+            return
+        left, right = 37.0, float(width) - 9.0
+        top, bottom = 8.0, float(height) - 15.0
+        point_count = min(values.size, max(2, int(right - left)))
+        indices = np.linspace(0, values.size - 1, point_count, dtype=np.int64)
+        sampled = np.clip(values[indices], -1.0, 1.0)
+        x_values = np.linspace(left, right, point_count)
+        y_values = top + (1.0 - (sampled + 1.0) / 2.0) * (bottom - top)
+        coordinates = np.column_stack((x_values, y_values)).reshape(-1).tolist()
+        canvas.create_line(*coordinates, fill=COLORS["blue"], width=1.4, tags=("dynamic",))
+
+    def _draw_spectrum(self, frame: SpectrumFrame) -> None:
+        """평활화된 FFT 레벨과 스펙트럼 중심을 로그 주파수축에 그린다."""
+        if not hasattr(self, "spectrum_canvas") or not self.spectrum_canvas.winfo_exists():
+            return
+        canvas = self.spectrum_canvas
+        canvas.delete("dynamic")
+        width = canvas.winfo_width()
+        height = canvas.winfo_height()
+        if width < 100 or height < 70:
+            return
+        frequencies = np.asarray(frame.frequencies_hz, dtype=np.float64)
+        levels = np.asarray(frame.magnitudes_dbfs, dtype=np.float64)
+        mask = np.isfinite(frequencies) & np.isfinite(levels) & (frequencies >= 20.0) & (frequencies <= 20_000.0)
+        if not np.any(mask):
+            return
+        frequencies = frequencies[mask]
+        levels = np.clip(levels[mask], -120.0, 0.0)
+        x_values = np.asarray([self._spectrum_plot_x(value, width) for value in frequencies], dtype=np.float64)
+        y_values = np.asarray([self._spectrum_plot_y(value, height) for value in levels], dtype=np.float64)
+        # 같은 화면 픽셀에 여러 FFT bin이 모이면 가장 강한 레벨을 남긴다.
+        pixels = np.rint(x_values).astype(np.int64)
+        unique_pixels, first_indices = np.unique(pixels, return_index=True)
+        reduced_x = unique_pixels.astype(np.float64)
+        reduced_y = np.minimum.reduceat(y_values, first_indices)
+        coordinates = np.column_stack((reduced_x, reduced_y)).reshape(-1).tolist()
+        if len(coordinates) >= 4:
+            canvas.create_line(*coordinates, fill=COLORS["accent"], width=1.8, tags=("dynamic",))
+        centroid = float(frame.spectral_centroid_hz)
+        if 20.0 <= centroid <= 20_000.0:
+            x = self._spectrum_plot_x(centroid, width)
+            bottom = float(height) - 25.0
+            canvas.create_line(x, 9, x, bottom, fill=COLORS["warning"], dash=(4, 4), tags=("dynamic",))
+            canvas.create_text(
+                min(float(width) - 8.0, x + 5.0),
+                12,
+                text=f"{centroid:.0f} Hz",
+                fill=COLORS["warning"],
+                anchor="nw",
+                font=("Consolas", 8),
+                tags=("dynamic",),
+            )
+
+    def _apply_spectrum_frame(self, frame: SpectrumFrame) -> None:
+        """최신 스펙트럼 프레임의 수치와 두 캔버스를 Tk 메인 스레드에서 갱신한다."""
+        if self.closing or not hasattr(self, "spectrum_rms_var"):
+            return
+        self.last_spectrum_frame = frame
+        self.spectrum_rms_var.set(f"{frame.rms_dbfs:.1f} dBFS")
+        self.spectrum_peak_var.set(f"{frame.peak_dbfs:.1f} dBFS")
+        centroid = float(frame.spectral_centroid_hz)
+        self.spectrum_centroid_var.set(f"{centroid:.0f} Hz" if centroid > 0.0 else "—")
+        self._draw_waveform(frame)
+        self._draw_spectrum(frame)
+
+    def _clear_spectrum_frame_queue(self) -> None:
+        """새 세션 전에 남아 있는 이전 스펙트럼 화면 프레임을 버린다."""
+        try:
+            while True:
+                self.spectrum_frames.get_nowait()
+        except queue.Empty:
+            pass
+
+    def _offer_latest_spectrum(self, session_id: int, frame: SpectrumFrame) -> None:
+        """작업 스레드에서 가장 최신 프레임 하나만 bounded 큐에 남긴다."""
+        try:
+            self.spectrum_frames.put_nowait((session_id, frame))
+            return
+        except queue.Full:
+            pass
+        try:
+            self.spectrum_frames.get_nowait()
+        except queue.Empty:
+            pass
+        try:
+            self.spectrum_frames.put_nowait((session_id, frame))
+        except queue.Full:
+            pass
+
+    def _drain_spectrum_frames(self) -> None:
+        """bounded 큐의 최신 측정치만 꺼내 메인 스레드에서 화면에 반영한다."""
+        latest: tuple[int, SpectrumFrame] | None = None
+        try:
+            while True:
+                latest = self.spectrum_frames.get_nowait()
+        except queue.Empty:
+            pass
+        if latest is not None and latest[0] == self.spectrum_session_id:
+            self._apply_spectrum_frame(latest[1])
+        if not self.closing:
+            try:
+                self.root.after(50, self._drain_spectrum_frames)
+            except tk.TclError:
+                pass
+
+    def _toggle_spectrum_monitor(self) -> None:
+        """선택한 녹음 장치의 실시간 스펙트럼 시작 또는 중지를 요청한다."""
+        if self._spectrum_is_running():
+            if self.spectrum_stop_event is not None:
+                self.spectrum_stop_event.set()
+            self.spectrum_stop_requested = True
+            self.spectrum_status_var.set(tr("status.spectrum_stopping", self.language))
+            self._update_spectrum_availability()
+            return
+        other_busy = bool(
+            (self.worker and self.worker.is_alive())
+            or (self.record_worker and self.record_worker.is_alive())
+            or self.hardware_probe_active
+        )
+        if other_busy:
+            messagebox.showinfo(APP_NAME, tr("dialog.wait_for_task", self.language))
+            return
+        if not self.capture_device_id:
+            messagebox.showwarning(APP_NAME, tr("error.no_capture_devices", self.language))
+            return
+
+        self.spectrum_session_id += 1
+        session_id = self.spectrum_session_id
+        stop_event = threading.Event()
+        self.spectrum_stop_event = stop_event
+        self.spectrum_stop_requested = False
+        self._clear_spectrum_frame_queue()
+        self.spectrum_status_var.set(tr("status.spectrum_running", self.language, rate=21.5))
+        self._append_debug_log(f"spectrum start · {self.capture_device_id} · session={session_id}")
+        self.spectrum_worker = threading.Thread(
+            target=self._spectrum_monitor_worker,
+            args=(session_id, self.capture_device_id, stop_event, self.language),
+            daemon=True,
+        )
+        self.spectrum_worker.start()
+        self._update_analysis_availability()
+
+    def _spectrum_monitor_worker(
+        self,
+        session_id: int,
+        device_id: str,
+        stop_event: threading.Event,
+        language: str,
+    ) -> None:
+        """장치 블록을 FFT 프레임으로 바꿔 UI bounded 큐에 공급한다."""
+        smoother = SpectrumSmoother(history_size=4)
+
+        def handle_block(block: np.ndarray, sample_rate: int) -> None:
+            """녹음 콜백의 PCM 블록을 분석하고 최근 네 프레임을 평활화한다."""
+            if stop_event.is_set():
+                return
+            frame = analyze_spectrum_frame(block, sample_rate)
+            self._offer_latest_spectrum(session_id, smoother.push(frame))
+
+        try:
+            monitor_capture_device(device_id, stop_event, handle_block, language)
+            self.events.put(("spectrum_finished", session_id))
+        except Exception as exc:
+            self.events.put(("spectrum_error", session_id, exc, traceback.format_exc()))
+
+    def _finish_spectrum_monitor(
+        self,
+        session_id: int,
+        error: Exception | None = None,
+        detail: str = "",
+    ) -> None:
+        """현재 세션의 종료·오류를 반영하고 잠근 컨트롤을 안전하게 복구한다."""
+        if session_id != self.spectrum_session_id or self.closing:
+            return
+        self.spectrum_worker = None
+        self.spectrum_stop_event = None
+        self.spectrum_stop_requested = False
+        if error is None:
+            self.spectrum_status_var.set(tr("status.spectrum_stopped", self.language))
+            self._append_debug_log(f"spectrum stop · session={session_id}")
+        else:
+            self.spectrum_status_var.set(tr("status.spectrum_failed", self.language))
+            self._append_debug_log(f"spectrum error · {type(error).__name__} · {error}\n{detail}")
+            messagebox.showerror(APP_NAME, str(error))
+        self._change_input_method()
+        self._update_analysis_availability()
+
+    def _update_spectrum_availability(self) -> None:
+        """다른 작업과 장치 상태를 보고 실시간 스펙트럼 컨트롤을 잠그거나 푼다."""
+        if not hasattr(self, "spectrum_button") or not self.spectrum_button.winfo_exists():
+            return
+        active = self._spectrum_is_running()
+        other_busy = bool(
+            (self.worker and self.worker.is_alive())
+            or (self.record_worker and self.record_worker.is_alive())
+            or self.hardware_probe_active
+        )
+        if active:
+            self.spectrum_button.configure(
+                text=tr("ui.stop_spectrum", self.language),
+                style="Danger.TButton",
+                state="disabled" if self.spectrum_stop_requested else "normal",
+            )
+        else:
+            enabled = bool(self.capture_device_id and not other_busy)
+            self.spectrum_button.configure(
+                text=tr("ui.start_spectrum", self.language),
+                style="Accent.TButton",
+                state="normal" if enabled else "disabled",
+            )
+        selector_enabled = bool(self.capture_device_id and not active and not other_busy)
+        self.spectrum_capture_combo.configure(state="readonly" if selector_enabled else "disabled")
+        self.spectrum_refresh_button.configure(state="normal" if not active and not other_busy else "disabled")
+        if active:
+            for widget in self.record_only_widgets:
+                widget.configure(state="disabled")
+
     def _change_language(self, _event: object | None = None) -> None:
         """선택값과 결과 수치를 보존한 채 전체 화면을 새 언어와 글꼴로 다시 만든다."""
-        if (self.worker and self.worker.is_alive()) or (self.record_worker and self.record_worker.is_alive()):
+        if (
+            (self.worker and self.worker.is_alive())
+            or (self.record_worker and self.record_worker.is_alive())
+            or self._spectrum_is_running()
+        ):
             self.language_var.set(LANGUAGE_LABELS[self.language])
             messagebox.showinfo(APP_NAME, tr("dialog.wait_for_task", self.language))
             return
@@ -632,7 +1049,12 @@ class ToneMatchApp:
 
     def _start_hardware_probe(self) -> None:
         """PyTorch·CUDA 확인을 UI 밖의 스레드에서 시작해 창 멈춤을 방지한다."""
-        if self.hardware_probe_active or (self.worker and self.worker.is_alive()):
+        if (
+            self.hardware_probe_active
+            or (self.worker and self.worker.is_alive())
+            or (self.record_worker and self.record_worker.is_alive())
+            or self._spectrum_is_running()
+        ):
             return
         self.hardware_probe_active = True
         self.hardware_status = {}
@@ -681,7 +1103,11 @@ class ToneMatchApp:
         """하드웨어 검사·분석 상태에 맞춰 가속 선택과 재검사 버튼을 함께 잠그거나 푼다."""
         if not hasattr(self, "compute_combo") or not self.compute_combo.winfo_exists():
             return
-        busy = bool((self.worker and self.worker.is_alive()) or (self.record_worker and self.record_worker.is_alive()))
+        busy = bool(
+            (self.worker and self.worker.is_alive())
+            or (self.record_worker and self.record_worker.is_alive())
+            or self._spectrum_is_running()
+        )
         active = bool(enabled and not busy and not self.hardware_probe_active)
         self.compute_combo.configure(state="readonly" if active else "disabled")
         self.hardware_refresh_button.configure(state="normal" if active else "disabled")
@@ -786,7 +1212,10 @@ class ToneMatchApp:
                 messagebox.showerror(APP_NAME, str(exc))
         self.capture_devices = devices
         self.capture_label_map = {capture_device_label(item, self.language): item for item in devices}
-        self.capture_combo.configure(values=tuple(self.capture_label_map))
+        capture_values = tuple(self.capture_label_map)
+        self.capture_combo.configure(values=capture_values)
+        if hasattr(self, "spectrum_capture_combo"):
+            self.spectrum_capture_combo.configure(values=capture_values)
         selected = next((item for item in devices if item.id == self.capture_device_id), None)
         if selected is None:
             selected = next((item for item in devices if item.is_loopback), devices[0] if devices else None)
@@ -796,11 +1225,13 @@ class ToneMatchApp:
         else:
             self.capture_device_id = ""
             self.capture_var.set(tr("error.no_capture_devices", self.language))
+        self._update_spectrum_availability()
 
     def _capture_device_changed(self, _event: object | None = None) -> None:
         """녹음 콤보박스의 표시 라벨을 실제 장치 식별자로 저장한다."""
         device = self.capture_label_map.get(self.capture_var.get())
         self.capture_device_id = device.id if device else ""
+        self._update_spectrum_availability()
 
     def _toggle_recording(self) -> None:
         """현재 상태에 따라 PC 재생음 녹음을 시작하거나 중지 요청을 보낸다."""
@@ -808,6 +1239,13 @@ class ToneMatchApp:
             self.record_stop_event.set()
             self.status_var.set(tr("status.recording_stopped", self.language))
             self.record_button.configure(state="disabled")
+            return
+        if (
+            (self.worker and self.worker.is_alive())
+            or self._spectrum_is_running()
+            or self.hardware_probe_active
+        ):
+            messagebox.showinfo(APP_NAME, tr("dialog.wait_for_task", self.language))
             return
         if not self.capture_device_id:
             messagebox.showwarning(APP_NAME, tr("error.no_capture_devices", self.language))
@@ -834,6 +1272,7 @@ class ToneMatchApp:
         self._append_debug_log(f"record start · {self.capture_device_id} · limit={limit:.1f}s")
         self.record_worker = threading.Thread(target=self._recording_worker, args=(destination, limit), daemon=True)
         self.record_worker.start()
+        self._update_analysis_availability()
 
     def _recording_worker(self, destination: Path, limit: float) -> None:
         """오디오 녹음을 백그라운드에서 실행하고 UI 큐에 상태를 전달한다."""
@@ -992,6 +1431,9 @@ class ToneMatchApp:
         """검증된 요청을 별도 스레드에서 시작하고 취소·내보내기 상태를 설정한다."""
         if self.worker and self.worker.is_alive():
             return
+        if (self.record_worker and self.record_worker.is_alive()) or self._spectrum_is_running() or self.hardware_probe_active:
+            messagebox.showinfo(APP_NAME, tr("dialog.wait_for_task", self.language))
+            return
         try:
             path, start, end = self._parse_inputs()
         except AnalysisError as exc:
@@ -1033,6 +1475,7 @@ class ToneMatchApp:
         }
         self.worker = threading.Thread(target=self._analysis_worker, args=(request,), daemon=True)
         self.worker.start()
+        self._update_analysis_availability()
 
     def _cancel_analysis(self) -> None:
         """Demucs의 현재 30초 조각이 끝난 뒤 멈추도록 안전한 취소 신호를 보낸다."""
@@ -1055,7 +1498,7 @@ class ToneMatchApp:
             self.events.put(("error", exc, traceback.format_exc()))
 
     def _drain_events(self) -> None:
-        """백그라운드 분석·녹음 이벤트를 Tk 메인 스레드에서 순서대로 처리한다."""
+        """백그라운드 분석·녹음·스펙트럼 제어 이벤트를 Tk 메인 스레드에서 처리한다."""
         try:
             while True:
                 event = self.events.get_nowait()
@@ -1076,9 +1519,17 @@ class ToneMatchApp:
                     self._recording_failed(event[1], event[2])
                 elif event[0] == "hardware_status":
                     self._apply_hardware_status(event[1])
+                elif event[0] == "spectrum_finished":
+                    self._finish_spectrum_monitor(event[1])
+                elif event[0] == "spectrum_error":
+                    self._finish_spectrum_monitor(event[1], event[2], event[3])
         except queue.Empty:
             pass
-        self.root.after(80, self._drain_events)
+        if not self.closing:
+            try:
+                self.root.after(80, self._drain_events)
+            except tk.TclError:
+                pass
 
     def _recording_completed(self, path: Path, duration: float) -> None:
         """완료된 임시 녹음을 현재 분석 파일로 연결하고 버튼 상태를 복구한다."""
@@ -1216,15 +1667,18 @@ class ToneMatchApp:
         return f"{minutes:02d}:{remainder:02d}"
 
     def _update_analysis_availability(self) -> None:
-        """장치 지원, 분석 및 녹음 실행 상태를 보고 분석 버튼 활성 여부를 결정한다."""
+        """장치 지원과 분석·녹음·스펙트럼 상태를 보고 공통 컨트롤을 갱신한다."""
         busy = (
             (self.worker and self.worker.is_alive())
             or (self.record_worker and self.record_worker.is_alive())
+            or self._spectrum_is_running()
             or self.hardware_probe_active
         )
         enabled = is_supported_device(self.device_id) and not busy
         self.analyze_button.configure(state="normal" if enabled else "disabled")
+        self.language_combo.configure(state="disabled" if busy else "readonly")
         self._set_compute_controls_enabled(not busy)
+        self._update_spectrum_availability()
         self._update_copy_availability()
 
     def _update_copy_availability(self, _event: object | None = None) -> None:
@@ -1333,7 +1787,7 @@ class ToneMatchApp:
         destination = filedialog.asksaveasfilename(title=tr("dialog.debug_bundle_title", self.language), defaultextension=".zip", initialfile=initial, filetypes=(("ZIP", "*.zip"),))
         if not destination:
             return
-        source_names = ("app.py", "catalog.py", "debug_info.py", "devices.py", "engine.py", "i18n.py", "recorder.py", "report.py", "separator.py", "voicing.py")
+        source_names = ("app.py", "catalog.py", "debug_info.py", "devices.py", "engine.py", "i18n.py", "recorder.py", "report.py", "separator.py", "spectrum.py", "voicing.py")
         diagnostics = {
             "app_version": APP_VERSION,
             "build_date": BUILD_DATE,
@@ -1362,9 +1816,14 @@ class ToneMatchApp:
             messagebox.showerror(APP_NAME, tr("dialog.save_failed", self.language, error=exc))
 
     def _on_close(self) -> None:
-        """진행 중 작업에 중지 신호를 보내고 임시 녹음을 정리한 뒤 창을 닫는다."""
+        """모든 작업에 중지 신호를 보내고 임시 녹음을 정리한 뒤 창을 닫는다."""
+        self.closing = True
         self.analysis_cancel_event.set()
         self.record_stop_event.set()
+        if self.spectrum_stop_event is not None:
+            self.spectrum_stop_event.set()
+        self.spectrum_session_id += 1
+        self._clear_spectrum_frame_queue()
         self._save_settings()
         for path in self.temporary_recordings:
             try:

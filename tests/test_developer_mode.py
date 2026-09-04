@@ -9,6 +9,8 @@ import tkinter as tk
 import unittest
 from pathlib import Path
 
+import numpy as np
+
 
 MODULE_DIR = Path(__file__).resolve().parents[1]
 if str(MODULE_DIR) not in sys.path:
@@ -17,6 +19,7 @@ if str(MODULE_DIR) not in sys.path:
 import catalog  # noqa: E402
 import debug_info  # noqa: E402
 from app import ToneMatchApp  # noqa: E402
+from spectrum import analyze_spectrum_frame  # noqa: E402
 
 
 class DeveloperModeTests(unittest.TestCase):
@@ -52,10 +55,13 @@ class DeveloperModeTests(unittest.TestCase):
             "recorder.py",
             "report.py",
             "separator.py",
+            "spectrum.py",
             "voicing.py",
             "tests/test_developer_mode.py",
             "tests/test_engine.py",
+            "tests/test_recorder.py",
             "tests/test_separator.py",
+            "tests/test_spectrum.py",
             "tests/test_voicing.py",
             "tools/collect_licenses.py",
             "tools/generate_function_reference.py",
@@ -99,6 +105,33 @@ class DeveloperModeTests(unittest.TestCase):
             self.assertEqual(len(application.debug_nodes), len(debug_info.PIPELINE_BLOCKS))
             self.assertLessEqual(bounds[3], application.debug_canvas.winfo_height())
             self.assertIn("def ", application.debug_code.get("1.0", "end-1c"))
+        finally:
+            root.destroy()
+
+    def test_live_spectrum_tab_renders_latest_frame_without_hardware(self) -> None:
+        """실제 장치 없이 합성 FFT 프레임이 탭 수치와 두 캔버스에 표시돼야 한다."""
+        sample_rate = 48_000
+        fft_size = 2_048
+        time_axis = np.arange(fft_size, dtype=np.float64) / sample_rate
+        samples = 0.5 * np.sin(2.0 * np.pi * 1_125.0 * time_axis)
+        frame = analyze_spectrum_frame(samples, sample_rate, fft_size=fft_size)
+        root = tk.Tk()
+        root.geometry("1280x850+0+0")
+        try:
+            application = ToneMatchApp(root)
+            root.update()
+            application.notebook.select(application.spectrum_tab)
+            root.update()
+            application._apply_spectrum_frame(frame)
+            root.update_idletasks()
+            self.assertIn("dBFS", application.spectrum_rms_var.get())
+            self.assertIn("Hz", application.spectrum_centroid_var.get())
+            self.assertTrue(application.waveform_canvas.find_withtag("dynamic"))
+            self.assertTrue(application.spectrum_canvas.find_withtag("dynamic"))
+
+            application._offer_latest_spectrum(application.spectrum_session_id, frame)
+            application._offer_latest_spectrum(application.spectrum_session_id, frame)
+            self.assertEqual(application.spectrum_frames.qsize(), 1)
         finally:
             root.destroy()
 

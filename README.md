@@ -1,9 +1,11 @@
-# ToneMatch TMP 0.0.04
+# ToneMatch TMP 0.0.05
 
 ToneMatch TMP is an unofficial, pre-release Windows desktop tool that analyzes a
 local audio/video file or Windows playback capture, isolates the guitar stem,
 and recommends three starting-point tone chains for Fender Tone Master Pro.
-It also provides an experimental chord/voicing timeline. Version 0.0.04 adds
+It also provides an experimental chord/voicing timeline. Version 0.0.05 adds a
+live visual spectrum for the selected Windows input or playback-loopback device.
+The release/build date is 2026-09-05 KST. Version 0.0.04 introduced the existing
 compute-device diagnostics and route-aware Amp/Cab recommendations.
 
 한국어 설치·사용 안내는 [README_KO.md](README_KO.md)를 먼저 읽어 주세요.
@@ -16,6 +18,8 @@ compute-device diagnostics and route-aware Amp/Cab recommendations.
 - Demucs `htdemucs_6s` guitar-stem isolation for full mixes
 - Auto/CPU/CUDA compute preference with GPU, VRAM, inference-time, and real-time-factor diagnostics
 - Windows WASAPI loopback/audio-input recording when no local file is available
+- Live raw-input waveform and logarithmic 20 Hz-20 kHz spectrum for the selected
+  WASAPI input or playback loopback, with RMS/peak dBFS and spectral centroid
 - Three ordered TMP recipes with output-route-specific Amp/Cab rules, plus JSON, HTML, and clipboard output
 - Experimental chord, pitch-class, bass/inversion, register, spacing, and playable-candidate cues
 - Native NumPy vector optimization for repeated chord/voicing spectrum work
@@ -39,6 +43,14 @@ environment on a compatible NVIDIA PC. It was not hardware-validated on the
 CPU-only release machine. C++ is reserved for a later real-time audio/ASIO
 boundary; the current app and AI orchestration remain Python-based.
 
+The v0.0.05 Live Spectrum tab is a Python/NumPy visual analyzer, not a tone-match
+input path. It reads 2,048-frame blocks from the selected WASAPI shared-mode
+device (about 21.5 capture frames/s at 44.1 kHz), averages per-channel FFT power,
+smooths four frames, and lets the Tk UI poll a bounded latest-frame queue every
+50 ms (about 20 Hz). It shows the raw selected input without Demucs isolation and
+does not feed recipe matching. It is not a C++ engine, ASIO, WASAPI Exclusive, or
+a hard-real-time audio path.
+
 ## Develop and build
 
 Use 64-bit Python 3.12 on Windows. The portable development ZIP includes the
@@ -56,6 +68,7 @@ Set-Location .\ToneMatchTMP
 py -3.12 -m venv ..\.venv
 & ..\.venv\Scripts\python.exe -m pip install -r requirements.txt
 & ..\.venv\Scripts\python.exe -m unittest discover -s tests -v
+& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.05.json
 & ..\.venv\Scripts\python.exe app.py
 ```
 

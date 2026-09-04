@@ -8,18 +8,56 @@
 from __future__ import annotations
 
 
-APP_VERSION = "0.0.04"
+APP_VERSION = "0.0.05"
 TARGET_FIRMWARE = "1.8.58"
 MODEL_GUIDE_REVISION = "Rev. J (2026-07)"
-BUILD_DATE = "2026-09-04"
+BUILD_DATE = "2026-09-05"
 
 
 # 앱 내부의 변경 기록 화면과 배포 문서가 함께 사용하는 단일 원본이다.
-# 이후 패치는 0.0.02, 0.0.03, 0.0.04처럼 한 단계씩 올리고 최신 항목을 맨 위에 둔다.
+# 이후 패치는 0.0.02, 0.0.03, 0.0.04, 0.0.05처럼 한 단계씩 올리고 최신 항목을 맨 위에 둔다.
 CHANGELOG: list[dict] = [
     {
-        "version": "0.0.04",
+        "version": "0.0.05",
         "date": BUILD_DATE,
+        "status": "공개 개발 프리뷰",
+        "status_en": "Public development preview",
+        "changes": [
+            "선택한 Windows 오디오 입력 또는 PC 재생음 loopback을 여는 실시간 스펙트럼 탭 추가",
+            "입력 파형, 20 Hz~20 kHz 로그 스펙트럼, RMS·Peak dBFS와 스펙트럼 중심 주파수 표시",
+            "좌우 역상도 사라지지 않도록 채널별 NumPy FFT 파워를 평균하고 무음·NaN·무한대 입력을 안전하게 처리",
+            "2,048 샘플 블록과 최근 4프레임 선형 파워 평활화로 약 20 Hz의 안정적인 시각 갱신 제공",
+            "최신 프레임 하나만 유지하는 bounded 큐와 세션별 취소 신호로 장시간 모니터링의 지연·메모리 증가 방지",
+            "녹음·AI 분석·하드웨어 검사·언어 전환과 실시간 장치 사용을 상호 배타적으로 관리",
+            "스펙트럼·녹음 계층·Tk Canvas 표시를 실제 장치 없이 검증하는 결정론적 회귀 테스트 추가",
+        ],
+        "changes_en": [
+            "Added a Live Spectrum tab that opens the selected Windows audio input or PC-playback loopback device",
+            "Shows the input waveform, 20 Hz-20 kHz log spectrum, RMS/peak dBFS, and spectral centroid",
+            "Averages per-channel NumPy FFT power so antiphase stereo remains visible and safely sanitizes silence, NaN, and infinite samples",
+            "Uses 2,048-sample blocks and a four-frame linear-power smoother for a stable visual refresh near 20 Hz",
+            "Keeps only the newest frame in a bounded queue and uses per-session cancellation to prevent long-session lag and memory growth",
+            "Mutually excludes live-device use from recording, AI analysis, hardware probing, and language rebuilds",
+            "Added deterministic hardware-free regression coverage for spectrum DSP, capture streaming, and Tk Canvas rendering",
+        ],
+        "known_issues": [
+            "실시간 스펙트럼은 선택한 원시 입력을 보여주는 시각 분석기이며 Demucs 분리·레시피 추천과 아직 연결되지 않음",
+            "WASAPI 공유 모드 기반 약 20 Hz 화면 갱신으로, ASIO·WASAPI Exclusive·하드 실시간 처리는 후속 C++ 엔진 범위임",
+            "실제 지연과 사용 가능 장치는 Windows 드라이버·오디오 인터페이스·loopback 지원에 따라 달라짐",
+            "현재 포터블 EXE는 CPU 런타임을 포함하며 CUDA는 호환 NVIDIA PC의 별도 소스 환경에서 설치·재빌드해야 함",
+            "코드 서명 인증서가 없는 개발 빌드라 Windows가 실행 경고를 표시할 수 있음",
+        ],
+        "known_issues_en": [
+            "Live Spectrum visualizes the selected raw input and is not yet connected to Demucs isolation or recipe recommendations",
+            "It uses WASAPI shared mode with a visual refresh near 20 Hz; ASIO, WASAPI Exclusive, and hard real-time processing remain future C++ engine work",
+            "Actual latency and available devices depend on Windows drivers, the audio interface, and loopback support",
+            "The portable EXE contains the CPU runtime; CUDA requires a separate source environment and rebuild on a compatible NVIDIA PC",
+            "This unsigned development build may trigger a Windows warning",
+        ],
+    },
+    {
+        "version": "0.0.04",
+        "date": "2026-09-04",
         "status": "공개 개발 프리뷰",
         "status_en": "Public development preview",
         "changes": [

@@ -1,0 +1,87 @@
+{
+  "schema": "tonematch-qa/v1",
+  "app_version": "0.0.05",
+  "tested_at": "2026-09-05T08:05:08+09:00",
+  "platform": "Microsoft Windows 11 Education 10.0.26200 x64 / Python 3.12.14",
+  "checks": {
+    "compileall": "passed",
+    "unit_tests": {
+      "status": "passed",
+      "count": 46,
+      "warnings_as_errors": true,
+      "coverage_focus": [
+        "calibrated per-channel FFT power, antiphase stereo, silence, non-finite input, and Nyquist bounds",
+        "bounded four-frame linear-power smoothing and frequency-grid resets",
+        "stream cancellation, normalized stereo blocks, device failures, and resource cleanup without hardware",
+        "mapped Tk Live Spectrum tab metrics, waveform/spectrum Canvas rendering, and newest-frame queue behavior",
+        "existing compute-device, recipe-route, export, voicing, and developer-source regressions"
+      ]
+    },
+    "source_self_test": {
+      "status": "passed",
+      "ok": true,
+      "recipes": 3,
+      "developer_blocks": 11,
+      "english_localization": true,
+      "ffmpeg_analysis": true
+    },
+    "runtime_probe": {
+      "status": "passed",
+      "demucs": "4.1.0",
+      "torch": "2.13.0+cpu",
+      "model": "htdemucs_6s",
+      "resolved_device": "cpu",
+      "cuda_available": false,
+      "cpu_fallback_observed": true
+    },
+    "capture_device_enumeration": {
+      "status": "passed",
+      "total": 4,
+      "loopback": 3,
+      "input": 1,
+      "audio_captured": false
+    },
+    "spectrum_synthetic_benchmark": {
+      "status": "passed",
+      "frames": 2000,
+      "fft_size": 2048,
+      "channels": 2,
+      "sample_rate_hz": 44100,
+      "mean_processing_ms": 0.7081,
+      "throughput_frames_per_second": 1412.2,
+      "note": "Local synthetic throughput observation, not a cross-device performance guarantee."
+    },
+    "ui_automated_smoke": {
+      "status": "passed",
+      "mapped_tk_window": true,
+      "live_spectrum_tab": true,
+      "waveform_canvas": true,
+      "log_spectrum_canvas": true,
+      "metrics": ["RMS dBFS", "Peak dBFS", "spectral centroid"]
+    },
+    "packaged_exe_self_test": {
+      "status": "passed",
+      "ok": true,
+      "app_version": "0.0.05",
+      "recipes": 3,
+      "developer_blocks": 11,
+      "ffmpeg_analysis": true
+    },
+    "portable_archive": {
+      "status": "passed",
+      "fresh_extract": true,
+      "manifest_entries": 4443,
+      "manifest_file_hashes": "passed",
+      "required_v0.0.05_sources": "present",
+      "model_weights_absent": true,
+      "personal_paths_in_public_log": "absent"
+    }
+  },
+  "not_run": [
+    "Actual microphone or loopback samples were not captured to avoid collecting private audio without a deliberate manual test; device enumeration and hardware-free stream tests passed.",
+    "Native visual inspection of the packaged Windows GUI was not run; mapped Tk widget and Canvas automation passed.",
+    "Actual NVIDIA CUDA inference and VRAM measurement were not run because this release PC has a CPU-only PyTorch runtime and no compatible CUDA device.",
+    "ASIO, WASAPI Exclusive, and a C++ real-time engine are roadmap work and are not implemented in v0.0.05.",
+    "Code signing was not performed."
+  ]
+}

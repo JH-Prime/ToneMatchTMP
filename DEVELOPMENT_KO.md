@@ -1,10 +1,14 @@
-# ToneMatch TMP 개발자 안내서 · 0.0.04
+# ToneMatch TMP 개발자 안내서 · 0.0.05
 
 이 문서는 구현 구조를 빠르게 이해하기 위한 한국어 요약입니다. 모든 함수의
 이름·원본 줄·docstring은 `FUNCTION_REFERENCE_KO.md`, 새 PC 재구성과 릴리스
 절차는 `DEVELOPER_HANDOFF_KO_EN.md`를 함께 보세요.
 
-## 처리 시퀀스
+현재 릴리스·빌드 기준일은 2026-09-05 KST입니다. v0.0.05는 기존 v0.0.04의
+오프라인 분석·CUDA 진단·Amp/Cab 계약을 유지하면서 별도의 원시 입력 실시간
+스펙트럼 경로를 추가합니다.
+
+## 파일 분석·레시피 처리 시퀀스
 
 ```text
 [01 앱 초기화]
@@ -34,21 +38,44 @@
 각 블록을 클릭하면 그 단계의 설명, 입력·출력, 실제 배포 함수 원문과 줄 번호가
 나옵니다. 함수에는 모두 한국어 docstring이 있으며 테스트가 누락을 검사합니다.
 
+## 실시간 스펙트럼 처리 시퀀스
+
+실시간 탭은 위 레시피 처리 시퀀스에 신호를 공급하지 않는 독립 경로입니다.
+
+```text
+[선택한 WASAPI 오디오 입력 또는 PC 재생음 loopback]
+       ↓ 44.1 kHz · 2채널 · 2,048-frame 블록(초당 약 21.5개)
+[채널별 Hann-window FFT power → 채널 power 평균]
+       ↓
+[20 Hz~20 kHz bin · RMS/Peak dBFS · 스펙트럼 중심 주파수]
+       ↓
+[최근 4프레임 선형 power 평활화 · 최신 파형 유지]
+       ↓
+[용량 1 bounded 큐: 오래된 화면 프레임 교체]
+       ↓ UI가 50 ms마다 poll(약 20 Hz)
+[Tk Canvas: 입력 파형 + 로그 주파수 스펙트럼 + 수치]
+```
+
+블록 캡처 주기와 UI 그리기 주기를 분리했으므로 UI가 잠시 늦어져도 측정 프레임이
+무한히 쌓이지 않습니다. 각 세션은 별도 중지 이벤트와 세션 ID를 사용해 종료 뒤의
+낡은 프레임을 버립니다.
+
 ## 모듈 구성
 
 | 파일 | 역할 |
 |---|---|
-| `app.py` | Tkinter 화면, 한·영 전환, 연산 장치·성능 진단, 작업 스레드, 녹음·취소, 결과/보이싱 탭, 로그, 디버그 번들, 자체 진단 |
+| `app.py` | Tkinter 화면, 한·영 전환, 연산 장치·성능 진단, 분석·녹음·스펙트럼 작업 스레드, Canvas 표시, 취소, 결과/보이싱 탭, 로그, 디버그 번들, 자체 진단 |
 | `engine.py` | FFmpeg 구간 변환, PCM 로딩, NumPy DSP, 기타 분리 호출, 출력 경로별 Amp/Cab 조립, 템플릿 매칭과 결과 스키마 |
 | `separator.py` | Demucs `htdemucs_6s` 모델 캐시 확인, 자동/CPU/CUDA 선택·폴백, VRAM/추론 벤치마크, 30초 외부 조각, guitar stem WAV |
-| `recorder.py` | SoundCard 기반 Windows WASAPI loopback/오디오 입력 열거와 PCM16 녹음 |
+| `recorder.py` | SoundCard 기반 Windows WASAPI loopback/오디오 입력 열거, PCM16 녹음, 실시간 2,048-frame float32 블록 전달 |
+| `spectrum.py` | 입력 정규화, 채널별 FFT power, 20 Hz~20 kHz 스펙트럼·dBFS·중심 주파수 계산과 4프레임 평활화 |
 | `voicing.py` | 캐시·NumPy 벡터 연산 기반 시간창 chroma, 제한된 코드 템플릿, 베이스/역위·음역·간격과 연주 후보(실험) |
 | `catalog.py` | 앱/펌웨어/가이드 버전, 패치 기록, 18개 Tone Master Pro 톤 템플릿 |
 | `devices.py` | Tone Master Pro 지원 프로필과 Quad Cortex/Helix 미구현 자리 |
 | `i18n.py` | 한국어/영어 문자열, 안정적인 선택 코드와 화면 라벨 변환 |
 | `report.py` | 언어별 클립보드 텍스트와 독립형 HTML 결과 |
 | `debug_info.py` | 11개 처리 블록, 진행률 매핑, AST 기반 실제 소스 추출 |
-| `tests/` | 엔진·내보내기·보이싱·개발자 모드 회귀 테스트 |
+| `tests/` | 엔진·내보내기·보이싱·스펙트럼 DSP·녹음 스트림·Tk 표시·개발자 모드 회귀 테스트 |
 | `tools/` | 함수 색인, 라이선스 목록, 포터블 manifest 생성 도구 |
 | `ToneMatchTMP.spec` | PyInstaller onedir와 동적 Demucs/Hugging Face 모듈 수집 |
 | `build.ps1` | 테스트, 라이선스 수집, 빌드, 자체 진단, 포터블 개발 ZIP, SHA-256 |
@@ -64,6 +91,24 @@
 - YouTube 스트림을 다운로드하지 않습니다. 권한 있는 로컬 파일 또는 브라우저의
   정상 재생음을 WASAPI loopback으로 녹음합니다.
 - Tone Master Pro 프리셋에 자동 쓰지 않고 사용자가 추천값을 수동 입력합니다.
+
+### v0.0.05 실시간 스펙트럼 경계
+
+- 녹음 목록과 같은 선택 WASAPI 입력/loopback을 공유 모드로 엽니다. 44.1 kHz에서
+  2,048-frame 블록은 초당 약 21.5개이며, UI는 50 ms마다 최신 프레임을 poll해
+  약 20 Hz로 갱신합니다. 둘은 같은 시간 기준을 뜻하지 않습니다.
+- 최신 PCM 블록의 채널별 FFT power를 먼저 계산하고 채널 사이에서 power를 평균합니다.
+  따라서 좌우 역상 신호가 모노 평균으로 사라지는 문제를 피합니다.
+- 스펙트럼과 RMS는 최근 4프레임의 선형 power 평균, Peak는 같은 창의 최댓값,
+  파형은 최신 프레임을 사용합니다. 출력은 로그 20 Hz~20 kHz 스펙트럼,
+  RMS/Peak dBFS와 스펙트럼 중심 주파수입니다.
+- 작업 스레드에서 UI로 보내는 `Queue(maxsize=1)`는 가득 차면 이전 값을 버리고
+  최신 프레임만 남깁니다. 중지 뒤에는 마지막으로 그린 프레임을 유지합니다.
+- 원시 입력 시각화만 제공하며 Demucs 분리, `ToneFeatures`, 템플릿 매칭,
+  레시피 결과와 연결하지 않습니다. 녹음·분석·하드웨어 검사·언어 재구성과도
+  동시에 실행하지 않아 하나의 캡처 장치를 두 작업이 경쟁하지 않게 합니다.
+- 이 경로는 Python/NumPy + SoundCard/WASAPI 공유 모드입니다. C++ 오디오 콜백,
+  ASIO, WASAPI Exclusive 또는 하드 실시간 엔진으로 표현하지 않습니다.
 
 ## 연산 장치와 출력 경로 경계
 
@@ -82,13 +127,14 @@
 
 ## Python과 C++의 경계
 
-v0.0.04는 전체 앱을 C++로 재작성하지 않습니다. NumPy와 PyTorch가 이미 사용하는
-컴파일된 네이티브 벡터·텐서 연산에 반복 계산을 모아 현재 오프라인 분석을 최적화합니다.
-Python은 UI, 파일 처리, Demucs 실행, 레시피와 리포트 조립의 기준 구현으로 유지합니다.
+v0.0.04는 전체 앱을 C++로 재작성하지 않고 NumPy와 PyTorch가 이미 사용하는
+컴파일된 네이티브 벡터·텐서 연산에 반복 계산을 모아 오프라인 분석을 최적화했습니다.
+v0.0.05도 Python을 UI, 파일 처리, Demucs 실행, 레시피·리포트 조립과 실시간
+스펙트럼의 기준 구현으로 유지합니다.
 
 후속 실시간 톤 매칭에서 지연 시간이 엄격한 오디오 콜백, lock-free 링 버퍼, FFT와
 ASIO 입출력이 필요해질 때 그 경계를 C++ 모듈로 분리하고 Python에는 안정적인 API만
-노출합니다. 이 계획은 v0.0.04의 구현 완료 항목이 아닙니다.
+노출합니다. 이 계획은 v0.0.04에도 v0.0.05에도 구현된 항목이 아닙니다.
 
 ## 코드 보이싱 결과의 의미
 
@@ -106,7 +152,7 @@ ASIO 입출력이 필요해질 때 그 경계를 C++ 모듈로 분리하고 Pyth
 # 프로젝트 폴더의 형제 위치에 Python 3.12 가상환경을 만든 경우
 & ..\.venv\Scripts\python.exe -m compileall -q .
 & ..\.venv\Scripts\python.exe -m unittest discover -s tests -v
-& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.04.json
+& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.05.json
 & ..\.venv\Scripts\python.exe app.py
 ```
 
@@ -141,7 +187,7 @@ ZIP에서 해당 파일을 복사한 뒤 실행하세요.
 1. 재현 테스트를 추가하고 코드를 수정합니다.
 2. 모든 함수의 한국어 docstring과 사용자용 한·영 문자열을 유지합니다.
 3. `catalog.APP_VERSION`, 최신 `CHANGELOG`, `version_info.txt`, spec, 문서와
-   파일명을 `0.0.05`처럼 정확히 한 단계 올립니다.
+   파일명을 다음 패치인 `0.0.06`으로 정확히 한 단계 올립니다.
 4. 함수 색인과 제3자 라이선스 목록을 다시 생성합니다.
 5. 단위 테스트, 소스 자체 진단, 실제 짧은 Demucs 분리, 패키지 자체 진단을
    통과시킵니다.

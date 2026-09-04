@@ -49,8 +49,8 @@ PIPELINE_BLOCKS: list[dict] = [
         "title_en": "Input validation",
         "short": "파일/녹음 · 구간 · 조건",
         "short_en": "File/recording · range · options",
-        "description": "로컬 파일 또는 PC 재생음 녹음을 준비하고, 최대 20분 구간·장치·픽업·AI 분리·출력 조건을 검사합니다.",
-        "description_en": "Prepares a local file or PC-playback recording and validates the up-to-20-minute range, device, pickup, AI-isolation, and output settings.",
+        "description": "로컬 파일 또는 PC 재생음 녹음을 준비하고, 선택한 입력의 실시간 스펙트럼을 안전하게 모니터링하며, 최대 20분 구간·장치·픽업·AI 분리·출력 조건을 검사합니다.",
+        "description_en": "Prepares a local file or PC-playback recording, safely monitors the selected input spectrum, and validates the up-to-20-minute range, device, pickup, AI-isolation, and output settings.",
         "inputs": "파일/녹음, 시작/끝 초, 장치, 픽업, 분리, 출력",
         "inputs_en": "File/recording, range, device, pickup, isolation, output",
         "outputs": "검증된 분석 요청",
@@ -62,7 +62,12 @@ PIPELINE_BLOCKS: list[dict] = [
             ("app.py", "ToneMatchApp._start_analysis"),
             ("app.py", "ToneMatchApp._analysis_worker"),
             ("app.py", "ToneMatchApp._drain_events"),
+            ("app.py", "ToneMatchApp._build_spectrum_tab"),
+            ("app.py", "ToneMatchApp._toggle_spectrum_monitor"),
+            ("app.py", "ToneMatchApp._spectrum_monitor_worker"),
+            ("app.py", "ToneMatchApp._drain_spectrum_frames"),
             ("recorder.py", "list_capture_devices"),
+            ("recorder.py", "monitor_capture_device"),
             ("recorder.py", "record_device_to_wav"),
         ],
         "progress": (0, 7),
@@ -119,13 +124,18 @@ PIPELINE_BLOCKS: list[dict] = [
         "title_en": "DSP feature extraction",
         "short": "FFT · 레벨 · 공간 · 반복",
         "short_en": "FFT · level · space · repeats",
-        "description": "프레임 FFT, 밴드 에너지, 다이내믹, 제로 크로싱, 온셋 자기상관과 스테레오 폭으로 톤 지문을 계산합니다.",
-        "description_en": "Computes a tone fingerprint from frame FFT, band energy, dynamics, zero crossings, onset autocorrelation, and stereo width.",
+        "description": "실시간 입력은 채널별 FFT와 롤링 파워 평균으로 파형·스펙트럼·RMS·Peak·중심 주파수를 표시하고, 파일 분석은 밴드 에너지·다이내믹·제로 크로싱·온셋 자기상관·스테레오 폭으로 톤 지문을 계산합니다.",
+        "description_en": "For live input, uses per-channel FFT and rolling power averages to show waveform, spectrum, RMS, peak, and centroid; for file analysis, computes a tone fingerprint from band energy, dynamics, zero crossings, onset autocorrelation, and stereo width.",
         "inputs": "스테레오 PCM",
         "inputs_en": "Stereo PCM",
         "outputs": "ToneFeatures 원본 측정값",
         "outputs_en": "Raw ToneFeatures measurements",
         "symbols": [
+            ("spectrum.py", "analyze_spectrum_frame"),
+            ("spectrum.py", "SpectrumSmoother.push"),
+            ("app.py", "ToneMatchApp._apply_spectrum_frame"),
+            ("app.py", "ToneMatchApp._draw_waveform"),
+            ("app.py", "ToneMatchApp._draw_spectrum"),
             ("engine.py", "_frames"),
             ("engine.py", "_frame_rms"),
             ("engine.py", "_band_ratio"),
@@ -360,11 +370,11 @@ def code_for_block(block_id: str) -> str:
 def changelog_as_text(entries: list[dict], language: str = "ko") -> str:
     """구조화된 변경 기록을 앱 화면용 한국어 또는 영어 텍스트로 변환한다."""
     if language == "en":
-        lines = ["ToneMatch TMP · Changelog", "Patch rule: 0.0.01 → 0.0.02 → 0.0.03 → 0.0.04 …", ""]
+        lines = ["ToneMatch TMP · Changelog", "Patch rule: 0.0.01 → 0.0.02 → 0.0.03 → 0.0.04 → 0.0.05 …", ""]
         changes_heading = "Changes"
         limits_heading = "Known limitations"
     else:
-        lines = ["ToneMatch TMP · 변경 기록", "패치 규칙: 0.0.01 → 0.0.02 → 0.0.03 → 0.0.04 …", ""]
+        lines = ["ToneMatch TMP · 변경 기록", "패치 규칙: 0.0.01 → 0.0.02 → 0.0.03 → 0.0.04 → 0.0.05 …", ""]
         changes_heading = "변경사항"
         limits_heading = "알려진 제한"
     for entry in entries:

@@ -8,10 +8,84 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 | 버전 | 상태 | 범위 |
 |---|---|---|
+| `0.0.05` | 포터블 개발 프리뷰 빌드·검증 완료 | Windows 입력/loopback 실시간 파형·FFT 스펙트럼, bounded 최신 프레임 처리 |
 | `0.0.04` | 포터블 개발 프리뷰 빌드·검증 완료 | 자동/CPU/CUDA 진단·벤치마크, NumPy 네이티브 최적화, 출력 경로별 Amp/Cab 체인 정정 |
 | `0.0.03` | 포터블 개발 프리뷰 빌드 완료 | 포터블 개발 ZIP, 한·영 handoff, 로그·빌드 이력, NumPy 코드/보이싱 분석(실험) |
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
+
+## 0.0.05 — Live input spectrum analyzer
+
+- 작업일 / Work date: `2026-09-05 KST`
+- 상태 / Status: `BUILT AND VERIFIED — unsigned CPU portable developer preview`
+- 기반 / Based on: v0.0.04 GPU diagnostics, native NumPy optimization, and route-aware recipe pipeline
+
+### 이 버전에 속하는 변경 / Changes owned by this version
+
+- 선택한 Windows 오디오 입력 또는 PC 재생음 loopback의 실시간 모니터링
+- 2,048 샘플 블록의 입력 파형과 20 Hz~20 kHz 로그 주파수 스펙트럼 표시
+- RMS·Peak dBFS와 스펙트럼 중심 주파수 수치 표시
+- 좌우 역상 신호가 사라지지 않는 채널별 NumPy FFT 파워 평균과 Hann 창 dBFS 보정
+- 무음·NaN·무한대 입력의 안전한 표시 하한 처리와 나이퀴스트 주파수 제한
+- 최근 4프레임의 선형 파워 평활화, 최신 프레임 하나만 보관하는 bounded UI 큐
+- worker 스레드와 Tk UI 분리, 세션 ID 기반 낡은 이벤트 차단과 중지 후 자원 정리
+- 녹음·AI 분석·하드웨어 검사·언어 전환과 실시간 장치 사용의 상호 배타 제어
+- 스펙트럼 DSP·스트림·Tk Canvas를 실제 오디오 캡처 없이 검증하는 결정론적 테스트
+
+### 검증 경계 / Verification boundary
+
+v0.0.05는 Python 조정 계층과 NumPy의 컴파일된 FFT 연산을 사용합니다. ASIO,
+WASAPI Exclusive, 하드 실시간 콜백과 C++ 엔진은 이 버전에 포함되지 않습니다.
+실시간 스펙트럼은 선택한 원시 입력의 시각화이며, Demucs 분리나 톤 레시피 추천에
+직접 연결되지 않습니다.
+
+The analyzer uses Python orchestration and NumPy's compiled FFT operations. ASIO,
+WASAPI Exclusive, hard-real-time callbacks, and a C++ engine are not part of this
+release. It visualizes the selected raw input and does not feed Demucs or recipes yet.
+
+Windows WASAPI 장치 열거는 통과했지만 사적 시스템 소리나 마이크를 의도치 않게
+수집하지 않도록 실제 블록 캡처는 자동 QA에서 수행하지 않았습니다. 패키지 GUI의
+수동 시각 점검도 미실행이며, mapped Tk 창에서 수치와 두 Canvas 렌더링을 자동 검증했습니다.
+
+### 릴리스 게이트 결과 / Release gate result
+
+- [x] 앱·spec·Windows 파일 정보·빌드 스크립트의 `0.0.05` 동기화
+- [x] Python 3.12에서 경고를 오류로 처리한 최종 자동 테스트 `46/46` 통과
+- [x] 소스 자체 진단 `ok: true`, 레시피 3개·개발자 블록 11개·FFmpeg 분석 확인
+- [x] Windows WASAPI 장치 열거: 입력 1개, loopback 3개
+- [x] 합성 스테레오 2,048 샘플 FFT·평활화 2,000회 처리 관찰값 평균 `0.7081 ms/frame`
+- [x] 패키지 EXE 자체 진단 `ok: true`, 앱 버전·레시피 3개·개발자 블록 11개 확인
+- [x] 새 임시 폴더 ZIP 압축 해제와 `MANIFEST.json` 파일 `4,443/4,443` 크기·SHA-256 재검증
+- [x] 필수 v0.0.05 소스·테스트·FFmpeg 포함, 모델 가중치 없음, 공개 로그 개인 경로 없음
+- [ ] 실제 마이크/loopback 블록 캡처, 패키지 GUI 수동 시각 점검과 코드 서명
+- [ ] 실제 CUDA GPU 추론 — `NOT TESTED: CPU-only release environment`
+
+### 최종 산출물 기록 / Final artifact record
+
+ZIP은 자기 자신의 해시를 내부 문서에 넣을 수 없으므로, 모든 최종 바이트·SHA-256은
+ZIP과 함께 배포하는 `ToneMatchTMP-v0.0.05-SHA256SUMS.txt`를 기준으로 합니다.
+`MANIFEST.json`은 ZIP 내부 각 파일을 별도로 검증합니다.
+
+| 산출물 | 바이트 | SHA-256 | 검증 |
+|---|---:|---|---|
+| `ToneMatchTMP-v0.0.05.exe` | 형제 체크섬 파일에서 확인 | 형제 체크섬 파일에서 확인 | 패키지 자체 진단 통과 |
+| `ToneMatchTMP-v0.0.05-Windows-x64-Portable-Dev.zip` | 형제 체크섬 파일에서 확인 | 형제 체크섬 파일에서 확인 | 새 임시 폴더 압축 해제·manifest 재검증 |
+| `ToneMatchTMP-v0.0.05-SELF-TEST.json` | 형제 체크섬 파일에서 확인 | 형제 체크섬 파일에서 확인 | `ok: true` |
+| `ToneMatchTMP-v0.0.05-build.log` | manifest/형제 체크섬 파일에서 확인 | manifest/형제 체크섬 파일에서 확인 | 사용자 홈·프로젝트 경로 일반화 |
+
+ZIP 내용을 바꾸거나 문서를 갱신하면 형제 체크섬과 manifest를 반드시 다시 계산합니다.
+
+### 권장 로그 생성 / Suggested build log
+
+```powershell
+$buildLog = Join-Path (Get-Location) "ToneMatchTMP-v0.0.05-BUILD.log"
+Start-Transcript -LiteralPath $buildLog -Force
+try {
+    .\build.ps1
+} finally {
+    Stop-Transcript
+}
+```
 
 ## 0.0.04 — Compute diagnostics and route-aware Amp/Cab
 

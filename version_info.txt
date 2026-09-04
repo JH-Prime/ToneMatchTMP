@@ -2,8 +2,8 @@
 # PyInstaller가 Windows 탐색기의 파일 속성에 넣는 버전 정보다.
 VSVersionInfo(
   ffi=FixedFileInfo(
-    filevers=(0, 0, 4, 0),
-    prodvers=(0, 0, 4, 0),
+    filevers=(0, 0, 5, 0),
+    prodvers=(0, 0, 5, 0),
     mask=0x3f,
     flags=0x0,
     OS=0x40004,
@@ -17,12 +17,12 @@ VSVersionInfo(
         u'041204B0',
         [StringStruct(u'CompanyName', u'ToneMatch TMP contributors'),
          StringStruct(u'FileDescription', u'ToneMatch TMP - unofficial Tone Master Pro tone recipe tool'),
-         StringStruct(u'FileVersion', u'0.0.04'),
+         StringStruct(u'FileVersion', u'0.0.05'),
          StringStruct(u'InternalName', u'ToneMatchTMP'),
          StringStruct(u'LegalCopyright', u'Copyright (c) 2026 ToneMatch TMP contributors'),
-         StringStruct(u'OriginalFilename', u'ToneMatchTMP-v0.0.04.exe'),
+         StringStruct(u'OriginalFilename', u'ToneMatchTMP-v0.0.05.exe'),
          StringStruct(u'ProductName', u'ToneMatch TMP'),
-         StringStruct(u'ProductVersion', u'0.0.04')])
+         StringStruct(u'ProductVersion', u'0.0.05')])
     ]),
     VarFileInfo([VarStruct(u'Translation', [0x0412, 1200])])
   ]
