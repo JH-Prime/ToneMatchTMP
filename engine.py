@@ -615,20 +615,32 @@ def _reverb_parameters(model: str, f: ToneFeatures) -> dict[str, str]:
     return {"MIX": _parameter(mix), "DECAY": _parameter(decay), "SPILLOVER SWITCH": "ON"}
 
 
+def _parse_mic_position(value: object) -> tuple[str, str]:
+    """카탈로그의 위치·거리·축 문자열을 검증해 TMP 표시값과 축 값으로 분리한다."""
+    parts = [part.strip() for part in str(value or "").split("/")]
+    if len(parts) != 3 or not parts[0] or not parts[1]:
+        raise ValueError(f"잘못된 캐비닛 마이크 위치 형식입니다: {value!r}")
+    axis_code = parts[2].lower()
+    if axis_code not in {"on-axis", "off-axis"}:
+        raise ValueError(f"지원하지 않는 캐비닛 마이크 축입니다: {parts[2]!r}")
+    distance_text = parts[1].lower().removesuffix("in").strip()
+    try:
+        distance = float(distance_text)
+    except ValueError as exc:
+        raise ValueError(f"잘못된 캐비닛 마이크 거리입니다: {parts[1]!r}") from exc
+    if not math.isfinite(distance) or distance < 0:
+        raise ValueError(f"캐비닛 마이크 거리는 0 이상이어야 합니다: {parts[1]!r}")
+    return f"{parts[0]} / {parts[1]}", "ON AXIS" if axis_code == "on-axis" else "OFF AXIS"
+
+
 def _cabinet_parameters(template: dict, f: ToneFeatures) -> dict[str, str]:
-    """템플릿 위치 문자열을 TMP의 마이크 위치·축·컷 필터 항목으로 분리한다."""
-    position_parts = [part.strip() for part in str(template["mic_position"]).split("/")]
-    axis = "OFF AXIS"
-    if position_parts and "on-axis" in position_parts[-1].lower():
-        axis = "ON AXIS"
-        position_parts = position_parts[:-1]
-    elif position_parts and "off-axis" in position_parts[-1].lower():
-        position_parts = position_parts[:-1]
+    """검증한 TMP 캐비닛 마이크 위치·축과 톤 기반 컷 필터 시작값을 만든다."""
+    position, axis = _parse_mic_position(template["mic_position"])
     high_cut = int(round(6800 + 3000 * (1.0 - f.brightness)))
     low_cut = int(round(68 + 35 * (1.0 - f.body)))
     return {
         "MIC": template["mic"],
-        "MIC POSITION": " / ".join(position_parts),
+        "MIC POSITION": position,
         "AXIS": axis,
         "LOW CUT FILTER": f"{low_cut} Hz",
         "HIGH CUT FILTER": f"{high_cut} Hz",
@@ -728,9 +740,6 @@ def _recipe_from_template(
         blocks.append(_make_block("Delay", template["delay"], delay_params, "reason.delay", language))
     if template["reverb"]:
         blocks.append(_make_block("Reverb", template["reverb"], _reverb_parameters(template["reverb"], f), "reason.reverb", language))
-    if use_cab:
-        blocks.append(_make_block("EQ", "Low/High Cut Filter", {"LC BYPASS": "OFF", "LC FREQ": f"{int(round(68 + 35 * (1.0 - f.body)))} Hz", "LC ORDER": "2nd", "HC BYPASS": "OFF", "HC FREQ": f"{int(round(6800 + 3000 * (1.0 - f.brightness)))} Hz", "HC ORDER": "2nd"}, "reason.eq", language))
-
     for index, block in enumerate(blocks, start=1):
         block["order"] = index
 
@@ -742,8 +751,11 @@ def _recipe_from_template(
         limitations.append(tr("limit.full_mix", language))
     if output_mode == "power_amp_cab":
         limitations.append(tr("limit.real_cab", language))
+        if template.get("cab"):
+            limitations.append(tr("limit.reference_cab", language, cabinet=template["cab"]))
     if output_mode == "amp_front":
         limitations.append(tr("limit.amp_front", language))
+    applicability = "high" if output_mode == "frfr" else "medium" if output_mode == "power_amp_cab" else "low"
     return {
         "template_id": template["id"],
         "name": template["name_en"] if language == "en" else template["name"],
@@ -752,6 +764,16 @@ def _recipe_from_template(
         "match_percent": int(round(confidence * 100)),
         "tags": template["tags"],
         "pickup_correction": tr(correction["note_key"], language),
+        "output_mode": output_mode,
+        "output_mode_label": choice_label("output", output_mode, language),
+        "route_applicability": applicability,
+        "route_applicability_label": tr(f"route.{applicability}", language),
+        "reference_amp": template.get("amp"),
+        "reference_cabinet": template.get("cab"),
+        "amp_included": bool(template.get("amp") and use_amp),
+        "cabinet_included": bool(template.get("cab") and use_cab),
+        "omitted_reference_amp": template.get("amp") if template.get("amp") and not use_amp else None,
+        "omitted_reference_cabinet": template.get("cab") if template.get("cab") and not use_cab else None,
         "blocks": blocks,
         "limitations": limitations,
     }
@@ -786,6 +808,27 @@ def _adjust_for_mix(features: ToneFeatures, mix_mode: str) -> ToneFeatures:
     return ToneFeatures(**values)
 
 
+def _application_steps(output_mode: str, language: str) -> list[str]:
+    """실제 출력 연결에서 포함되는 앰프·캐비닛 블록과 일치하는 적용 순서를 만든다."""
+    route_step = {
+        "frfr": "step.amp_only",
+        "power_amp_cab": "step.power_amp_real_cab",
+        "amp_front": "step.amp_front",
+    }.get(output_mode, "step.amp_only")
+    comparison_step = {
+        "frfr": "step.ab",
+        "power_amp_cab": "step.ab_power_amp",
+        "amp_front": "step.ab_amp_front",
+    }.get(output_mode, "step.ab")
+    return [
+        tr("step.new_preset", language),
+        tr("step.series", language),
+        tr(route_step, language),
+        tr("step.parameters", language),
+        tr(comparison_step, language),
+    ]
+
+
 def analyze_file(
     source: str | Path,
     start_seconds: float,
@@ -798,6 +841,7 @@ def analyze_file(
     device_id: str = "tone_master_pro",
     language: str = "ko",
     cancel_requested: Callable[[], bool] | None = None,
+    compute_backend: str = "auto",
 ) -> dict:
     """디코딩·기타 분리·DSP 분석·장치 레시피 조립의 전체 순서를 실행한다."""
     if not is_supported_device(device_id):
@@ -805,11 +849,14 @@ def analyze_file(
     pickup_code = choice_code("pickup", pickup)
     mix_code = choice_code("mix", mix_mode)
     output_code = choice_code("output", output_mode)
+    compute_code = choice_code("compute", compute_backend)
     separation_requested = mix_code != "isolated"
     separation_data: dict[str, object] = {
         "used": False,
         "mode": mix_code,
         "model": None,
+        "requested_device": compute_code,
+        "resolved_device": None,
     }
     if separation_requested:
         with tempfile.TemporaryDirectory(prefix="tonematch_isolate_") as tmp_dir:
@@ -833,6 +880,7 @@ def analyze_file(
                     progress,
                     cancel_requested,
                     language,
+                    compute_code,
                 )
             except SeparationError as exc:
                 raise AnalysisError(str(exc)) from exc
@@ -911,19 +959,15 @@ def analyze_file(
             "mix_mode_label": choice_label("mix", mix_code, language),
             "output_mode": output_code,
             "output_mode_label": choice_label("output", output_code, language),
+            "compute_backend": compute_code,
+            "compute_backend_label": choice_label("compute", compute_code, language),
         },
         "features": asdict(features),
         "raw_features": asdict(raw_features),
         "chord_voicing": voicing_analysis_dict(voicing_analysis),
         "recipes": recipes,
         "warnings": warnings,
-        "application_steps": [
-            tr("step.new_preset", language),
-            tr("step.series", language),
-            tr("step.amp_only", language),
-            tr("step.parameters", language),
-            tr("step.ab", language),
-        ],
+        "application_steps": _application_steps(output_code, language),
     }
     if progress:
         progress(100, tr("progress.complete", language))
@@ -966,6 +1010,7 @@ def relocalize_result(result: dict, language: str) -> dict:
     pickup_code = profile["pickup"]
     mix_code = profile["mix_mode"]
     output_code = profile["output_mode"]
+    compute_code = profile.get("compute_backend", "auto")
     updated["language"] = language
     updated["device"] = device_label(result.get("device_id", "tone_master_pro"), language)
     updated["recipes"] = localized_recipes
@@ -975,14 +1020,9 @@ def relocalize_result(result: dict, language: str) -> dict:
         "pickup_label": choice_label("pickup", pickup_code, language),
         "mix_mode_label": choice_label("mix", mix_code, language),
         "output_mode_label": choice_label("output", output_code, language),
+        "compute_backend_label": choice_label("compute", compute_code, language),
     }
-    updated["application_steps"] = [
-        tr("step.new_preset", language),
-        tr("step.series", language),
-        tr("step.amp_only", language),
-        tr("step.parameters", language),
-        tr("step.ab", language),
-    ]
+    updated["application_steps"] = _application_steps(output_code, language)
     return updated
 
 

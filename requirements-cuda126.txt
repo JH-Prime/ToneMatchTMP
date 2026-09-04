@@ -1,0 +1,6 @@
+# ToneMatch TMP 선택형 GPU 개발 런타임
+# 대상: Windows x64 / CPython 3.12 / PyTorch 2.13.0 / CUDA 12.6
+#
+# 이 wheel은 용량이 매우 크고 GPU 드라이버 환경에 따라 동작 여부가 달라지므로
+# 일반 portable ZIP에는 포함하지 않는다. GPU 개발 PC에서 enable_cuda.ps1로 설치한다.
+torch @ https://download.pytorch.org/whl/cu126/torch-2.13.0%2Bcu126-cp312-cp312-win_amd64.whl

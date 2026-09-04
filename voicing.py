@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import asdict, dataclass
+from functools import lru_cache
 from typing import Iterable
 
 import numpy as np
@@ -76,11 +77,18 @@ def _next_power_of_two(value: int) -> int:
     return 1 << max(1, int(value - 1).bit_length())
 
 
+@lru_cache(maxsize=1)
 def _guitar_midi_frequencies() -> tuple[np.ndarray, np.ndarray]:
     """기타 기본음과 주요 배음을 포괄하는 MIDI 번호와 주파수를 만든다."""
     midi = np.arange(28, 89, dtype=np.int16)
     frequencies = 440.0 * np.power(2.0, (midi.astype(np.float64) - 69.0) / 12.0)
     return midi, frequencies
+
+
+@lru_cache(maxsize=8)
+def _analysis_window(length: int) -> np.ndarray:
+    """같은 길이의 보이싱 창이 반복될 때 재사용할 Hann 창을 만든다."""
+    return np.hanning(int(length))
 
 
 def _local_spectral_peak(magnitude: np.ndarray, frequency: float, sample_rate: int, fft_size: int) -> float:
@@ -91,35 +99,39 @@ def _local_spectral_peak(magnitude: np.ndarray, frequency: float, sample_rate: i
     return float(np.max(magnitude[index - 1 : index + 2]))
 
 
+def _spectral_peaks(
+    magnitude: np.ndarray,
+    frequencies: np.ndarray,
+    sample_rate: int,
+    fft_size: int,
+) -> np.ndarray:
+    """여러 목표 주파수 주변의 세 FFT bin 최댓값을 네이티브 NumPy 연산으로 함께 구한다."""
+    indexes = np.rint(frequencies * fft_size / sample_rate).astype(np.int64)
+    valid = (indexes >= 1) & (indexes < len(magnitude) - 1)
+    safe = np.clip(indexes, 1, max(1, len(magnitude) - 2))
+    peaks = np.maximum.reduce((magnitude[safe - 1], magnitude[safe], magnitude[safe + 1]))
+    return np.where(valid, peaks, 0.0).astype(np.float64, copy=False)
+
+
 def _window_pitch_profile(window: np.ndarray, sample_rate: int) -> tuple[np.ndarray, np.ndarray, np.ndarray, float]:
     """한 시간창에서 HPCP형 chroma, 음별 salience, 기본음 크기와 RMS를 계산한다."""
     centered = window.astype(np.float64, copy=False) - float(np.mean(window))
     rms = math.sqrt(float(np.dot(centered, centered)) / max(len(centered), 1) + 1e-12)
     fft_size = _next_power_of_two(len(centered))
-    tapered = centered * np.hanning(len(centered))
+    tapered = centered * _analysis_window(len(centered))
     magnitude = np.abs(np.fft.rfft(tapered, n=fft_size))
     midi, frequencies = _guitar_midi_frequencies()
-    fundamentals = np.array(
-        [_local_spectral_peak(magnitude, float(frequency), sample_rate, fft_size) for frequency in frequencies],
-        dtype=np.float64,
-    )
+    fundamentals = _spectral_peaks(magnitude, frequencies, sample_rate, fft_size)
     salience = fundamentals.copy()
     for harmonic, weight in ((2, 0.42), (3, 0.24), (4, 0.12)):
-        harmonic_values = np.array(
-            [
-                _local_spectral_peak(magnitude, float(frequency * harmonic), sample_rate, fft_size)
-                if frequency * harmonic < sample_rate / 2
-                else 0.0
-                for frequency in frequencies
-            ],
-            dtype=np.float64,
-        )
+        harmonic_frequencies = frequencies * harmonic
+        harmonic_values = _spectral_peaks(magnitude, harmonic_frequencies, sample_rate, fft_size)
+        harmonic_values = np.where(harmonic_frequencies < sample_rate / 2, harmonic_values, 0.0)
         salience += weight * harmonic_values
     salience = np.sqrt(np.maximum(salience, 0.0))
     chroma = np.zeros(12, dtype=np.float64)
-    for midi_note, value in zip(midi, salience):
-        octave_weight = 1.0 if 40 <= midi_note <= 76 else 0.72
-        chroma[int(midi_note) % 12] += float(value) * octave_weight
+    octave_weights = np.where((midi >= 40) & (midi <= 76), 1.0, 0.72)
+    np.add.at(chroma, midi.astype(np.int64) % 12, salience * octave_weights)
     if float(np.sum(chroma)) > 0:
         chroma /= float(np.sum(chroma))
     return chroma, salience, fundamentals, rms

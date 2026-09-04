@@ -1,0 +1,62 @@
+{
+  "schema": "tonematch-qa/v1",
+  "app_version": "0.0.04",
+  "tested_at": "2026-09-04T15:10:47+09:00",
+  "platform": "Windows 11 x64 / Python 3.12.14",
+  "checks": {
+    "compileall": "passed",
+    "unit_tests": {
+      "status": "passed",
+      "count": 26,
+      "coverage_focus": [
+        "Auto/CPU/CUDA device resolution and explicit-CUDA errors",
+        "GPU/VRAM/runtime diagnostics and inference timing fields",
+        "FRFR, power-amp/real-cab, and amp-front Amp/Cab policies",
+        "non-duplicated Cabinet low/high cuts",
+        "NumPy chord/voicing determinism and native vector path",
+        "developer block source links and Korean docstrings"
+      ]
+    },
+    "source_self_test": {
+      "status": "passed",
+      "recipes": 3,
+      "developer_blocks": 11,
+      "english_localization": true,
+      "ffmpeg_analysis": true
+    },
+    "runtime_probe": {
+      "status": "passed",
+      "demucs": "4.1.0",
+      "torch": "2.13.0+cpu",
+      "model": "htdemucs_6s",
+      "resolved_device": "cpu",
+      "cuda_available": false,
+      "cpu_fallback_observed": true
+    },
+    "ui_visual_smoke": {
+      "status": "passed",
+      "languages": ["ko", "en"],
+      "font_policy": ["Malgun Gothic", "Arial Narrow"],
+      "scrollable_input_card": true,
+      "performance_dsp_tab": true,
+      "developer_diagram_and_clickable_source": true
+    },
+    "packaged_exe_self_test": {
+      "status": "passed",
+      "ok": true
+    },
+    "portable_archive": {
+      "status": "passed",
+      "fresh_extract": true,
+      "manifest_file_hashes": "passed",
+      "model_weights_absent": true,
+      "personal_paths_in_public_log": "absent"
+    }
+  },
+  "not_run": [
+    "Actual NVIDIA CUDA inference and VRAM measurement were not run because this release PC has a CPU-only PyTorch runtime and no compatible CUDA device.",
+    "A real copyrighted YouTube stream was not downloaded or extracted.",
+    "A live loopback recording was not captured to avoid recording private system audio without a deliberate manual test.",
+    "Code signing was not performed."
+  ]
+}

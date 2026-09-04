@@ -12,7 +12,7 @@ from voicing import pitch_class_names
 
 
 REPORT_TEXT = {
-    "match": {"ko": "매칭", "en": "Match"},
+    "match": {"ko": "톤 유사도", "en": "Tone similarity"},
     "pickup": {"ko": "픽업 보정", "en": "Pickup correction"},
     "reason": {"ko": "이유", "en": "Reason"},
     "caution": {"ko": "주의", "en": "Caution"},
@@ -27,6 +27,7 @@ REPORT_TEXT = {
     "none": {"ko": "없음", "en": "None"},
     "input": {"ko": "입력", "en": "Input"},
     "output": {"ko": "출력", "en": "Output"},
+    "applicability": {"ko": "연결 경로 적용성", "en": "Route applicability"},
     "isolation": {"ko": "기타 분리", "en": "Guitar isolation"},
     "isolated": {"ko": "Demucs guitar stem만 분석", "en": "Demucs guitar stem only"},
     "skipped": {"ko": "기타 단독 파일 · 분리 생략", "en": "Guitar-only file · isolation skipped"},
@@ -53,6 +54,8 @@ def recipe_as_text(result: dict, recipe_index: int = 0) -> str:
     lines = [
         f"{recipe['name']} · {recipe['archetype']} · {_rt('match', language)} {recipe['match_percent']}%",
         recipe["description"],
+        f"{_rt('output', language)}: {recipe.get('output_mode_label', result['input_profile']['output_mode_label'])}",
+        f"{_rt('applicability', language)}: {recipe.get('route_applicability_label', '-')}",
         f"{_rt('pickup', language)}: {recipe['pickup_correction']}",
         "",
     ]
@@ -129,6 +132,7 @@ def save_html(result: dict, path: str | Path) -> None:
                 <div><h2>{html.escape(recipe['name'])}</h2><p>{html.escape(recipe['description'])}</p></div>
                 <div class="match">{recipe['match_percent']}<small>%</small></div>
               </div>
+              <p class="route">{_rt('output', language)} · {html.escape(str(recipe.get('output_mode_label', result['input_profile']['output_mode_label'])))}<br>{_rt('applicability', language)} · {html.escape(str(recipe.get('route_applicability_label', '-')))}</p>
               <p class="correction">{_rt('pickup', language)} · {html.escape(recipe['pickup_correction'])}</p>
               <div class="blocks">{''.join(blocks_html)}</div>
               {f'<ul class="limitations">{limitations}</ul>' if limitations else ''}
@@ -194,7 +198,7 @@ def save_html(result: dict, path: str | Path) -> None:
 .meta{{text-align:right;color:var(--muted)}} .grid{{display:grid;grid-template-columns:1.1fr .9fr;gap:20px;margin:24px 0}} .card,.recipe{{background:rgba(18,27,36,.96);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:0 15px 35px #0003}}
 .feature{{margin:13px 0}} .feature-row{{display:flex;justify-content:space-between}} .bar{{height:7px;background:#25323d;border-radius:9px;overflow:hidden;margin-top:6px}} .bar i{{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2))}}
 table{{width:100%;border-collapse:collapse}} th,td{{padding:7px 9px;border-bottom:1px solid #263541;text-align:left;vertical-align:top}} th{{color:#c6d3da;width:45%;font-weight:600}} td{{color:var(--text)}}
-.recipe{{margin-top:24px}} .recipe-head{{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}} .match{{font-size:52px;color:var(--accent);font-weight:800;line-height:1}} .match small{{font-size:17px}} .correction{{background:#0d171f;border-radius:10px;padding:10px 13px}}
+  .recipe{{margin-top:24px}} .recipe-head{{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}} .match{{font-size:52px;color:var(--accent);font-weight:800;line-height:1}} .match small{{font-size:17px}} .route{{color:var(--warn);font-weight:700;border-left:3px solid var(--warn);padding-left:11px}} .correction{{background:#0d171f;border-radius:10px;padding:10px 13px}}
 .blocks{{display:grid;gap:12px;margin-top:18px}} .block{{display:flex;gap:14px;background:var(--panel2);border:1px solid #2a3c49;border-radius:14px;padding:16px}} .block-index{{display:grid;place-items:center;min-width:42px;height:42px;border-radius:11px;background:#0b131a;color:var(--accent);font-weight:800}} .block-body{{flex:1}} .block-body p{{margin-bottom:0}}
 .warning{{border-left:4px solid var(--warn)}} a{{color:var(--accent2);word-break:break-all}} footer{{margin-top:28px;color:#7f929f;text-align:center}} @media(max-width:760px){{.grid{{grid-template-columns:1fr}}header{{display:block}}.meta{{text-align:left;margin-top:12px}}}}
 </style>

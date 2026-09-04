@@ -1,6 +1,6 @@
-# ToneMatch TMP 0.0.03
+# ToneMatch TMP 0.0.04
 
-로컬 오디오·영상 또는 Windows PC 재생음을 분석해 Fender Tone Master Pro용 톤 레시피 3개를 추천하는 비공식 Windows 프리뷰입니다. v0.0.02에서 풀믹스의 AI `guitar stem` 분리, 최대 20분 분석과 PC 재생음 녹음을 도입했고, v0.0.03은 포터블 개발 ZIP·로그/빌드 이력 문서와 NumPy 기반 코드·보이싱 분석(실험)을 추가합니다.
+로컬 오디오·영상 또는 Windows PC 재생음을 분석해 Fender Tone Master Pro용 톤 레시피 3개를 추천하는 비공식 Windows 프리뷰입니다. v0.0.04는 AI 분리의 자동/CPU/CUDA 선택과 성능 진단, NumPy 네이티브 최적화, 출력 연결별 Amp/Cab 체인 정정을 추가합니다.
 
 추천 카탈로그는 Tone Master Pro 펌웨어 1.8.58과 Model Guide Rev. J의 공개 모델명·컨트롤명을 기준으로 작성했습니다.
 
@@ -12,11 +12,12 @@
 - `풀믹스/영상 → AI 기타 분리`를 처음 실행할 때 Demucs `htdemucs_6s` 모델 파일을 Hugging Face에서 내려받으므로 인터넷 연결과 여유 저장 공간이 필요합니다.
 - 모델은 배포 ZIP에 포함되지 않습니다. 한 번 정상 다운로드되면 같은 Windows 사용자 캐시를 재사용하므로 이후 분석은 보통 오프라인에서도 가능합니다.
 - `이미 기타만 있는 파일 → 분리 생략`은 AI 모델을 사용하지 않으므로 첫 모델 다운로드 없이 실행할 수 있습니다.
-- AI 분리는 CPU에서 실행됩니다. 특히 5~20분 곡은 실제 재생 시간보다 오래 걸릴 수 있습니다.
+- 포터블 EXE는 호환성을 위해 CPU 런타임을 포함합니다. 자동 모드는 CUDA를 사용할 수 없으면 CPU를 선택하며, 특히 5~20분 곡은 실제 재생 시간보다 오래 걸릴 수 있습니다.
+- CUDA는 호환 NVIDIA PC의 소스 개발 환경에 별도로 설치하고 재빌드해야 합니다. 이번 릴리스 PC에는 CUDA GPU가 없어 실제 GPU 추론은 하드웨어 검증하지 못했습니다.
 
 ## 로컬 파일 빠른 사용법
 
-1. `ToneMatchTMP-v0.0.03.exe`를 실행합니다. 서명되지 않은 프리뷰라 Windows가 경고하면 배포자가 제공한 SHA-256과 파일 해시를 먼저 비교하세요.
+1. `ToneMatchTMP-v0.0.04.exe`를 실행합니다. 서명되지 않은 프리뷰라 Windows가 경고하면 배포자가 제공한 SHA-256과 파일 해시를 먼저 비교하세요.
 2. 입력 방법에서 `로컬 오디오/영상 파일`을 선택하고, 직접 보유하거나 분석 권한이 있는 파일을 고릅니다.
 3. 시작·끝 시간을 초 단위로 지정합니다.
    - 최소 분석 길이는 3초입니다.
@@ -25,11 +26,12 @@
 4. 소스 구성을 고릅니다.
    - 일반 음원·뮤직비디오·밴드 믹스: `풀믹스/영상 → AI 기타 분리 (권장)`
    - 이미 기타만 녹음된 DI·앰프·타브 영상: `이미 기타만 있는 파일 → 분리 생략`
-5. 내 기타의 픽업과 Tone Master Pro 출력 연결 방식을 선택합니다.
-6. 필요하면 YouTube 주소를 참고 URL에 적습니다. 주소는 출처 기록과 브라우저 열기에만 쓰며 영상 스트림을 직접 추출하지 않습니다.
-7. `톤 분석 시작`을 누릅니다. AI 모드는 30초 단위 조각 진행률을 표시하며, `분석 취소`는 현재 조각 처리가 끝난 뒤 반영될 수 있습니다.
-8. 추천 1~3의 블록 순서, 모델, 파라미터와 이유를 비교한 뒤 JSON 또는 HTML 리포트를 저장합니다.
-9. Tone Master Pro 본체나 Pro Control에서 값을 수동 입력하고, 원곡과 같은 체감 음량으로 A/B하며 조정합니다.
+5. 내 기타의 픽업과 Tone Master Pro 출력 연결 방식을 선택합니다. 이 선택에 따라 Amp/Cab 포함 여부와 실제 적용 순서가 달라집니다.
+6. `성능 · DSP 진단`에서 연산 장치를 자동, CPU 또는 CUDA로 고릅니다. CUDA를 고를 수 없는 환경에서는 자동을 사용하세요.
+7. 필요하면 YouTube 주소를 참고 URL에 적습니다. 주소는 출처 기록과 브라우저 열기에만 쓰며 영상 스트림을 직접 추출하지 않습니다.
+8. `톤 분석 시작`을 누릅니다. AI 모드는 30초 단위 조각 진행률을 표시하며, `분석 취소`는 현재 조각 처리가 끝난 뒤 반영될 수 있습니다.
+9. 추천 1~3의 블록 순서, 모델, 파라미터와 이유를 비교한 뒤 JSON 또는 HTML 리포트를 저장합니다.
+10. Tone Master Pro 본체나 Pro Control에서 값을 수동 입력하고, 원곡과 같은 체감 음량으로 A/B하며 조정합니다.
 
 ## PC 재생음 녹음
 
@@ -53,7 +55,7 @@
   → FFmpeg 44.1 kHz/16-bit PCM 변환
   → Demucs htdemucs_6s, 30초 단위 guitar stem 분리
   → 22.05 kHz 분석 PCM 변환
-  → NumPy DSP 특징 추출
+  → NumPy 네이티브 DSP 특징 추출
   → 코드·베이스/역위·음역·간격 타임라인 추정(실험)
   → Tone Master Pro 템플릿 매칭
   → 추천 3개와 JSON/HTML 결과
@@ -63,9 +65,11 @@
 
 DSP 단계는 포화도, 밝기, 바디, 압축감, 다이내믹, 공간감, 스테레오 폭, 모듈레이션, 딜레이 반복 단서 등을 계산합니다. 출력 연결에 따라 다음처럼 블록을 조정합니다.
 
-- FRFR·헤드폰·USB·PA: Amp Only와 별도 Cabinet 포함
-- 파워앰프 + 실제 기타 캐비닛: Cabinet/IR 제외
-- 기타 앰프 전면 입력: 앰프·캐비닛 제외, 이펙트 중심 추천
+- FRFR·헤드폰·USB·PA: `Amp Only`와 별도 `Cabinet`을 포함하고 Cabinet의 로우/하이 컷을 한 번만 적용
+- 파워앰프 + 실제 기타 캐비닛: `Amp Only`만 포함하고 Cabinet/IR은 제외하며 기준 Cabinet 정보는 비교 참고값으로 보존
+- 기타 앰프 전면 입력: Amp/Cab을 모두 제외하고 이펙트 중심으로 추천
+
+성능 진단은 요청 장치와 실제 선택 장치, CUDA 가용성·빌드, GPU 모델과 총/여유 VRAM, Demucs 전체·조각별 추론 시간, 실시간 배수와 최대 GPU 메모리 사용량을 표시합니다. 실제 분석을 하지 않은 값은 해당 없음으로 남습니다. 연산 선택은 설정에 저장됩니다.
 
 ## 첫 AI 모델 다운로드와 캐시
 
@@ -88,20 +92,20 @@ DSP 단계는 포화도, 밝기, 바디, 압축감, 다이내믹, 공간감, 스
 ### EXE만 사용할 때
 
 1. 포터블 ZIP 전체를 쓰기 가능한 새 폴더에 압축 해제합니다.
-2. SHA-256을 확인하고 `ToneMatchTMP-v0.0.03.exe`를 실행합니다.
+2. SHA-256을 확인하고 `ToneMatchTMP-v0.0.04.exe`를 실행합니다.
 3. 새 PC에는 이전 PC의 사용자 캐시가 없으므로 첫 AI 기타 분리 때 모델을 다시 다운로드합니다.
 4. 다운로드를 반복하고 싶지 않다면 모델의 배포 조건을 확인한 뒤 이전 PC의 `models--adefossez--HTDemucs-6s` 폴더 전체를 새 PC의 동일한 캐시 경로로 복사하거나, 두 PC에서 같은 구조의 `HF_HOME`을 지정하세요.
 
 ### 소스 개발을 이어갈 때
 
 1. 개발 ZIP을 `C:\ToneMatchTMP-dev` 같은 쓰기 가능한 경로에 압축 해제합니다.
-2. 압축 안의 `ToneMatchTMP-v0.0.03\source`가 자체 완결된 프로젝트 폴더입니다.
+2. 압축 안의 `ToneMatchTMP-v0.0.04\source`가 자체 완결된 프로젝트 폴더입니다.
 3. 64-bit Python 3.12를 설치하고 패키지 루트에 `.venv`를 새로 만듭니다. 기존 PC의 가상환경은 절대 경로와 네이티브 패키지를 포함하므로 복사해 재사용하지 마세요.
 4. `source\requirements.txt`로 의존성을 설치하고 테스트를 실행합니다.
 5. `DEVELOPER_HANDOFF_KO_EN.md`와 `BUILD_HISTORY.md`를 먼저 읽은 뒤 작업을 이어갑니다.
 
 ```powershell
-Set-Location C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.03
+Set-Location C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.04
 py -3.12 -m venv .venv
 & .\.venv\Scripts\python.exe -m pip install --upgrade pip
 & .\.venv\Scripts\python.exe -m pip install -r .\source\requirements.txt
@@ -111,21 +115,32 @@ Set-Location .\source
 & ..\.venv\Scripts\python.exe app.py
 ```
 
+CUDA 지원 NVIDIA PC에서 소스 빌드를 가속하려면 위 기본 환경과 테스트를 먼저 확인한 뒤 `source`에서 다음을 실행합니다.
+
+```powershell
+.\enable_cuda.ps1
+& ..\.venv\Scripts\python.exe -m unittest discover -s tests -v
+.\build.ps1
+```
+
+`enable_cuda.ps1`은 `requirements-cuda126.txt`에 고정된 PyTorch CUDA 런타임을 설치합니다. NVIDIA 드라이버·GPU·PyTorch CUDA 빌드가 모두 호환되어야 하며, 설치만으로 모든 PC에서 CUDA가 보장되지는 않습니다. 가상환경을 다른 PC로 복사하지 말고 PC마다 다시 만드세요.
+
 공개 소스는 `git clone https://github.com/JH-Prime/ToneMatchTMP.git`으로 받을 수도 있습니다. Git 저장소는 용량이 큰 `resources\ffmpeg.exe`를 제외하므로, 소스 실행·빌드 전 포터블 ZIP의 `source\resources\ffmpeg.exe`를 같은 위치에 복사하세요. `build.ps1`은 프로젝트의 형제 폴더에 있는 `..\.venv`를 사용합니다. 자세한 인수인계·빌드·검증 절차는 `DEVELOPER_HANDOFF_KO_EN.md`를 참고하세요. Codex나 다른 개발 도구에서 재개할 때는 `source` 또는 Git clone 폴더를 작업 폴더로 열고 두 인수인계 문서를 먼저 읽도록 지시하세요. 대화 기록이나 이전 PC의 임시 파일은 ZIP에 자동 포함되지 않습니다.
 
 ## 개발자 옵션
 
-오른쪽 위 `개발자 옵션`을 켜면 처리 시퀀스, 실시간 로그, 클릭형 배포 소스와 변경 기록을 확인할 수 있습니다. v0.0.02에서 입력/녹음, FFmpeg 디코딩, AI 기타 분리, DSP 특징 추출, 보정, 모델 매칭, TMP 레시피 생성과 내보내기 흐름을 확장했습니다. v0.0.03은 포터블 인수인계·빌드 이력을 정리하고 코드·보이싱 분석을 실험 단계로 추가합니다.
+오른쪽 위 `개발자 옵션`을 켜면 처리 시퀀스, 실시간 로그, 클릭형 배포 소스와 변경 기록을 확인할 수 있습니다. v0.0.04에서는 성능·DSP 진단에 연산 장치, CUDA/GPU/VRAM 상태와 마지막 분리 벤치마크가 함께 표시됩니다. NumPy 최적화는 기존 파이썬 UI·AI 구조를 유지하면서 컴파일된 네이티브 연산을 활용합니다.
 
 ## 중요한 한계
 
 - Demucs 6-stem의 guitar 출력은 실험적인 추정입니다. 키보드·보컬·심벌이 남거나 기타가 일부 사라지고, 위상감·어택·잔향에 인공음이 생길 수 있습니다.
 - AI가 분리한 stem이 거의 무음이면 분석을 중단합니다. 실제 기타가 잘 들리는 구간을 선택하세요.
-- 긴 곡의 외부 처리는 30초 단위지만 CPU 추론 시간은 PC 성능에 크게 좌우됩니다.
+- 긴 곡의 외부 처리는 30초 단위지만 CPU/GPU 추론 시간은 PC 성능, CUDA 호환성과 VRAM에 크게 좌우됩니다.
 - PC 재생음 녹음 품질은 Windows 출력 장치, 드라이버, 시스템 음량과 다른 앱 소리에 영향을 받습니다.
 - 코드·보이싱 분석은 NumPy 스펙트럼의 피치 클래스 단서를 이용하는 실험 기능입니다. 복잡한 왜곡, 드롭 튜닝, 카포, 벤딩, 베이스·건반 누출에서는 코드명·최저음·음역이 틀릴 수 있으며 악보 채보 결과로 간주하면 안 됩니다.
 - 취소되거나 중단된 AI 분석을 중간 조각부터 재개하는 체크포인트는 없습니다. 완전히 내려받은 모델 캐시만 재사용되며 분석은 처음부터 다시 실행합니다.
 - 추천값은 완성 프리셋이 아니라 시작점입니다. Gain → Cab/Mic → EQ → Delay/Reverb 순으로 조정하세요.
+- C++ 실시간 오디오·링 버퍼·FFT·ASIO 엔진은 후속 로드맵입니다. v0.0.04는 실시간 입력 톤 매칭이나 C++ 오디오 엔진을 제공하지 않습니다.
 - Tone Master Pro/Pro Control은 임의 블록과 모든 값을 쓰는 공개 API를 제공하지 않습니다. 기기 연결, 프리셋 자동 생성·전송, 노브 자동 조작을 하지 않습니다.
 - JSON은 분석 데이터이며 Tone Master Pro가 가져오는 `.preset` 파일이 아닙니다.
 - Tone Master Pro 외 장치 프로필은 현재 선택 자리만 있으며 분석은 지원하지 않습니다.
@@ -140,8 +155,9 @@ Fender, Tone Master, Tone Master Pro와 Pro Control은 각 권리자의 상표�
 
 ## 버전 및 개발 기록
 
-정식 출시 전 패치는 `0.0.01`, `0.0.02`, `0.0.03` 순으로 올립니다. 앱 버전, Windows 파일 정보, EXE·ZIP 이름, README, 변경 기록과 SHA-256은 같은 버전이어야 합니다.
+정식 출시 전 패치는 `0.0.01`, `0.0.02`, `0.0.03`, `0.0.04` 순으로 올립니다. 앱 버전, Windows 파일 정보, EXE·ZIP 이름, README, 변경 기록과 SHA-256은 같은 버전이어야 합니다.
 
+- `0.0.04`: 자동/CPU/CUDA 연산 선택과 GPU·VRAM·추론 벤치마크 진단, NumPy 네이티브 최적화, 출력 경로별 Amp/Cab 체인 정정, 별도 CUDA 소스 설치 경로
 - `0.0.03`: 포터블 개발 ZIP과 한·영 인수인계, 빌드/검증 이력, 로그 전달 기준, NumPy 코드·보이싱 분석(실험)
 - `0.0.02`: 한국어/English 전환, 확장형 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음과 취소
 - `0.0.01`: 로컬 짧은 구간 DSP 특징 분석과 Tone Master Pro 추천 3개, JSON/HTML, 개발자 코드 뷰

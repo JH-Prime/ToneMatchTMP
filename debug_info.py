@@ -88,15 +88,23 @@ PIPELINE_BLOCKS: list[dict] = [
         "order": 4,
         "title": "AI 기타 분리",
         "title_en": "AI guitar isolation",
-        "short": "Demucs 6-stem → guitar",
-        "short_en": "Demucs 6-stem → guitar",
-        "description": "30초 조각별로 건반·베이스·드럼·보컬·기타 외 소리를 분리하고 guitar stem만 다음 단계로 보냅니다.",
-        "description_en": "Separates keys, bass, drums, vocals, and other sounds in 30-second chunks, passing only the guitar stem onward.",
-        "inputs": "44.1 kHz 풀믹스 PCM",
-        "inputs_en": "44.1 kHz full-mix PCM",
-        "outputs": "guitar stem WAV와 분리 진단",
-        "outputs_en": "Guitar-stem WAV and separation diagnostics",
+        "short": "장치 탐지 · Demucs · 성능 진단",
+        "short_en": "Device probe · Demucs · performance",
+        "description": "백그라운드에서 CPU·CUDA와 GPU/VRAM을 탐지하고 자동·CPU·CUDA 선택을 검증한 뒤, Demucs가 30초 조각별 guitar stem만 분리합니다. 추론 시간·청크 속도·실시간 배수·최대 GPU 메모리를 진단에 남깁니다.",
+        "description_en": "Probes CPU/CUDA and GPU/VRAM in the background, validates Auto/CPU/CUDA selection, then isolates only the guitar stem in 30-second Demucs chunks. Inference time, chunk speed, realtime factor, and peak GPU memory are recorded for diagnostics.",
+        "inputs": "44.1 kHz 풀믹스 PCM, 연산 장치 선택",
+        "inputs_en": "44.1 kHz full-mix PCM, compute-device preference",
+        "outputs": "guitar stem WAV, 장치·VRAM·성능 진단",
+        "outputs_en": "Guitar-stem WAV plus device, VRAM, and performance diagnostics",
         "symbols": [
+            ("app.py", "ToneMatchApp._start_hardware_probe"),
+            ("app.py", "ToneMatchApp._hardware_probe_worker"),
+            ("app.py", "ToneMatchApp._apply_hardware_status"),
+            ("app.py", "ToneMatchApp._change_compute_backend"),
+            ("app.py", "ToneMatchApp._set_compute_controls_enabled"),
+            ("app.py", "ToneMatchApp._format_bytes"),
+            ("app.py", "ToneMatchApp._populate_diagnostics"),
+            ("separator.py", "resolve_compute_device"),
             ("separator.py", "separator_runtime_status"),
             ("separator.py", "_pcm16_chunk"),
             ("separator.py", "_tensor_to_pcm16"),
@@ -186,20 +194,22 @@ PIPELINE_BLOCKS: list[dict] = [
         "order": 9,
         "title": "TMP 레시피 생성",
         "title_en": "TMP recipe generation",
-        "short": "블록 · 모델 · 파라미터",
-        "short_en": "Blocks · models · parameters",
-        "description": "선택된 템플릿을 실제 Tone Master Pro 블록 순서와 표시 파라미터 값으로 변환합니다.",
-        "description_en": "Converts selected templates into actual Tone Master Pro block order and displayed parameter values.",
+        "short": "출력 경로 · Amp/Cab · 파라미터",
+        "short_en": "Output route · Amp/Cab · parameters",
+        "description": "선택된 템플릿을 Tone Master Pro 블록으로 바꾸고 FRFR·파워앰프+실캐비닛·앰프 입력 연결에 맞춰 Amp Only와 Cabinet의 포함·생략 정책, 마이크 위치, 적용 순서를 생성합니다.",
+        "description_en": "Converts selected templates into Tone Master Pro blocks and generates route-specific Amp Only/Cabinet inclusion rules, microphone placement, and application steps for FRFR, power amp plus real cabinet, or amp-input connections.",
         "inputs": "상위 템플릿, ToneFeatures, 픽업/출력 조건",
         "inputs_en": "Top templates, ToneFeatures, pickup/output settings",
-        "outputs": "추천 체인 3개",
-        "outputs_en": "Three recommended chains",
+        "outputs": "출력 경로 적합도가 표시된 추천 체인 3개",
+        "outputs_en": "Three recommended chains with output-route applicability",
         "symbols": [
             ("engine.py", "_amp_parameters"),
             ("engine.py", "_drive_parameters"),
             ("engine.py", "_reverb_parameters"),
+            ("engine.py", "_parse_mic_position"),
             ("engine.py", "_cabinet_parameters"),
             ("engine.py", "_recipe_from_template"),
+            ("engine.py", "_application_steps"),
         ],
         "progress": (93, 96),
     },
@@ -350,11 +360,11 @@ def code_for_block(block_id: str) -> str:
 def changelog_as_text(entries: list[dict], language: str = "ko") -> str:
     """구조화된 변경 기록을 앱 화면용 한국어 또는 영어 텍스트로 변환한다."""
     if language == "en":
-        lines = ["ToneMatch TMP · Changelog", "Patch rule: 0.0.01 → 0.0.02 → 0.0.03 …", ""]
+        lines = ["ToneMatch TMP · Changelog", "Patch rule: 0.0.01 → 0.0.02 → 0.0.03 → 0.0.04 …", ""]
         changes_heading = "Changes"
         limits_heading = "Known limitations"
     else:
-        lines = ["ToneMatch TMP · 변경 기록", "패치 규칙: 0.0.01 → 0.0.02 → 0.0.03 …", ""]
+        lines = ["ToneMatch TMP · 변경 기록", "패치 규칙: 0.0.01 → 0.0.02 → 0.0.03 → 0.0.04 …", ""]
         changes_heading = "변경사항"
         limits_heading = "알려진 제한"
     for entry in entries:

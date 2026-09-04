@@ -55,6 +55,7 @@ class DeveloperModeTests(unittest.TestCase):
             "voicing.py",
             "tests/test_developer_mode.py",
             "tests/test_engine.py",
+            "tests/test_separator.py",
             "tests/test_voicing.py",
             "tools/collect_licenses.py",
             "tools/generate_function_reference.py",

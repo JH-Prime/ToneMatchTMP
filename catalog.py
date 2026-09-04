@@ -8,18 +8,61 @@
 from __future__ import annotations
 
 
-APP_VERSION = "0.0.03"
+APP_VERSION = "0.0.04"
 TARGET_FIRMWARE = "1.8.58"
 MODEL_GUIDE_REVISION = "Rev. J (2026-07)"
-BUILD_DATE = "2026-09-03"
+BUILD_DATE = "2026-09-04"
 
 
 # 앱 내부의 변경 기록 화면과 배포 문서가 함께 사용하는 단일 원본이다.
-# 이후 패치는 0.0.02, 0.0.03처럼 한 단계씩 올리고 최신 항목을 맨 위에 둔다.
+# 이후 패치는 0.0.02, 0.0.03, 0.0.04처럼 한 단계씩 올리고 최신 항목을 맨 위에 둔다.
 CHANGELOG: list[dict] = [
     {
-        "version": "0.0.03",
+        "version": "0.0.04",
         "date": BUILD_DATE,
+        "status": "공개 개발 프리뷰",
+        "status_en": "Public development preview",
+        "changes": [
+            "AI 기타 분리의 자동/CPU/CUDA 연산 선택과 CUDA 가용성·GPU 모델·VRAM 진단 추가",
+            "Demucs 전체/조각별 추론 시간, 실시간 배수와 최대 GPU 메모리 사용량을 성능 진단에 표시",
+            "CUDA를 사용할 수 없을 때 자동 모드가 CPU로 안전하게 폴백하고 선택값을 다음 실행에도 유지",
+            "코드·보이싱 분석의 반복 계산을 캐시하고 NumPy 벡터 연산으로 옮겨 네이티브 DSP 경로 최적화",
+            "FRFR, 실제 캐비닛용 파워앰프, 기타 앰프 전면 입력별 Amp/Cab 포함 규칙과 적용 순서를 분리",
+            "FRFR Cabinet 컷과 중복되던 별도 EQ를 제거하고 실제 캐비닛 경로의 기준 Cabinet 정보를 보존",
+            "고해상도 배율·작은 화면에서도 분석 버튼까지 접근할 수 있도록 입력 카드를 세로 스크롤 방식으로 개선",
+            "C++은 전체 재작성 대신 후속 실시간 오디오·링 버퍼·FFT·ASIO 엔진 경계로 계획",
+            "CPU 포터블 배포와 별도로 NVIDIA CUDA 소스 환경을 설치·재빌드하는 개발 경로 문서화",
+        ],
+        "changes_en": [
+            "Added Auto/CPU/CUDA compute selection for guitar isolation with CUDA availability, GPU model, and VRAM diagnostics",
+            "Reports total/per-chunk Demucs inference time, real-time factor, and peak GPU-memory use in performance diagnostics",
+            "Auto mode safely falls back to CPU when CUDA is unavailable and persists the selected preference",
+            "Optimized chord/voicing analysis by caching repeated data and moving inner work to native NumPy vector operations",
+            "Separated Amp/Cab inclusion rules and application steps for FRFR, power amp with a real cabinet, and guitar-amp front input",
+            "Removed the standalone EQ that duplicated FRFR cabinet cuts while preserving reference-cab information for real-cabinet routes",
+            "Made the input card vertically scrollable so Analyze remains reachable on high-DPI and smaller displays",
+            "Keeps the Python application and reserves C++ for a later real-time audio, ring-buffer, FFT, and ASIO engine boundary",
+            "Documented a separate NVIDIA CUDA source-environment install and rebuild path alongside the CPU portable distribution",
+        ],
+        "known_issues": [
+            "현재 포터블 EXE는 CPU 런타임을 포함하며 CUDA는 호환 NVIDIA PC의 별도 소스 환경에서 설치·재빌드해야 함",
+            "이번 개발 PC에는 CUDA 지원 GPU가 없어 실제 GPU Demucs 추론과 VRAM 측정은 하드웨어 검증하지 못함",
+            "GPU 가속 여부와 속도는 NVIDIA 드라이버·PyTorch CUDA 빌드·VRAM 및 곡 길이에 따라 달라짐",
+            "C++ 실시간/ASIO 엔진은 로드맵이며 이 버전에 실시간 오디오 처리나 기기 프리셋 전송은 포함되지 않음",
+            "코드 서명 인증서가 없는 개발 빌드라 Windows가 실행 경고를 표시할 수 있음",
+        ],
+        "known_issues_en": [
+            "The portable EXE contains the CPU runtime; CUDA requires a separate source environment and rebuild on a compatible NVIDIA PC",
+            "This development PC has no CUDA-capable GPU, so real GPU Demucs inference and VRAM reporting were not hardware-validated",
+            "GPU acceleration and speed depend on the NVIDIA driver, PyTorch CUDA build, available VRAM, and track length",
+            "The C++ real-time/ASIO engine remains roadmap work; this version adds neither real-time audio processing nor preset transfer",
+            "This unsigned development build may trigger a Windows warning",
+        ],
+    },
+    {
+        "version": "0.0.03",
+        # 이전 릴리스 날짜가 다음 빌드의 BUILD_DATE 변경을 따라가지 않게 고정한다.
+        "date": "2026-09-03",
         "status": "공개 개발 프리뷰",
         "status_en": "Public development preview",
         "changes": [

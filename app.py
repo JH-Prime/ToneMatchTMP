@@ -1,4 +1,4 @@
-"""ToneMatch TMP v0.0.03 데스크톱 애플리케이션.
+"""ToneMatch TMP v0.0.04 데스크톱 애플리케이션.
 
 로컬 오디오·영상 또는 Windows PC 재생음 녹음을 받아 AI로 guitar stem만
 분리하고, Tone Master Pro에 수동 적용할 설명 가능한 톤 체인을 추천한다.
@@ -162,7 +162,10 @@ class ToneMatchApp:
         self.pickup_code = "unknown"
         self.mix_code = "auto"
         self.output_code = "frfr"
+        self.compute_backend_code = "auto"
         self.input_method_code = "local"
+        self.hardware_status: dict[str, object] = {}
+        self.hardware_probe_active = False
         self.recipe_texts: list[ScrolledText] = []
         self.debug_nodes: dict[str, tuple[int, int]] = {}
         self.debug_log_lines: list[str] = []
@@ -181,6 +184,7 @@ class ToneMatchApp:
         self.pickup_var = tk.StringVar()
         self.mix_var = tk.StringVar()
         self.output_var = tk.StringVar()
+        self.compute_var = tk.StringVar()
         self.input_method_var = tk.StringVar()
         self.capture_var = tk.StringVar()
         self.developer_var = tk.BooleanVar(value=False)
@@ -189,6 +193,7 @@ class ToneMatchApp:
         self._build_ui()
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
         self.root.after(80, self._drain_events)
+        self.root.after(180, self._start_hardware_probe)
 
     @property
     def ui_font(self) -> str:
@@ -196,7 +201,7 @@ class ToneMatchApp:
         return "Arial Narrow" if self.language == "en" else "Malgun Gothic"
 
     def _load_settings(self) -> None:
-        """이전 실행의 언어와 장치 선택을 읽되 손상된 파일은 무시한다."""
+        """이전 실행의 언어·장치·연산 백엔드 선택을 읽되 손상된 파일은 무시한다."""
         path = self.data_root / "settings.json"
         try:
             settings = json.loads(path.read_text(encoding="utf-8"))
@@ -206,10 +211,17 @@ class ToneMatchApp:
         candidate_device = str(settings.get("device_id", self.device_id))
         if any(item["id"] == candidate_device for item in DEVICE_PROFILES):
             self.device_id = candidate_device
+        candidate_compute = str(settings.get("compute_backend", self.compute_backend_code))
+        if candidate_compute in {"auto", "cuda", "cpu"}:
+            self.compute_backend_code = candidate_compute
 
     def _save_settings(self) -> None:
-        """다음 실행에서도 유지할 언어와 장치 선택을 작은 JSON으로 저장한다."""
-        payload = {"language": self.language, "device_id": self.device_id}
+        """다음 실행에서도 유지할 언어·장치·연산 백엔드 선택을 작은 JSON으로 저장한다."""
+        payload = {
+            "language": self.language,
+            "device_id": self.device_id,
+            "compute_backend": self.compute_backend_code,
+        }
         try:
             (self.data_root / "settings.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         except OSError:
@@ -264,6 +276,29 @@ class ToneMatchApp:
         """입력 필드 위의 작은 설명 라벨을 지정한 그리드 위치에 배치한다."""
         ttk.Label(parent, text=text, style="Muted.TLabel").grid(row=row, column=column, columnspan=columnspan, sticky="w", pady=(7, 3))
 
+    def _sync_left_scroll_region(self, _event: object | None = None) -> None:
+        """입력 카드 내용 높이가 바뀔 때 스크롤 가능한 전체 영역을 다시 계산한다."""
+        if hasattr(self, "left_canvas") and self.left_canvas.winfo_exists():
+            self.left_canvas.configure(scrollregion=self.left_canvas.bbox("all"))
+
+    def _resize_left_scroll_content(self, event: tk.Event) -> None:
+        """창 너비가 바뀌어도 입력 카드 내부 프레임이 캔버스 폭을 정확히 채우게 한다."""
+        if hasattr(self, "left_canvas") and self.left_canvas.winfo_exists():
+            self.left_canvas.itemconfigure(self.left_canvas_window, width=max(1, event.width))
+
+    def _enable_left_mousewheel(self, _event: object | None = None) -> None:
+        """포인터가 입력 카드 위에 있을 때 휠을 해당 세로 스크롤에 연결한다."""
+        self.root.bind_all("<MouseWheel>", self._scroll_left_panel)
+
+    def _disable_left_mousewheel(self, _event: object | None = None) -> None:
+        """포인터가 입력 카드를 벗어나면 다른 화면의 휠 동작을 방해하지 않게 연결을 푼다."""
+        self.root.unbind_all("<MouseWheel>")
+
+    def _scroll_left_panel(self, event: tk.Event) -> None:
+        """Windows 마우스 휠 회전량을 입력 카드의 세로 이동 단위로 변환한다."""
+        if hasattr(self, "left_canvas") and self.left_canvas.winfo_exists():
+            self.left_canvas.yview_scroll(int(-event.delta / 120), "units")
+
     def _build_ui(self) -> None:
         """입력·결과·개발자·변경 기록과 하단 상태를 현재 언어로 구성한다."""
         self.recipe_texts.clear()
@@ -273,6 +308,7 @@ class ToneMatchApp:
         self.pickup_var.set(choice_label("pickup", self.pickup_code, self.language))
         self.mix_var.set(choice_label("mix", self.mix_code, self.language))
         self.output_var.set(choice_label("output", self.output_code, self.language))
+        self.compute_var.set(choice_label("compute", self.compute_backend_code, self.language))
         self.input_method_var.set(_input_method_label(self.input_method_code, self.language))
 
         shell = ttk.Frame(self.root, padding=(22, 18, 22, 14))
@@ -303,7 +339,21 @@ class ToneMatchApp:
         self.device_combo.bind("<<ComboboxSelected>>", self._change_device)
         ttk.Checkbutton(tools, text=tr("ui.developer", self.language), variable=self.developer_var, command=self._toggle_developer_mode, style="Developer.TCheckbutton").grid(row=2, column=1, sticky="e", pady=(5, 0))
 
-        left = self._panel(shell, row=1, column=0, sticky="nsew", padx=(0, 13))
+        left_shell = ttk.Frame(shell, style="Panel.TFrame")
+        left_shell.grid(row=1, column=0, sticky="nsew", padx=(0, 13))
+        left_shell.rowconfigure(0, weight=1)
+        left_shell.columnconfigure(0, weight=1)
+        self.left_canvas = tk.Canvas(left_shell, bg=COLORS["panel"], highlightthickness=0, borderwidth=0, width=404)
+        self.left_canvas.grid(row=0, column=0, sticky="nsew")
+        left_scroll = ttk.Scrollbar(left_shell, orient="vertical", command=self.left_canvas.yview)
+        left_scroll.grid(row=0, column=1, sticky="ns")
+        self.left_canvas.configure(yscrollcommand=left_scroll.set)
+        left = ttk.Frame(self.left_canvas, style="Panel.TFrame", padding=16)
+        self.left_canvas_window = self.left_canvas.create_window((0, 0), window=left, anchor="nw")
+        left.bind("<Configure>", self._sync_left_scroll_region)
+        self.left_canvas.bind("<Configure>", self._resize_left_scroll_content)
+        self.left_canvas.bind("<Enter>", self._enable_left_mousewheel)
+        self.left_canvas.bind("<Leave>", self._disable_left_mousewheel)
         left.columnconfigure(0, weight=1)
         ttk.Label(left, text=tr("ui.source_section", self.language), style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
         self.device_description_var = tk.StringVar(value=device_description(self.device_id, self.language))
@@ -419,6 +469,7 @@ class ToneMatchApp:
             text.grid(row=0, column=0, sticky="nsew")
             text.tag_configure("heading", font=(self.ui_font, 17, "bold"), foreground=COLORS["accent"], spacing3=6)
             text.tag_configure("subheading", font=(self.ui_font, 10), foreground=COLORS["muted"], spacing3=12)
+            text.tag_configure("route", font=(self.ui_font, 10, "bold"), foreground=COLORS["warning"], spacing1=2, spacing3=8)
             text.tag_configure("block", font=(self.ui_font, 11, "bold"), foreground=COLORS["blue"], spacing1=10, spacing3=4)
             text.tag_configure("parameter", foreground=COLORS["text"], lmargin1=18, lmargin2=18)
             text.tag_configure("reason", foreground=COLORS["muted"], lmargin1=18, lmargin2=18, spacing3=4)
@@ -439,14 +490,33 @@ class ToneMatchApp:
 
         self.diag_tab = ttk.Frame(self.notebook, style="Alt.TFrame", padding=12)
         self.notebook.add(self.diag_tab, text=tr("ui.diagnostics", self.language))
-        self.diag_tab.rowconfigure(0, weight=1)
+        self.diag_tab.rowconfigure(2, weight=1)
         self.diag_tab.columnconfigure(0, weight=1)
-        self.diag_tree = ttk.Treeview(self.diag_tab, columns=("metric", "value"), show="headings", selectmode="none")
+
+        compute_controls = ttk.Frame(self.diag_tab, style="Alt.TFrame")
+        compute_controls.grid(row=0, column=0, sticky="ew", pady=(0, 5))
+        compute_controls.columnconfigure(1, weight=1)
+        ttk.Label(compute_controls, text=tr("ui.compute_backend", self.language), background=COLORS["panel_alt"], foreground=COLORS["text"], font=(self.ui_font, 10, "bold")).grid(row=0, column=0, sticky="w", padx=(0, 10))
+        self.compute_combo = ttk.Combobox(compute_controls, textvariable=self.compute_var, values=choice_values("compute", self.language), state="readonly", width=28)
+        self.compute_combo.grid(row=0, column=1, sticky="w")
+        self.compute_combo.bind("<<ComboboxSelected>>", self._change_compute_backend)
+        self.hardware_refresh_button = ttk.Button(compute_controls, text=tr("ui.recheck_hardware", self.language), command=self._start_hardware_probe)
+        self.hardware_refresh_button.grid(row=0, column=2, sticky="e", padx=(8, 0))
+        ttk.Label(self.diag_tab, text=tr("ui.compute_hint", self.language), background=COLORS["panel_alt"], foreground=COLORS["muted"], font=(self.ui_font, 9), wraplength=700, justify="left").grid(row=1, column=0, sticky="ew", pady=(0, 8))
+
+        diagnostics_table = ttk.Frame(self.diag_tab, style="Alt.TFrame")
+        diagnostics_table.grid(row=2, column=0, sticky="nsew")
+        diagnostics_table.rowconfigure(0, weight=1)
+        diagnostics_table.columnconfigure(0, weight=1)
+        self.diag_tree = ttk.Treeview(diagnostics_table, columns=("metric", "value"), show="headings", selectmode="none")
         self.diag_tree.heading("metric", text=tr("ui.metric", self.language))
         self.diag_tree.heading("value", text=tr("ui.value", self.language))
-        self.diag_tree.column("metric", width=260, anchor="w")
-        self.diag_tree.column("value", width=180, anchor="e")
+        self.diag_tree.column("metric", width=235, minwidth=180, stretch=False, anchor="w")
+        self.diag_tree.column("value", width=360, minwidth=220, stretch=True, anchor="w")
         self.diag_tree.grid(row=0, column=0, sticky="nsew")
+        diag_scroll = ttk.Scrollbar(diagnostics_table, orient="vertical", command=self.diag_tree.yview)
+        diag_scroll.grid(row=0, column=1, sticky="ns")
+        self.diag_tree.configure(yscrollcommand=diag_scroll.set)
 
         self._build_debug_tab()
         self._build_changelog_tab()
@@ -462,6 +532,7 @@ class ToneMatchApp:
 
         self._refresh_capture_devices(silent=True)
         self._change_input_method()
+        self._populate_diagnostics()
         self._update_analysis_availability()
         if self.result:
             self._show_result(self.result, reset_notebook=False)
@@ -532,6 +603,7 @@ class ToneMatchApp:
         self.pickup_code = choice_code("pickup", self.pickup_var.get())
         self.mix_code = choice_code("mix", self.mix_var.get())
         self.output_code = choice_code("output", self.output_var.get())
+        self.compute_backend_code = choice_code("compute", self.compute_var.get())
         self.input_method_code = _input_method_code(self.input_method_var.get())
         self.device_id = device_id_from_label(self.device_var.get())
         developer_enabled = self.developer_var.get()
@@ -557,6 +629,126 @@ class ToneMatchApp:
             self.status_var.set(tr("status.ready", self.language) if self.file_var.get() else tr("status.choose_file", self.language))
         self._update_analysis_availability()
         self._save_settings()
+
+    def _start_hardware_probe(self) -> None:
+        """PyTorch·CUDA 확인을 UI 밖의 스레드에서 시작해 창 멈춤을 방지한다."""
+        if self.hardware_probe_active or (self.worker and self.worker.is_alive()):
+            return
+        self.hardware_probe_active = True
+        self.hardware_status = {}
+        self._set_compute_controls_enabled(False)
+        self._populate_diagnostics()
+        self._update_analysis_availability()
+        threading.Thread(target=self._hardware_probe_worker, daemon=True).start()
+
+    def _hardware_probe_worker(self) -> None:
+        """Demucs와 GPU 런타임을 검사하고 메인 UI 큐로 결과를 전달한다."""
+        try:
+            status = separator_runtime_status("auto")
+        except Exception as exc:
+            status = {"available": False, "error": str(exc), "resolved_device": "unavailable"}
+        self.events.put(("hardware_status", status))
+
+    def _apply_hardware_status(self, status: dict[str, object]) -> None:
+        """하드웨어 검사 결과를 저장하고 가능한 선택값·진단표·로그를 갱신한다."""
+        self.hardware_probe_active = False
+        self.hardware_status = dict(status)
+        cuda_available = bool(status.get("cuda_available"))
+        codes = ("auto", "cuda", "cpu") if cuda_available else ("auto", "cpu")
+        if self.compute_backend_code == "cuda" and not cuda_available:
+            self.compute_backend_code = "auto"
+            self._save_settings()
+        self.compute_combo.configure(values=tuple(choice_label("compute", code, self.language) for code in codes))
+        self.compute_var.set(choice_label("compute", self.compute_backend_code, self.language))
+        self._populate_diagnostics()
+        self._update_analysis_availability()
+        self._append_debug_log(
+            "hardware probe · "
+            f"cuda={str(cuda_available).lower()} · "
+            f"gpu={status.get('gpu_name') or '-'} · "
+            f"recommended={status.get('resolved_device', 'unavailable')}"
+        )
+
+    def _change_compute_backend(self, _event: object | None = None) -> None:
+        """표시된 AI 가속 선택을 안정적인 auto·cuda·cpu 코드로 저장한다."""
+        self.compute_backend_code = choice_code("compute", self.compute_var.get())
+        self.compute_var.set(choice_label("compute", self.compute_backend_code, self.language))
+        self._save_settings()
+        self._populate_diagnostics()
+        self._append_debug_log(f"compute preference · {self.compute_backend_code}")
+
+    def _set_compute_controls_enabled(self, enabled: bool) -> None:
+        """하드웨어 검사·분석 상태에 맞춰 가속 선택과 재검사 버튼을 함께 잠그거나 푼다."""
+        if not hasattr(self, "compute_combo") or not self.compute_combo.winfo_exists():
+            return
+        busy = bool((self.worker and self.worker.is_alive()) or (self.record_worker and self.record_worker.is_alive()))
+        active = bool(enabled and not busy and not self.hardware_probe_active)
+        self.compute_combo.configure(state="readonly" if active else "disabled")
+        self.hardware_refresh_button.configure(state="normal" if active else "disabled")
+
+    @staticmethod
+    def _format_bytes(value: object) -> str:
+        """바이트 값을 진단표에서 읽기 쉬운 MiB 또는 GiB 문자열로 바꾼다."""
+        if value is None:
+            return "-"
+        try:
+            size = max(0, int(value))
+        except (TypeError, ValueError):
+            return "-"
+        if size >= 1024**3:
+            return f"{size / 1024**3:.2f} GiB"
+        return f"{size / 1024**2:.1f} MiB"
+
+    def _populate_diagnostics(self) -> None:
+        """하드웨어·AI 분리 벤치마크·DSP 특징을 한 진단표에 순서대로 표시한다."""
+        if not hasattr(self, "diag_tree") or not self.diag_tree.winfo_exists():
+            return
+        for item in self.diag_tree.get_children():
+            self.diag_tree.delete(item)
+
+        def add(label_key: str, value: object) -> None:
+            """번역된 항목명과 문자열 값을 진단표 끝에 추가한다."""
+            self.diag_tree.insert("", "end", values=(tr(label_key, self.language), str(value)))
+
+        add("diag.compute_preference", choice_label("compute", self.compute_backend_code, self.language))
+        status = self.hardware_status
+        if not status:
+            add("diag.hardware_status", tr("value.checking", self.language))
+        else:
+            add("diag.hardware_status", tr("value.available" if status.get("available") else "value.unavailable", self.language))
+            resolved = str(status.get("resolved_device") or "unavailable").upper()
+            add("diag.recommended_device", resolved)
+            add("diag.cuda_available", tr("value.yes" if status.get("cuda_available") else "value.no", self.language))
+            add("diag.cuda_build", status.get("cuda_build") or "CPU-only")
+            add("diag.gpu_model", status.get("gpu_name") or "-")
+            total = self._format_bytes(status.get("gpu_vram_total_bytes"))
+            free = self._format_bytes(status.get("gpu_vram_free_bytes"))
+            add("diag.gpu_memory", f"{total} / {free}")
+            add("diag.runtime_versions", f"{status.get('torch_version', '-')} / {status.get('cuda_build') or '-'}")
+            add("diag.model_cache", tr("value.cached" if status.get("model_cached") else "value.not_cached", self.language))
+            if status.get("device_resolution_error") or status.get("error"):
+                add("diag.fallback_reason", status.get("device_resolution_error") or status.get("error"))
+        add("diag.native_dsp", tr("value.numpy_native", self.language))
+
+        if not self.result:
+            return
+        separation = self.result.get("source_separation", {})
+        if separation.get("used"):
+            self.diag_tree.insert("", "end", values=(tr("ui.guitar_source", self.language), tr("ui.guitar_stem_only", self.language)))
+            self.diag_tree.insert("", "end", values=(tr("ui.separator_model", self.language), separation.get("model", "")))
+            add("diag.requested_device", str(separation.get("requested_device") or "-").upper())
+            add("diag.effective_device", str(separation.get("resolved_device") or "-").upper())
+            add("diag.inference_time", f"{float(separation.get('inference_total_seconds', 0.0)):.2f} s")
+            add("diag.chunk_speed", f"{float(separation.get('inference_seconds_per_chunk', 0.0)):.2f} s")
+            realtime_factor = float(separation.get("realtime_factor", 0.0))
+            speed = (1.0 / realtime_factor) if realtime_factor > 0 else 0.0
+            add("diag.realtime_factor", f"{realtime_factor:.3f} RTF · {speed:.2f}× realtime")
+            if separation.get("peak_gpu_memory_bytes") is not None:
+                add("diag.peak_gpu_memory", self._format_bytes(separation.get("peak_gpu_memory_bytes")))
+        else:
+            add("diag.effective_device", tr("value.not_applicable", self.language))
+        for label, value in human_feature_rows(self.result["features"], self.language):
+            self.diag_tree.insert("", "end", values=(label, value))
 
     def _change_input_method(self, _event: object | None = None) -> None:
         """로컬 파일과 PC 재생음 녹음 모드에 맞춰 관련 컨트롤 상태를 바꾼다."""
@@ -808,18 +1000,23 @@ class ToneMatchApp:
         self.pickup_code = choice_code("pickup", self.pickup_var.get())
         self.mix_code = choice_code("mix", self.mix_var.get())
         self.output_code = choice_code("output", self.output_var.get())
+        self.compute_backend_code = choice_code("compute", self.compute_var.get())
         self.result = None
         self.completed_debug_blocks = {"boot"}
         self.active_debug_block = "input"
         self._draw_debug_diagram()
         range_label = f"{start:.3f}s–{'full' if end == 0 else f'{end:.3f}s'}"
-        self._append_debug_log(f"analysis request · {Path(path).name} · {range_label} · separation={self.mix_code}")
+        self._append_debug_log(
+            f"analysis request · {Path(path).name} · {range_label} · "
+            f"separation={self.mix_code} · compute={self.compute_backend_code}"
+        )
         self.analysis_cancel_event.clear()
         self.progress_var.set(2)
         self.status_var.set(tr("status.preparing", self.language))
         self.analyze_button.configure(state="disabled", text=tr("ui.analyzing", self.language))
         self.cancel_button.configure(state="normal")
         self.language_combo.configure(state="disabled")
+        self._set_compute_controls_enabled(False)
         for button in (self.export_json_button, self.export_html_button, self.copy_button):
             button.configure(state="disabled")
         request = {
@@ -832,6 +1029,7 @@ class ToneMatchApp:
             "reference_url": self.url_var.get().strip(),
             "device_id": self.device_id,
             "language": self.language,
+            "compute_backend": self.compute_backend_code,
         }
         self.worker = threading.Thread(target=self._analysis_worker, args=(request,), daemon=True)
         self.worker.start()
@@ -876,6 +1074,8 @@ class ToneMatchApp:
                     self._recording_completed(event[1], event[2])
                 elif event[0] == "record_error":
                     self._recording_failed(event[1], event[2])
+                elif event[0] == "hardware_status":
+                    self._apply_hardware_status(event[1])
         except queue.Empty:
             pass
         self.root.after(80, self._drain_events)
@@ -888,6 +1088,7 @@ class ToneMatchApp:
         self.progress_var.set(0)
         self.record_button.configure(text=tr("ui.start_record", self.language), style="TButton", state="normal")
         self.language_combo.configure(state="readonly")
+        self._set_compute_controls_enabled(True)
         self.status_var.set(tr("status.recording_complete", self.language, seconds=duration))
         self._append_debug_log(f"record complete · {path.name} · {duration:.2f}s")
         self._update_analysis_availability()
@@ -897,6 +1098,7 @@ class ToneMatchApp:
         self.progress_var.set(0)
         self.record_button.configure(text=tr("ui.start_record", self.language), style="TButton", state="normal")
         self.language_combo.configure(state="readonly")
+        self._set_compute_controls_enabled(True)
         self._append_debug_log(f"record error · {type(exc).__name__} · {exc}\n{detail}")
         messagebox.showerror(APP_NAME, str(exc))
         self._update_analysis_availability()
@@ -908,6 +1110,7 @@ class ToneMatchApp:
         self.analyze_button.configure(text=tr("ui.analyze", self.language))
         self.cancel_button.configure(state="disabled")
         self.language_combo.configure(state="readonly")
+        self._set_compute_controls_enabled(True)
         self._append_debug_log(f"analysis error · {type(exc).__name__} · {exc}\n{detail}")
         message = str(exc) if isinstance(exc, AnalysisError) else tr("dialog.unexpected", self.language, error=exc)
         if "취소" not in message and "cancel" not in message.lower():
@@ -927,20 +1130,22 @@ class ToneMatchApp:
             self._render_recipe(self.recipe_texts[index], recipe)
             self.notebook.tab(index, text=f"{tr('ui.recipe_tab', self.language, rank=index + 1)} · {recipe['match_percent']}%")
         self._render_voicing(result.get("chord_voicing", {}))
-        for item in self.diag_tree.get_children():
-            self.diag_tree.delete(item)
         separation = result.get("source_separation", {})
         if separation.get("used"):
-            self.diag_tree.insert("", "end", values=(tr("ui.guitar_source", self.language), tr("ui.guitar_stem_only", self.language)))
-            self.diag_tree.insert("", "end", values=(tr("ui.separator_model", self.language), separation.get("model", "")))
-        for label, value in human_feature_rows(features, self.language):
-            self.diag_tree.insert("", "end", values=(label, value))
+            self._append_debug_log(
+                "separation backend · "
+                f"requested={separation.get('requested_device', '-')} · "
+                f"active={separation.get('resolved_device', '-')} · "
+                f"inference={float(separation.get('inference_total_seconds', 0.0)):.2f}s"
+            )
+        self._populate_diagnostics()
         if reset_notebook:
             self.notebook.select(0)
         self.status_var.set(tr("status.complete", self.language))
         self.analyze_button.configure(text=tr("ui.analyze_again", self.language))
         self.cancel_button.configure(state="disabled")
         self.language_combo.configure(state="readonly")
+        self._set_compute_controls_enabled(True)
         self._update_analysis_availability()
         for button in (self.export_json_button, self.export_html_button, self.copy_button):
             button.configure(state="normal")
@@ -951,6 +1156,12 @@ class ToneMatchApp:
         widget.delete("1.0", "end")
         widget.insert("end", f"{recipe['name']}\n", "heading")
         widget.insert("end", f"{recipe['archetype']}  ·  {tr('recipe.match', self.language, value=recipe['match_percent'])}\n{recipe['description']}\n", "subheading")
+        widget.insert(
+            "end",
+            f"{tr('recipe.output_route', self.language)} · {recipe['output_mode_label']}\n"
+            f"{tr('recipe.route_applicability', self.language)} · {recipe['route_applicability_label']}\n",
+            "route",
+        )
         widget.insert("end", f"{tr('recipe.pickup_correction', self.language)}  {recipe['pickup_correction']}\n", "reason")
         for block in recipe["blocks"]:
             category = block.get("category_label", block["category"])
@@ -1006,9 +1217,14 @@ class ToneMatchApp:
 
     def _update_analysis_availability(self) -> None:
         """장치 지원, 분석 및 녹음 실행 상태를 보고 분석 버튼 활성 여부를 결정한다."""
-        busy = (self.worker and self.worker.is_alive()) or (self.record_worker and self.record_worker.is_alive())
+        busy = (
+            (self.worker and self.worker.is_alive())
+            or (self.record_worker and self.record_worker.is_alive())
+            or self.hardware_probe_active
+        )
         enabled = is_supported_device(self.device_id) and not busy
         self.analyze_button.configure(state="normal" if enabled else "disabled")
+        self._set_compute_controls_enabled(not busy)
         self._update_copy_availability()
 
     def _update_copy_availability(self, _event: object | None = None) -> None:
@@ -1118,7 +1334,15 @@ class ToneMatchApp:
         if not destination:
             return
         source_names = ("app.py", "catalog.py", "debug_info.py", "devices.py", "engine.py", "i18n.py", "recorder.py", "report.py", "separator.py", "voicing.py")
-        diagnostics = {"app_version": APP_VERSION, "build_date": BUILD_DATE, "python": sys.version, "platform": platform.platform(), "separator": separator_runtime_status(), "data_root": str(self.data_root)}
+        diagnostics = {
+            "app_version": APP_VERSION,
+            "build_date": BUILD_DATE,
+            "python": sys.version,
+            "platform": platform.platform(),
+            "compute_preference": self.compute_backend_code,
+            "separator": self.hardware_status or {"status": "not_probed"},
+            "data_root": str(self.data_root),
+        }
         try:
             with zipfile.ZipFile(destination, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
                 archive.writestr("diagnostics/runtime.json", json.dumps(diagnostics, ensure_ascii=False, indent=2))

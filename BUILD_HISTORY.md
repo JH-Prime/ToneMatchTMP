@@ -8,9 +8,81 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 | 버전 | 상태 | 범위 |
 |---|---|---|
+| `0.0.04` | 포터블 개발 프리뷰 빌드·검증 완료 | 자동/CPU/CUDA 진단·벤치마크, NumPy 네이티브 최적화, 출력 경로별 Amp/Cab 체인 정정 |
 | `0.0.03` | 포터블 개발 프리뷰 빌드 완료 | 포터블 개발 ZIP, 한·영 handoff, 로그·빌드 이력, NumPy 코드/보이싱 분석(실험) |
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
+
+## 0.0.04 — Compute diagnostics and route-aware Amp/Cab
+
+- 작업일 / Work date: `2026-09-04 KST`
+- 상태 / Status: `BUILT AND VERIFIED — unsigned CPU portable developer preview`
+- 기반 / Based on: v0.0.03 portable developer handoff and experimental chord/voicing pipeline
+
+### 이 버전에 속하는 변경 / Changes owned by this version
+
+- Demucs 기타 분리의 `auto`/`cpu`/`cuda` 선택, CUDA 미지원 자동 CPU 폴백과 설정 유지
+- CUDA 빌드·GPU 모델/연산 능력·총/여유 VRAM을 UI가 멈추지 않도록 조회하는 성능 진단
+- 실제 선택 장치, 전체/조각별 추론 시간, 실시간 배수와 최대 GPU 메모리 결과 기록
+- 코드·보이싱 반복 계산 캐시와 NumPy 벡터 연산을 통한 컴파일된 네이티브 DSP 경로 최적화
+- FRFR/헤드폰/USB/PA, 실제 캐비닛용 파워앰프, 기타 앰프 전면 입력별 Amp/Cab 포함 규칙·적용 순서 분리
+- FRFR Cabinet 컷과 중복되던 독립 EQ 제거, 실제 캐비닛 경로에서 기준 Cabinet 비교 정보 보존
+- CPU 포터블과 분리된 `requirements-cuda126.txt`/`enable_cuda.ps1` 기반 NVIDIA CUDA 소스 환경 절차
+- 전체 C++ 재작성 대신 후속 실시간 콜백·링 버퍼·FFT·ASIO만 C++ 경계로 두는 설계 방향
+
+### 검증 경계 / Verification boundary
+
+포터블 EXE는 CPU 런타임을 포함합니다. 이 개발 PC에는 CUDA 지원 GPU가 없어 실제
+GPU Demucs 추론, VRAM 사용량과 CPU/GPU 음원 비교는 하드웨어 검증하지 못했습니다.
+CUDA 분기 mock 테스트와 실제 CPU 폴백 결과를 GPU 검증으로 표현하지 않습니다.
+호환 NVIDIA PC에서 별도 CUDA 환경을 설치한 뒤 실제 짧은 분리, 메모리 회수와 취소를
+추가 검증해야 합니다.
+
+The portable EXE contains the CPU runtime. No CUDA-capable GPU was available on
+the release machine, so real GPU inference, VRAM use, and CPU/GPU output comparison
+remain unverified. Mock branch coverage and real CPU fallback are not GPU validation.
+
+C++ 실시간/ASIO 엔진은 로드맵이며 v0.0.04 산출물에는 포함되지 않습니다. 현재
+오프라인 앱은 Python이 조정하고 NumPy/PyTorch의 컴파일된 네이티브 연산을 사용합니다.
+
+### 릴리스 게이트 결과 / Release gate result
+
+- [x] 모든 버전 파일·배포 문서의 `0.0.04` 동기화 확인
+- [x] 출력 경로별 Amp/Cab 계약과 Cabinet 컷 비중복 회귀 테스트 통과
+- [x] 자동/CPU/CUDA 장치 결정과 진단 데이터 구조 회귀 테스트 통과
+- [x] Python 3.12에서 최종 자동 테스트 `26/26` 통과
+- [x] 소스·패키지 EXE 자체 진단 모두 `ok: true`
+- [x] 새 임시 폴더 ZIP 압축 해제와 `MANIFEST.json` 파일별 크기·SHA-256 재검증
+- [x] EXE·ZIP·자체 진단·manifest·공개 빌드 로그 SHA-256을 형제 체크섬 파일에 기록
+- [ ] 실제 CUDA GPU 추론 — `NOT TESTED: no compatible GPU on this release PC`
+- [ ] 실제 개인 PC 재생음 loopback 수동 테스트와 코드 서명
+
+### 최종 산출물 기록 / Final artifact record
+
+ZIP은 자기 자신의 해시를 내부 문서에 넣을 수 없으므로, 모든 최종 바이트·SHA-256은
+ZIP과 함께 배포하는 `ToneMatchTMP-v0.0.04-SHA256SUMS.txt`를 기준으로 합니다.
+`MANIFEST.json`은 ZIP 내부 각 파일을 별도로 검증합니다.
+
+| 산출물 | 바이트 | SHA-256 | 검증 |
+|---|---:|---|---|
+| `ToneMatchTMP-v0.0.04.exe` | 형제 체크섬 파일에서 확인 | 형제 체크섬 파일에서 확인 | 패키지 자체 진단 통과 |
+| `ToneMatchTMP-v0.0.04-Windows-x64-Portable-Dev.zip` | 형제 체크섬 파일에서 확인 | 형제 체크섬 파일에서 확인 | 새 임시 폴더 압축 해제·manifest 재검증 |
+| `ToneMatchTMP-v0.0.04-SELF-TEST.json` | 형제 체크섬 파일에서 확인 | 형제 체크섬 파일에서 확인 | `ok: true` |
+| `ToneMatchTMP-v0.0.04-build.log` | manifest/형제 체크섬 파일에서 확인 | manifest/형제 체크섬 파일에서 확인 | 사용자 홈·프로젝트 경로 일반화 |
+
+ZIP 내용을 바꾸거나 문서를 갱신하면 형제 체크섬과 manifest를 반드시 다시 계산합니다.
+
+### 권장 로그 생성 / Suggested build log
+
+```powershell
+$buildLog = Join-Path (Get-Location) "ToneMatchTMP-v0.0.04-BUILD.log"
+Start-Transcript -LiteralPath $buildLog -Force
+try {
+    .\build.ps1
+} finally {
+    Stop-Transcript
+}
+```
 
 ## 0.0.03 — Portable developer handoff
 

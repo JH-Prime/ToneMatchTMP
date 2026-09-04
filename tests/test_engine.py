@@ -110,7 +110,12 @@ class EngineAnalysisTests(unittest.TestCase):
         cls.bright = _spectral_shape(cls.base, "bright", cls.sample_rate)
         cls.body_heavy = _spectral_shape(cls.base, "body", cls.sample_rate)
 
-    def _analyze_result(self, samples: np.ndarray, reference_url: str = "") -> dict:
+    def _analyze_result(
+        self,
+        samples: np.ndarray,
+        reference_url: str = "",
+        output_mode: str = "FRFR / 헤드폰 / USB / PA",
+    ) -> dict:
         """파일 디코딩만 대체하고 나머지 전체 분석·추천 시퀀스를 실행한다."""
         duration = len(samples) / self.sample_rate
         with patch.object(
@@ -124,7 +129,7 @@ class EngineAnalysisTests(unittest.TestCase):
                 duration,
                 pickup="직접 입력/모름",
                 mix_mode="기타 단독/타브 영상",
-                output_mode="FRFR / 헤드폰 / USB / PA",
+                output_mode=output_mode,
                 reference_url=reference_url,
             )
 
@@ -191,6 +196,73 @@ class EngineAnalysisTests(unittest.TestCase):
             self.assertTrue(all(block["model"] for block in blocks))
             self.assertTrue(all(block["parameters"] for block in blocks))
 
+    def test_output_routes_match_amp_and_cabinet_policy(self) -> None:
+        """세 출력 연결의 Amp·Cabinet 구성과 적용 안내가 실제 추천 블록과 일치해야 한다."""
+        cases = {
+            "FRFR / 헤드폰 / USB / PA": (True, True, "high"),
+            "파워앰프 + 실제 기타 캐비닛 (캐비닛 제외)": (True, False, "medium"),
+            "기타 앰프 전면 입력 (앰프/캐비닛 제외)": (False, False, "low"),
+        }
+        for output_label, (expect_amp, expect_cab, applicability) in cases.items():
+            with self.subTest(output=output_label):
+                result = self._analyze_result(self.base, output_mode=output_label)
+                recipe_item = result["recipes"][0]
+                categories = [block["category"] for block in recipe_item["blocks"]]
+                self.assertEqual("Amp Head" in categories, expect_amp)
+                self.assertEqual("Cabinet" in categories, expect_cab)
+                self.assertEqual(recipe_item["amp_included"], expect_amp)
+                self.assertEqual(recipe_item["cabinet_included"], expect_cab)
+                self.assertEqual(recipe_item["route_applicability"], applicability)
+                self.assertEqual([block["order"] for block in recipe_item["blocks"]], list(range(1, len(recipe_item["blocks"]) + 1)))
+                if expect_cab:
+                    cabinet = next(block for block in recipe_item["blocks"] if block["category"] == "Cabinet")
+                    self.assertIn("LOW CUT FILTER", cabinet["parameters"])
+                    self.assertIn("HIGH CUT FILTER", cabinet["parameters"])
+                    self.assertNotIn("EQ", categories, "캐비닛 컷과 같은 Low/High Cut EQ를 중복 적용하면 안 됩니다.")
+                if output_label.startswith("파워앰프"):
+                    self.assertTrue(recipe_item["omitted_reference_cabinet"])
+                    self.assertTrue(any("Cabinet/IR" in step for step in result["application_steps"]))
+                if output_label.startswith("기타 앰프"):
+                    self.assertTrue(recipe_item["omitted_reference_amp"])
+                    self.assertTrue(any("Amp와 Cabinet" in step for step in result["application_steps"]))
+
+                english = engine.relocalize_result(result, "en")
+                self.assertEqual(
+                    [block["category"] for block in english["recipes"][0]["blocks"]],
+                    categories,
+                )
+
+    def test_catalog_cabinet_positions_are_structured_and_valid(self) -> None:
+        """모든 TMP 캐비닛 조합의 마이크 위치·거리·축이 검증 가능한 형식이어야 한다."""
+        features = engine.extract_features(self.base, self.sample_rate)
+        for template in engine.TEMPLATES:
+            if not template.get("cab"):
+                continue
+            with self.subTest(template=template["id"]):
+                position, axis = engine._parse_mic_position(template["mic_position"])
+                self.assertIn("/", position)
+                self.assertIn(axis, {"ON AXIS", "OFF AXIS"})
+                parameters = engine._cabinet_parameters(template, features)
+                self.assertEqual(parameters["MIC"], template["mic"])
+                self.assertTrue(parameters["LOW CUT FILTER"].endswith(" Hz"))
+                self.assertTrue(parameters["HIGH CUT FILTER"].endswith(" Hz"))
+
+    def test_direct_template_remains_valid_without_amp_or_cabinet(self) -> None:
+        """앰프·캐비닛이 없는 다이렉트 템플릿도 모든 출력 경로에서 빈 참조값 없이 조립돼야 한다."""
+        features = engine.extract_features(self.base, self.sample_rate)
+        template = next(item for item in engine.TEMPLATES if item["id"] == "rockbox_direct")
+        for output_mode in ("frfr", "power_amp_cab", "amp_front"):
+            with self.subTest(output_mode=output_mode):
+                recipe_item = engine._recipe_from_template(template, features, "unknown", output_mode, 0.8, "ko")
+                categories = [block["category"] for block in recipe_item["blocks"]]
+                self.assertNotIn("Amp Head", categories)
+                self.assertNotIn("Cabinet", categories)
+                self.assertIsNone(recipe_item["reference_amp"])
+                self.assertIsNone(recipe_item["reference_cabinet"])
+                self.assertIsNone(recipe_item["omitted_reference_amp"])
+                self.assertIsNone(recipe_item["omitted_reference_cabinet"])
+                self.assertFalse(any(item.rstrip().endswith("-") for item in recipe_item["limitations"]))
+
     def test_json_and_html_exports_are_complete_and_escape_url(self) -> None:
         """JSON/HTML 저장 내용과 HTML 특수문자 이스케이프를 검증한다."""
         unsafe_url = "https://example.test/watch?a=1&label=<guitar>"
@@ -217,6 +289,8 @@ class EngineAnalysisTests(unittest.TestCase):
         self.assertIn(result["target_firmware"], html_text)
         for recipe_item in result["recipes"]:
             self.assertIn(recipe_item["name"], html_text)
+        self.assertIn("연결 경로 적용성", html_text)
+        self.assertIn(result["recipes"][0]["route_applicability_label"], html_text)
         self.assertNotIn("<guitar>", html_text)
         self.assertIn("&lt;guitar&gt;", html_text)
         self.assertIn("&amp;label=", html_text)

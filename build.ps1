@@ -5,7 +5,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$Version = "0.0.03"
+$Version = "0.0.04"
 $AppBaseName = "ToneMatchTMP-v$Version"
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $PythonExe = [System.IO.Path]::GetFullPath((Join-Path $ProjectDir "..\.venv\Scripts\python.exe"))
@@ -59,7 +59,10 @@ try {
     Set-Content -LiteralPath $BuildLog -Encoding utf8 -Value "ToneMatch TMP $Version build log"
 
     if (-not $SkipTests) {
-        Invoke-LoggedNative "Python compileall" { & $PythonExe -m compileall -q . }
+        # 이전 build/dist의 수천 개 런타임 파일을 다시 컴파일하지 않고 배포 소스만 검사한다.
+        Invoke-LoggedNative "Python compileall" {
+            & $PythonExe -m compileall -q app.py catalog.py debug_info.py devices.py engine.py i18n.py recorder.py report.py separator.py voicing.py tests tools
+        }
         Invoke-LoggedNative "Unit tests" { & $PythonExe -m unittest discover -s tests -v }
     }
 
@@ -111,7 +114,8 @@ try {
         "README.md", "README_KO.md", "DEVELOPMENT_KO.md", "FUNCTION_REFERENCE_KO.md",
         "DEVELOPER_HANDOFF_KO_EN.md", "BUILD_HISTORY.md", "LICENSE.txt",
         "THIRD_PARTY_NOTICES.txt", "THIRD_PARTY_RUNTIME_INVENTORY.txt",
-        "ToneMatchTMP.spec", "build.ps1", "requirements.txt", "version_info.txt"
+        "ToneMatchTMP.spec", "build.ps1", "requirements.txt", "requirements-cuda126.txt",
+        "enable_cuda.ps1", "version_info.txt"
     )) {
         Copy-Item -LiteralPath (Join-Path $ProjectDir $Name) -Destination $SourceRoot -Force
     }
@@ -128,7 +132,10 @@ try {
         Remove-Item -LiteralPath $_.FullName -Force
     }
 
-    foreach ($Name in @("ToneMatchTMP.spec", "build.ps1", "requirements.txt", "version_info.txt")) {
+    foreach ($Name in @(
+        "ToneMatchTMP.spec", "build.ps1", "requirements.txt", "requirements-cuda126.txt",
+        "enable_cuda.ps1", "version_info.txt"
+    )) {
         Copy-Item -LiteralPath (Join-Path $ProjectDir $Name) -Destination $BuildRoot -Force
     }
     Copy-Item -LiteralPath (Join-Path $ProjectDir "BUILD_HISTORY.md") -Destination $HistoryRoot -Force
@@ -174,6 +181,16 @@ try {
         $SelfTest.separator_runtime.cache_path = "%USERPROFILE%\.cache\huggingface\hub\models--adefossez--HTDemucs-6s"
         $SelfTest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $SelfTestPath -Encoding utf8
     }
+    # 자체 진단까지 기록된 최종 공개 로그로 앞서 복사한 파일을 덮어쓴다.
+    $PublicBuildLog = Get-Content -Raw -LiteralPath $BuildLog
+    foreach ($PrivateRoot in @($ProjectDir, $env:USERPROFILE)) {
+        if ($PrivateRoot) {
+            $PublicBuildLog = $PublicBuildLog.Replace($PrivateRoot, "<PRIVATE_ROOT>")
+            $EscapedPrivateRoot = $PrivateRoot.Replace("\", "\\")
+            $PublicBuildLog = $PublicBuildLog.Replace($EscapedPrivateRoot, "<PRIVATE_ROOT>")
+        }
+    }
+    Set-Content -LiteralPath (Join-Path $HistoryRoot (Split-Path -Leaf $BuildLog)) -Encoding utf8 -Value $PublicBuildLog
     if (Test-Path -LiteralPath (Join-Path $ProjectDir "QA_REPORT_v$Version.json")) {
         Copy-Item -LiteralPath (Join-Path $ProjectDir "QA_REPORT_v$Version.json") -Destination $DiagnosticsRoot -Force
     }
@@ -192,6 +209,10 @@ try {
     $ChecksumLines = @()
     $ChecksumLines += "{0}  {1}" -f (Get-FileHash -Algorithm SHA256 -LiteralPath $ExePath).Hash, "$AppBaseName\$AppBaseName.exe"
     $ChecksumLines += "{0}  {1}" -f (Get-FileHash -Algorithm SHA256 -LiteralPath $SelfTestPath).Hash, "$AppBaseName\diagnostics\$(Split-Path -Leaf $SelfTestPath)"
+    $ManifestPath = Join-Path $StageRoot "MANIFEST.json"
+    $PublicBuildLogPath = Join-Path $HistoryRoot (Split-Path -Leaf $BuildLog)
+    $ChecksumLines += "{0}  {1}" -f (Get-FileHash -Algorithm SHA256 -LiteralPath $ManifestPath).Hash, "$AppBaseName\MANIFEST.json"
+    $ChecksumLines += "{0}  {1}" -f (Get-FileHash -Algorithm SHA256 -LiteralPath $PublicBuildLogPath).Hash, "$AppBaseName\history\$(Split-Path -Leaf $PublicBuildLogPath)"
     if (-not $SkipZip) {
         $ChecksumLines += "{0}  {1}" -f (Get-FileHash -Algorithm SHA256 -LiteralPath $ZipPath).Hash, (Split-Path -Leaf $ZipPath)
     }
