@@ -1,0 +1,119 @@
+{
+  "schema": "tonematch-qa/v1",
+  "app_version": "0.0.06",
+  "prepared_at": "2026-09-06",
+  "tested_at": "2026-09-07",
+  "platform": "Windows 11 10.0.26200 x64 / Python 3.12.14",
+  "checks": {
+    "compileall": "passed",
+    "unit_tests": {
+      "status": "passed",
+      "count": 80,
+      "warnings_as_errors": true,
+      "coverage_focus": [
+        "reference profile generation from final analyzed PCM and deterministic bounded frame sampling",
+        "level-normalized six-band aggregation in Low, Low Mid, Mid, Presence, Treble, and Air order",
+        "common-frequency-grid interpolation and delta sign defined as Current minus Reference",
+        "identical-PCM curve and band deltas within 1e-7 dB at 8/22.05/44.1/48 kHz; calibrated two-band delta signs",
+        "consistent 80 dB relative noise treatment, shared observation floor, and -75 dBFS quiet gate",
+        "silence, non-finite input, Nyquist limits, and sample-rate mismatch handling",
+        "reuse of the existing live SpectrumFrame without a second device stream",
+        "Reference, Current, and delta table plus frequency-difference rendering",
+        "existing spectrum, capture, compute-device, recipe-route, export, voicing, and developer-source regressions",
+        "windowed None stdout/stderr startup, floating monotonic progress, 250 ms elapsed timer and terminal states",
+        "actual-byte download progress, unknown totals, cache-only loading, preserved model errors and installed Demucs API compatibility",
+        "internal split-block progress, duplicate/multi-model accounting and cancellation cleanup",
+        "fixed analysis footer remains visible at 1080x720 in Korean/English with long status messages and scrolled input options"
+      ]
+    },
+    "source_self_test": {
+      "status": "passed",
+      "ok": true,
+      "reference_compare_ok": true,
+      "reference_bands": 6,
+      "recipes": 3,
+      "developer_blocks": 11,
+      "english_localization": true,
+      "ffmpeg_analysis": true
+    },
+    "runtime_probe": {
+      "status": "passed",
+      "demucs": "4.1.0",
+      "torch": "2.13.0+cpu",
+      "resolved_device": "cpu",
+      "cuda_available": false,
+      "model_cached": true
+    },
+    "capture_device_enumeration": {
+      "status": "passed",
+      "total": 4,
+      "loopback": 3,
+      "input": 1,
+      "audio_captured": false
+    },
+    "reference_compare_automated_smoke": {
+      "status": "passed",
+      "reference_from_analyzed_pcm": true,
+      "live_current_reused": true,
+      "mapped_tk_window": false,
+      "canvas_test": "hidden Tk widgets with injected canvas dimensions",
+      "stopped_language_state": "passed",
+      "stale_and_post_stop_frames": "rejected",
+      "bands": ["Low", "Low Mid", "Mid", "Presence", "Treble", "Air"],
+      "delta_definition": "Current minus Reference",
+      "level_normalized": true,
+      "match_percent_implemented": false,
+      "automatic_eq_or_tmp_settings_implemented": false
+    },
+    "provided_mp3_source_analysis": {
+      "status": "passed",
+      "source": "User-provided 320 kbps stereo 44.1 kHz MP3; kept local and excluded from release",
+      "duration_seconds": 252.61,
+      "analysis_seconds_including_first_model_download": 109.204,
+      "compute_device": "cpu",
+      "first_model_download": true,
+      "windowed_none_streams_at_start": true,
+      "progress_events": 97,
+      "completed_chunks": 9,
+      "recipe_count": 3,
+      "reference_bands": 6,
+      "guitar_stem_rms_dbfs": -63.245,
+      "boundary": "Execution/progress verification only; weak guitar stem in a backing track is not a tone-reconstruction accuracy test."
+    },
+    "packaged_gui_analysis": {
+      "status": "passed",
+      "duration_seconds": 252.61,
+      "displayed_elapsed": "01:42",
+      "compute_device": "cpu",
+      "model_cache_reuse": true,
+      "real_download_in_gui": false,
+      "observed_overall_percent": [10.0, 34.0, 62.2, 100.0],
+      "observed_processed_audio_seconds": [60.0, 229.9, 252.6],
+      "recipe_count": 3,
+      "reference_bands": 6,
+      "microphone_or_loopback_captured": false
+    },
+    "packaged_exe_self_test": {
+      "status": "passed",
+      "ok": true
+    },
+    "portable_archive": {
+      "status": "passed",
+      "fresh_extract": true,
+      "manifest_entries": 4446,
+      "manifest_file_hashes": "passed",
+      "required_v0.0.06_sources": "matching",
+      "model_weights_absent": true,
+      "personal_paths_in_public_log": "absent",
+      "final_hash_authority": "Sibling ToneMatchTMP-v0.0.06-SHA256SUMS.txt; re-extraction verification is repeated after final documentation packaging."
+    }
+  },
+  "not_run": [
+    "Actual microphone or loopback Reference Compare capture requires a deliberate manual test and is not claimed by hardware-free automation.",
+    "Actual NVIDIA CUDA inference and VRAM measurement remain unverified unless a compatible GPU run is recorded later.",
+    "Live Brightness, Body, Gain, Compression, Ambience, and Match-percent meters are not implemented in v0.0.06.",
+    "Automatic EQ/TMP recommendation or application, preset writing, ASIO, WASAPI Exclusive, and a C++ real-time engine are not implemented in v0.0.06.",
+    "Offline behavior is covered by cache-only mocked loader tests; disabling networking on this PC was not performed.",
+    "Code signing was not performed."
+  ]
+}

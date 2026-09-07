@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import html
+import math
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -32,6 +33,18 @@ REPORT_TEXT = {
     "isolated": {"ko": "Demucs guitar stem만 분석", "en": "Demucs guitar stem only"},
     "skipped": {"ko": "기타 단독 파일 · 분리 생략", "en": "Guitar-only file · isolation skipped"},
     "fingerprint": {"ko": "톤 지문", "en": "Tone fingerprint"},
+    "reference_compare": {"ko": "참조 비교", "en": "Reference compare"},
+    "band": {"ko": "대역", "en": "Band"},
+    "reference": {"ko": "Reference", "en": "Reference"},
+    "current": {"ko": "Current", "en": "Current"},
+    "reference_profile_note": {
+        "ko": "분석 오디오에서 만든 레벨 정규화 6대역 참조 프로필입니다.",
+        "en": "A level-normalized six-band reference profile built from the analyzed audio.",
+    },
+    "live_values_not_saved": {
+        "ko": "Current와 Δ는 실시간 입력 세션 값이므로 이 저장 보고서에는 포함되지 않습니다. 앱에서 입력 모니터링을 시작하면 비교할 수 있습니다.",
+        "en": "Current and Δ are live-input session values, so they are not stored in this report. Start input monitoring in the app to compare them.",
+    },
     "warnings": {"ko": "해석 주의", "en": "Interpretation notes"},
     "steps": {"ko": "적용 순서", "en": "Application steps"},
     "diagnostics": {"ko": "DSP 진단값", "en": "DSP diagnostics"},
@@ -94,6 +107,60 @@ def _reference_link(value: object) -> str:
         return visible
     escaped_url = html.escape(candidate, quote=True)
     return f'<a href="{escaped_url}" rel="noopener noreferrer">{visible}</a>'
+
+
+def _reference_compare_html(result: dict, language: str) -> str:
+    """저장된 참조 프로필의 6대역 값과 라이브 값의 비저장 상태를 안전하게 표시한다."""
+    profile = result.get("reference_spectrum")
+    if not isinstance(profile, dict):
+        return ""
+    bands = profile.get("bands")
+    if not isinstance(bands, list):
+        return ""
+
+    rows: list[str] = []
+    for band in bands:
+        if not isinstance(band, dict):
+            continue
+        label = band.get(f"label_{language}", band.get("label", band.get("name", band.get("id", "—"))))
+        reference_db = next(
+            (
+                band[key]
+                for key in ("relative_db", "reference_db", "level_db", "normalized_db")
+                if key in band
+            ),
+            None,
+        )
+        if isinstance(reference_db, bool):
+            continue
+        try:
+            reference_value = float(reference_db)
+        except (TypeError, ValueError):
+            continue
+        if not math.isfinite(reference_value):
+            continue
+        rows.append(
+            "<tr>"
+            f"<th>{html.escape(str(label))}</th>"
+            f"<td>{reference_value:+.1f} dB</td>"
+            "<td>—</td><td>—</td>"
+            "</tr>"
+        )
+    if not rows:
+        return ""
+
+    return f"""
+<section class="card recipe reference-compare">
+  <div class="rank">Reference | Current | Δ</div>
+  <h2>{_rt('reference_compare', language)}</h2>
+  <p>{_rt('reference_profile_note', language)}</p>
+  <table>
+    <thead><tr><th>{_rt('band', language)}</th><th>{_rt('reference', language)}</th><th>{_rt('current', language)}</th><th>Δ</th></tr></thead>
+    <tbody>{''.join(rows)}</tbody>
+  </table>
+  <p class="correction">{_rt('live_values_not_saved', language)}</p>
+</section>
+"""
 
 
 def save_html(result: dict, path: str | Path) -> None:
@@ -160,6 +227,7 @@ def save_html(result: dict, path: str | Path) -> None:
         for label, value in human_feature_rows(features, language)
     )
     isolation_text = _rt("isolated", language) if result.get("source_separation", {}).get("used") else _rt("skipped", language)
+    reference_compare_html = _reference_compare_html(result, language)
     voicing_rows = []
     for event in result.get("chord_voicing", {}).get("events", []):
         if event.get("chord_type") == "unknown":
@@ -209,6 +277,7 @@ table{{width:100%;border-collapse:collapse}} th,td{{padding:7px 9px;border-botto
   <section class="card"><h2>{_rt('source', language)}</h2><table><tr><th>{_rt('file', language)}</th><td>{html.escape(source['file_name'])}</td></tr><tr><th>{_rt('range', language)}</th><td>{source['start_seconds']:.1f}s – {source['end_seconds']:.1f}s</td></tr><tr><th>{_rt('url', language)}</th><td>{reference_link or _rt('none', language)}</td></tr><tr><th>{_rt('input', language)}</th><td>{html.escape(result['input_profile']['pickup_label'])}</td></tr><tr><th>{_rt('output', language)}</th><td>{html.escape(result['input_profile']['output_mode_label'])}</td></tr><tr><th>{_rt('isolation', language)}</th><td>{html.escape(isolation_text)}</td></tr></table></section>
   <section class="card"><h2>{_rt('fingerprint', language)}</h2>{feature_bars}</section>
 </div>
+{reference_compare_html}
 {''.join(recipes_html)}
 <section class="card recipe"><div class="rank">{tr('ui.voicing_tab', language)}</div><h2>{tr('ui.voicing_chord', language)}</h2><p>{tr('ui.voicing_intro', language)}</p><table><thead><tr><th>{tr('ui.voicing_time', language)}</th><th>{tr('ui.voicing_chord', language)}</th><th>{tr('ui.voicing_notes', language)}</th><th>{tr('ui.voicing_profile', language)}</th><th>{tr('ui.playable_shapes', language)}</th></tr></thead><tbody>{voicing_body}</tbody></table><p class="correction">{tr('ui.voicing_limit', language)}</p></section>
 <div class="grid">

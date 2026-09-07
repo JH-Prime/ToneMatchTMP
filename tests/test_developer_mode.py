@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import ast
 import re
+import subprocess
 import sys
 import tkinter as tk
 import unittest
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 import numpy as np
 
@@ -19,6 +21,8 @@ if str(MODULE_DIR) not in sys.path:
 import catalog  # noqa: E402
 import debug_info  # noqa: E402
 from app import ToneMatchApp  # noqa: E402
+from i18n import LANGUAGE_LABELS, tr  # noqa: E402
+from reference_compare import build_reference_profile  # noqa: E402
 from spectrum import analyze_spectrum_frame  # noqa: E402
 
 
@@ -53,6 +57,7 @@ class DeveloperModeTests(unittest.TestCase):
             "engine.py",
             "i18n.py",
             "recorder.py",
+            "reference_compare.py",
             "report.py",
             "separator.py",
             "spectrum.py",
@@ -60,6 +65,7 @@ class DeveloperModeTests(unittest.TestCase):
             "tests/test_developer_mode.py",
             "tests/test_engine.py",
             "tests/test_recorder.py",
+            "tests/test_reference_compare.py",
             "tests/test_separator.py",
             "tests/test_spectrum.py",
             "tests/test_voicing.py",
@@ -90,6 +96,212 @@ class DeveloperModeTests(unittest.TestCase):
         for progress, expected in checkpoints:
             self.assertEqual(debug_info.block_for_progress(progress), expected)
 
+    def test_windowed_import_repairs_missing_standard_streams(self) -> None:
+        """콘솔 없는 실행 환경도 출력 가능한 스트림을 만들고 기존 스트림은 유지해야 한다."""
+        script = "\n".join((
+            "import importlib, sys",
+            "sys.stdout = None",
+            "sys.stderr = None",
+            "import app",
+            "assert sys.stdout is not None and sys.stderr is not None",
+            "assert sys.stdout.write('model download output') >= 0",
+            "assert sys.stderr.write('model download progress') >= 0",
+            "sys.stdout.flush()",
+            "sys.stderr.flush()",
+            "old_stdout, old_stderr = sys.stdout, sys.stderr",
+            "importlib.reload(app)",
+            "assert sys.stdout is old_stdout and sys.stderr is old_stderr",
+        ))
+        completed = subprocess.run(
+            [sys.executable, "-W", "error", "-c", script],
+            cwd=MODULE_DIR,
+            capture_output=True,
+            text=True,
+            timeout=90,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+        self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+
+    def test_analysis_progress_accepts_floats_without_regressing(self) -> None:
+        """실수 진행률은 표시되며 지연·잘못된 콜백에도 뒤로 가거나 범위를 벗어나지 않아야 한다."""
+        root = tk.Tk()
+        root.withdraw()
+        try:
+            application = ToneMatchApp(root)
+            root.update_idletasks()
+            application.language = "ko"
+            application.analysis_started_at = 100.0
+            with patch("app.time.monotonic", return_value=165.25), patch.object(root, "after"):
+                application.events.put(("progress", 23.75, "모델 다운로드"))
+                application._drain_events()
+                self.assertEqual(application.analysis_progress_percent, 23.75)
+                self.assertEqual(application.progress_var.get(), 23.75)
+                self.assertIn("23.8%", application.progress_detail_var.get())
+                self.assertIn("01:05", application.progress_detail_var.get())
+                self.assertIn("23.8%", application.debug_log_lines[-1])
+                for value in (18.0, -5.0, float("nan"), float("inf")):
+                    application.events.put(("progress", value, "지연된 콜백"))
+                    application._drain_events()
+                    self.assertEqual(application.progress_var.get(), 23.75)
+                application.analysis_cancel_event.set()
+                application.status_var.set("취소 대기 중")
+                application.events.put(("progress", 42.125, "기타 분리"))
+                application._drain_events()
+                self.assertEqual(application.status_var.get(), "취소 대기 중")
+                self.assertEqual(application.progress_var.get(), 42.125)
+                application.events.put(("progress", 110.0, "범위 밖 콜백"))
+                application._drain_events()
+                self.assertEqual(application.progress_var.get(), 100.0)
+        finally:
+            root.destroy()
+
+    def test_analysis_timer_refreshes_and_stops_on_error_or_cancellation(self) -> None:
+        """콜백이 없어도 경과 시간만 갱신하고 오류·취소 이후에는 마지막 값이 유지돼야 한다."""
+        root = tk.Tk()
+        root.withdraw()
+        try:
+            application = ToneMatchApp(root)
+            root.update_idletasks()
+            application.language = "ko"
+            application.analysis_started_at = 100.0
+            application.analysis_progress_percent = 18.5
+            application.progress_var.set(18.5)
+            with patch("app.time.monotonic", return_value=107.9), patch.object(root, "after") as schedule:
+                application._tick_analysis_progress()
+                self.assertIn("18.5%", application.progress_detail_var.get())
+                self.assertIn("00:07", application.progress_detail_var.get())
+                self.assertEqual(application.progress_var.get(), 18.5)
+                schedule.assert_called_once_with(250, application._tick_analysis_progress)
+            with patch("app.time.monotonic", return_value=112.5), patch("app.messagebox.showerror") as show_error:
+                application._show_error(RuntimeError("model unavailable"), "test diagnostic")
+                show_error.assert_called_once()
+            self.assertIsNone(application.analysis_started_at)
+            self.assertEqual(application.analysis_elapsed_seconds, 12.5)
+            self.assertEqual(application.progress_var.get(), 18.5)
+            stopped_text = application.progress_detail_var.get()
+            with patch("app.time.monotonic", return_value=900.0), patch.object(root, "after"):
+                application._tick_analysis_progress()
+            self.assertEqual(application.progress_detail_var.get(), stopped_text)
+            application.analysis_started_at = 200.0
+            with patch("app.time.monotonic", return_value=204.0), patch("app.messagebox.showerror") as show_error:
+                application._show_error(RuntimeError("cancelled by user"), "")
+                show_error.assert_not_called()
+            self.assertIsNone(application.analysis_started_at)
+            self.assertEqual(application.analysis_elapsed_seconds, 4.0)
+            application.closing = True
+            with patch.object(root, "after") as schedule:
+                application._tick_analysis_progress()
+                schedule.assert_not_called()
+        finally:
+            root.destroy()
+
+    def test_analysis_completion_preserves_final_elapsed_time(self) -> None:
+        """완료 이벤트는 전체 진행률을 100%로 만들고 결과 화면에서도 소요 시간을 보존해야 한다."""
+        root = tk.Tk()
+        root.withdraw()
+        try:
+            application = ToneMatchApp(root)
+            root.update_idletasks()
+            application.language = "en"
+            application.analysis_started_at = 100.0
+            application.analysis_progress_percent = 97.5
+            result = {
+                "features": dict.fromkeys(("saturation", "brightness", "body", "ambience", "analysis_confidence"), 0.5),
+                "recipes": [{"name": "Test chain", "match_percent": 80}],
+            }
+            with (
+                patch("app.time.monotonic", return_value=172.9),
+                patch.object(root, "after"),
+                patch.object(application, "_render_recipe"),
+                patch.object(application, "_render_voicing"),
+                patch.object(application, "_populate_diagnostics"),
+                patch.object(application, "_refresh_reference_profile"),
+            ):
+                application.events.put(("done", result))
+                application._drain_events()
+            self.assertIs(application.result, result)
+            self.assertIsNone(application.analysis_started_at)
+            self.assertEqual(application.analysis_progress_percent, 100.0)
+            self.assertEqual(application.progress_var.get(), 100.0)
+            self.assertAlmostEqual(application.analysis_elapsed_seconds, 72.9)
+            self.assertIn("100.0%", application.progress_detail_var.get())
+            self.assertIn("Elapsed 01:12", application.progress_detail_var.get())
+            with patch("app.time.monotonic", return_value=999.0):
+                application._refresh_analysis_progress()
+            self.assertIn("Elapsed 01:12", application.progress_detail_var.get())
+        finally:
+            root.destroy()
+
+    def test_analysis_progress_footer_stays_visible_when_options_scroll(self) -> None:
+        """최소 크기의 한·영 화면에서 긴 상태와 진행률이 입력 스크롤 밖에 고정돼야 한다."""
+        root = tk.Tk()
+        root.withdraw()
+        try:
+            with (
+                patch.object(ToneMatchApp, "_load_settings"),
+                patch.object(ToneMatchApp, "_save_settings"),
+                patch.object(root, "after"),
+            ):
+                application = ToneMatchApp(root)
+                root.geometry("1080x720")
+                for language in ("ko", "en"):
+                    application.language_var.set(LANGUAGE_LABELS[language])
+                    application._change_language()
+                    application.analysis_progress_percent = 23.75
+                    application.analysis_elapsed_seconds = 125.0
+                    application._refresh_analysis_progress()
+                    statuses = (
+                        tr(
+                            "progress.separator_download", language,
+                            filename="htdemucs_6s-large-model-checkpoint.safetensors",
+                            downloaded_mb="1234.5", total_mb="2345.6", percent="52.6",
+                        ),
+                        tr(
+                            "error.separator_network", language,
+                            detail="HTTPSConnectionPool: model-download.example.test:443; certificate verification failed",
+                        ),
+                    )
+                    for status in statuses:
+                        with self.subTest(language=language, status=status):
+                            application.status_var.set(status)
+                            application.left_canvas.yview_moveto(0.0)
+                            root.update_idletasks()
+                            footer = application.progress.master
+                            self.assertIs(footer.master, application.left_canvas.master)
+                            self.assertEqual(footer.grid_info()["row"], 1)
+                            self.assertEqual(application.left_canvas.grid_info()["row"], 0)
+                            detail_label = footer.grid_slaves(row=2, column=0)[0]
+                            status_label = footer.grid_slaves(row=3, column=0)[0]
+                            self.assertEqual(str(detail_label.cget("textvariable")), str(application.progress_detail_var))
+                            self.assertEqual(str(status_label.cget("textvariable")), str(application.status_var))
+                            fixed_widgets = (
+                                footer, application.analyze_button, application.cancel_button,
+                                application.progress, detail_label, status_label,
+                            )
+                            original_positions = []
+                            for widget in fixed_widgets:
+                                x = widget.winfo_rootx() - root.winfo_rootx()
+                                y = widget.winfo_rooty() - root.winfo_rooty()
+                                original_positions.append((widget.winfo_rootx(), widget.winfo_rooty()))
+                                self.assertGreaterEqual(x, 0)
+                                self.assertGreaterEqual(y, 0)
+                                self.assertLessEqual(x + widget.winfo_width(), 1080)
+                                self.assertLessEqual(y + widget.winfo_height(), 720)
+                                self.assertGreaterEqual(widget.winfo_height(), widget.winfo_reqheight())
+                            self.assertGreater(application.left_canvas.winfo_height(), 0)
+                            self.assertEqual(root.state(), "withdrawn")
+                            self.assertEqual((root.winfo_width(), root.winfo_height()), (1080, 720))
+                            top_view = application.left_canvas.yview()
+                            application.left_canvas.yview_moveto(1.0)
+                            root.update_idletasks()
+                            self.assertGreater(application.left_canvas.yview()[0], top_view[0])
+                            self.assertEqual(
+                                [(widget.winfo_rootx(), widget.winfo_rooty()) for widget in fixed_widgets],
+                                original_positions,
+                            )
+        finally:
+            root.destroy()
+
     def test_debug_diagram_fits_and_displays_source(self) -> None:
         """개발자 탭의 모든 블록이 화면 안에 들어오고 코드 내용이 표시되는지 확인한다."""
         root = tk.Tk()
@@ -116,12 +328,14 @@ class DeveloperModeTests(unittest.TestCase):
         samples = 0.5 * np.sin(2.0 * np.pi * 1_125.0 * time_axis)
         frame = analyze_spectrum_frame(samples, sample_rate, fft_size=fft_size)
         root = tk.Tk()
-        root.geometry("1280x850+0+0")
+        root.withdraw()
         try:
             application = ToneMatchApp(root)
-            root.update()
-            application.notebook.select(application.spectrum_tab)
-            root.update()
+            root.update_idletasks()
+            application.waveform_canvas.winfo_width = lambda: 800
+            application.waveform_canvas.winfo_height = lambda: 130
+            application.spectrum_canvas.winfo_width = lambda: 800
+            application.spectrum_canvas.winfo_height = lambda: 250
             application._apply_spectrum_frame(frame)
             root.update_idletasks()
             self.assertIn("dBFS", application.spectrum_rms_var.get())
@@ -132,6 +346,77 @@ class DeveloperModeTests(unittest.TestCase):
             application._offer_latest_spectrum(application.spectrum_session_id, frame)
             application._offer_latest_spectrum(application.spectrum_session_id, frame)
             self.assertEqual(application.spectrum_frames.qsize(), 1)
+        finally:
+            root.destroy()
+
+    def test_reference_compare_tab_renders_six_bands_without_hardware(self) -> None:
+        """숨긴 Tk 화면에서 기준 프로필과 합성 라이브 차이 여섯 대역을 표시해야 한다."""
+        sample_rate = 48_000
+        fft_size = 2_048
+        reference_axis = np.arange(fft_size * 6, dtype=np.float64) / sample_rate
+        live_axis = np.arange(fft_size, dtype=np.float64) / sample_rate
+        reference_samples = (
+            0.42 * np.sin(2.0 * np.pi * 750.0 * reference_axis)
+            + 0.12 * np.sin(2.0 * np.pi * 3_000.0 * reference_axis)
+        ).astype(np.float32)
+        live_samples = (
+            0.25 * np.sin(2.0 * np.pi * 750.0 * live_axis)
+            + 0.25 * np.sin(2.0 * np.pi * 3_000.0 * live_axis)
+        ).astype(np.float32)
+        root = tk.Tk()
+        root.withdraw()
+        try:
+            application = ToneMatchApp(root)
+            root.update_idletasks()
+            application.reference_canvas.winfo_width = lambda: 800
+            application.reference_canvas.winfo_height = lambda: 250
+            application.waveform_canvas.winfo_width = lambda: 800
+            application.waveform_canvas.winfo_height = lambda: 130
+            application.spectrum_canvas.winfo_width = lambda: 800
+            application.spectrum_canvas.winfo_height = lambda: 250
+            application.result = {
+                "source": {"file_name": "reference.wav"},
+                "reference_spectrum": build_reference_profile(reference_samples, sample_rate),
+            }
+            application._refresh_reference_profile(reset_comparison=True)
+            application._apply_spectrum_frame(analyze_spectrum_frame(live_samples, sample_rate))
+
+            rows = application.reference_tree.get_children()
+            self.assertEqual(len(rows), 6)
+            self.assertTrue(all("dB" in application.reference_tree.item(row, "values")[1] for row in rows))
+            self.assertTrue(all("dB" in application.reference_tree.item(row, "values")[2] for row in rows))
+            self.assertTrue(all("dB" in application.reference_tree.item(row, "values")[3] for row in rows))
+            self.assertIsNotNone(application.last_reference_comparison)
+            self.assertTrue(application.reference_canvas.find_withtag("dynamic"))
+
+            previous = application.last_reference_comparison
+            silence = analyze_spectrum_frame(np.zeros(fft_size, dtype=np.float32), sample_rate)
+            application._apply_spectrum_frame(silence)
+            self.assertIs(application.last_reference_comparison, previous)
+            application.language = "en"
+            application._refresh_reference_profile()
+            self.assertIn("Comparison stopped", application.reference_status_var.get())
+
+            application.spectrum_worker = Mock()
+            application.spectrum_stop_requested = True
+            application._offer_latest_spectrum(application.spectrum_session_id, silence)
+            application._drain_spectrum_frames()
+            self.assertIs(application.last_reference_comparison, previous)
+            application.spectrum_worker = None
+            application._refresh_reference_profile(reset_comparison=True)
+            self.assertIsNone(application.last_reference_comparison)
+            application._offer_latest_spectrum(application.spectrum_session_id, frame := analyze_spectrum_frame(live_samples, sample_rate))
+            application._drain_spectrum_frames()
+            self.assertIsNone(application.last_reference_comparison)
+            application.spectrum_worker = Mock()
+            application.spectrum_stop_requested = False
+            application._offer_latest_spectrum(application.spectrum_session_id - 1, frame)
+            application._drain_spectrum_frames()
+            self.assertIsNone(application.last_reference_comparison)
+            application._offer_latest_spectrum(application.spectrum_session_id, frame)
+            application._drain_spectrum_frames()
+            self.assertIsNotNone(application.last_reference_comparison)
+            application.spectrum_worker = None
         finally:
             root.destroy()
 

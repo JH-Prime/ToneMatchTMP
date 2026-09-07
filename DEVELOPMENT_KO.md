@@ -1,12 +1,12 @@
-# ToneMatch TMP 개발자 안내서 · 0.0.05
+# ToneMatch TMP 개발자 안내서 · 0.0.06
 
 이 문서는 구현 구조를 빠르게 이해하기 위한 한국어 요약입니다. 모든 함수의
 이름·원본 줄·docstring은 `FUNCTION_REFERENCE_KO.md`, 새 PC 재구성과 릴리스
 절차는 `DEVELOPER_HANDOFF_KO_EN.md`를 함께 보세요.
 
-현재 릴리스·빌드 기준일은 2026-09-05 KST입니다. v0.0.05는 기존 v0.0.04의
-오프라인 분석·CUDA 진단·Amp/Cab 계약을 유지하면서 별도의 원시 입력 실시간
-스펙트럼 경로를 추가합니다.
+현재 릴리스·빌드 기준일은 2026-09-07 KST입니다. v0.0.06은 기존 오프라인
+분석 신호에서 레벨 정규화 Reference 스펙트럼을 만들고, v0.0.05의 실시간
+모니터를 Current로 재사용해 6밴드와 주파수 차이를 표시합니다.
 
 ## 파일 분석·레시피 처리 시퀀스
 
@@ -19,7 +19,7 @@
        ↓
 [04 연산 장치 결정 · Demucs 6-stem AI 기타 분리]
        ↓
-[05 기타 stem NumPy 네이티브 DSP 특징 추출]
+[05 기타 stem NumPy 네이티브 DSP 특징·Reference 스펙트럼 추출]
        ↓
 [06 코드 보이싱 분석(실험)]
        ↓
@@ -37,6 +37,29 @@
 앱에서 `개발자 옵션`을 켜면 같은 순서가 블록 다이어그램으로 표시됩니다.
 각 블록을 클릭하면 그 단계의 설명, 입력·출력, 실제 배포 함수 원문과 줄 번호가
 나옵니다. 함수에는 모두 한국어 docstring이 있으며 테스트가 누락을 검사합니다.
+
+### v0.0.06 분석 진행률·모델 준비 계약
+
+- `app.py`는 외부 라이브러리를 import하기 전에 `sys.stdout`·`sys.stderr`가
+  `None`인 경우에만 안전한 출력 스트림을 연결합니다. 콘솔 없는 PyInstaller EXE의
+  진행 출력이 `'NoneType' object has no attribute 'write'`로 실패하지 않게 합니다.
+- 일반 분석 화면에 단계 가중 전체 %와 경과 `mm:ss`를 표시합니다. Tk의 250 ms
+  타이머는 경과 시간만 갱신하며, 실제 콜백을 기다리는 동안 %를 임의로 올리지
+  않습니다. 전체 %는 단계 배분이지 남은 시간의 비율이나 ETA가 아닙니다.
+- `separator.py`는 공식 `adefossez/HTDemucs-6s` YAML·safetensors를
+  `local_files_only=True`로 먼저 확인한 뒤 누락 파일만 받습니다. 명시적인 모델
+  로더를 사용하여 Hugging Face 오류 뒤 예전 모델 다운로드로 조용히 폴백하지 않습니다.
+- 다운로드용 `tqdm`은 콘솔에 그리지 않고 실제 수신 바이트를 앱 콜백에 전달합니다.
+  총량을 알 때만 파일 %를 계산하며 캐시 확인·수신·메모리 로딩을 구분합니다.
+- Demucs의 30초 외부 조각은 유지하되 내부 분할 콜백의 완료 블록을 누적합니다.
+  모델별 stride·overlap과 완료 블록을 반영한 음원 처리 초를 전체 분리 구간 진행률에
+  대응시키며, CPU 처리 중 시간만으로 추론 완료량을 꾸미지 않습니다.
+- 취소는 다운로드 콜백과 내부 블록 시작·종료 경계에서 확인합니다. 진행 중인 추론
+  블록이나 네트워크 대기를 즉시 강제 종료하지 않으므로 반영이 지연될 수 있습니다.
+- 모델 준비 예외 체인을 서버·네트워크, 캐시 권한·디스크, 메모리 부족, 기타
+  모델·런타임으로 분류합니다. 모든 예외를 인터넷 미연결로 설명하지 않습니다.
+  실제 오디오·EXE 검증 결과는 `QA_REPORT_v0.0.06.json`과 `BUILD_HISTORY.md`를
+  기준으로 하며 이 구현 설명 자체는 해당 검증의 성공 증거가 아닙니다.
 
 ## 실시간 스펙트럼 처리 시퀀스
 
@@ -60,15 +83,39 @@
 무한히 쌓이지 않습니다. 각 세션은 별도 중지 이벤트와 세션 ID를 사용해 종료 뒤의
 낡은 프레임을 버립니다.
 
+## Reference Compare 처리 시퀀스
+
+Reference 생성은 파일 분석 경로에, Current 갱신은 기존 실시간 모니터 경로에
+붙습니다. 같은 장치를 여는 별도의 두 번째 캡처 세션은 만들지 않습니다.
+
+```text
+[분석에 실제 사용한 PCM: 분리 guitar stem 또는 분리 생략 로컬 소스]
+       ↓ 활성 프레임 표본 · 채널별 Hann FFT power 누적
+[레벨 정규화 Reference 주파수 프로필 + 6밴드 집계]
+       ↓ 분석 결과 JSON에 저장
+[Reference Compare 탭]
+       ↑
+[기존 Live Spectrum의 최신 Current 프레임]
+       ↓ Reference 주파수 그리드로 보간 · 전체 power 정규화
+[Low / Low Mid / Mid / Presence / Treble / Air]
+       ↓
+[Reference | Current | Δ(Current−Reference) + 0 dB 중심 차이 그래프]
+```
+
+입력 게인으로 비교 결과가 좌우되지 않게 Reference와 Current의 전체 power를 각각
+정규화합니다. 따라서 Δ는 레벨 정규화된 톤 형상 차이이며 정확도 확률이나 Match %가
+아닙니다. Reference가 없으면 Current만으로 비교 결과를 생성하지 않습니다.
+
 ## 모듈 구성
 
 | 파일 | 역할 |
 |---|---|
-| `app.py` | Tkinter 화면, 한·영 전환, 연산 장치·성능 진단, 분석·녹음·스펙트럼 작업 스레드, Canvas 표시, 취소, 결과/보이싱 탭, 로그, 디버그 번들, 자체 진단 |
+| `app.py` | Tkinter 화면, 한·영 전환, 연산 장치·성능 진단, 분석·녹음·스펙트럼 작업 스레드, 수치 진행률·경과 시간, 콘솔 없는 출력 보호, Canvas 표시, 취소, 결과/보이싱 탭, 로그, 디버그 번들, 자체 진단 |
 | `engine.py` | FFmpeg 구간 변환, PCM 로딩, NumPy DSP, 기타 분리 호출, 출력 경로별 Amp/Cab 조립, 템플릿 매칭과 결과 스키마 |
-| `separator.py` | Demucs `htdemucs_6s` 모델 캐시 확인, 자동/CPU/CUDA 선택·폴백, VRAM/추론 벤치마크, 30초 외부 조각, guitar stem WAV |
+| `separator.py` | Demucs `htdemucs_6s` 캐시 우선 명시 로더, 실제 다운로드·내부 블록 진행, 원인별 모델 오류, 자동/CPU/CUDA 선택·폴백, VRAM/추론 벤치마크, 30초 외부 조각, guitar stem WAV |
 | `recorder.py` | SoundCard 기반 Windows WASAPI loopback/오디오 입력 열거, PCM16 녹음, 실시간 2,048-frame float32 블록 전달 |
 | `spectrum.py` | 입력 정규화, 채널별 FFT power, 20 Hz~20 kHz 스펙트럼·dBFS·중심 주파수 계산과 4프레임 평활화 |
+| `reference_compare.py` | 분석 PCM의 레벨 정규화 Reference 프로필, 6밴드 집계, 실시간 Current 보간과 `Δ(Current−Reference)` 계산 |
 | `voicing.py` | 캐시·NumPy 벡터 연산 기반 시간창 chroma, 제한된 코드 템플릿, 베이스/역위·음역·간격과 연주 후보(실험) |
 | `catalog.py` | 앱/펌웨어/가이드 버전, 패치 기록, 18개 Tone Master Pro 톤 템플릿 |
 | `devices.py` | Tone Master Pro 지원 프로필과 Quad Cortex/Helix 미구현 자리 |
@@ -110,6 +157,30 @@
 - 이 경로는 Python/NumPy + SoundCard/WASAPI 공유 모드입니다. C++ 오디오 콜백,
   ASIO, WASAPI Exclusive 또는 하드 실시간 엔진으로 표현하지 않습니다.
 
+### v0.0.06 Reference Compare 경계
+
+기준 프로필은 최대 384개 활성 표본 프레임의 2,048-point Hann FFT를 192개 로그
+셀에 파워 보존 방식으로 투영합니다. 기준과 Current 모두 peak 대비 80 dB 미만
+성분을 제외하며, 총 파워 대비 −80 dB와 라이브 dBFS 측정 한계로부터 계산한
+공통 관측 하한을 표시값에 적용합니다. RMS −75 dBFS 이하 입력은 비교에서
+제외합니다. Current/Δ는 세션 상태이며 JSON/HTML에는 기준 프로필만 저장합니다.
+자동 UI 테스트는 숨긴 Tk 창과 지정한 Canvas 크기를 사용하므로 실제 창 배치의
+수동 시각 점검과 구분합니다.
+
+- Reference는 `engine.analyze_file`이 최종 분석에 사용한 PCM에서 생성합니다. 풀믹스는
+  Demucs guitar stem, 분리 생략은 디코딩한 로컬/녹음 소스이므로 참고 URL의 오디오를
+  직접 가져오지 않습니다.
+- 긴 신호는 제한된 수의 활성 프레임을 고르게 표본화해 FFT power를 누적합니다. 채널은
+  파형을 모노로 상쇄시키지 않고 채널별 power 뒤에 평균합니다.
+- Current는 새 오디오 스트림이 아니라 v0.0.05 Live Spectrum의 최신 프레임입니다.
+  샘플레이트가 달라도 Reference 그리드로 보간한 뒤 양쪽 전체 power를 정규화합니다.
+- 고정 대역은 Low, Low Mid, Mid, Presence, Treble, Air이며 Δ의 부호는 항상
+  `Current−Reference`입니다. 양수는 Current가, 음수는 Reference가 더 강함을 뜻합니다.
+- 이 비교는 통계적 정확도, 기존 레시피 순위의 유사도 또는 Match %가 아닙니다.
+  Brightness·Body·Gain·Compression·Ambience 실시간 미터도 이 버전에 포함하지 않습니다.
+- 자동 EQ/TMP 파라미터 추천·적용, 프리셋 쓰기, C++/ASIO/WASAPI Exclusive는
+  구현하지 않습니다. 무음·비유한 값과 공통 나이퀴스트 범위 밖은 안전하게 처리합니다.
+
 ## 연산 장치와 출력 경로 경계
 
 - 연산 선택 코드는 `auto`, `cpu`, `cuda`입니다. `auto`는 CUDA를 사용할 수 있을 때
@@ -129,12 +200,12 @@
 
 v0.0.04는 전체 앱을 C++로 재작성하지 않고 NumPy와 PyTorch가 이미 사용하는
 컴파일된 네이티브 벡터·텐서 연산에 반복 계산을 모아 오프라인 분석을 최적화했습니다.
-v0.0.05도 Python을 UI, 파일 처리, Demucs 실행, 레시피·리포트 조립과 실시간
-스펙트럼의 기준 구현으로 유지합니다.
+v0.0.05와 v0.0.06도 Python을 UI, 파일 처리, Demucs 실행, 레시피·리포트 조립,
+실시간 스펙트럼과 Reference Compare의 기준 구현으로 유지합니다.
 
 후속 실시간 톤 매칭에서 지연 시간이 엄격한 오디오 콜백, lock-free 링 버퍼, FFT와
 ASIO 입출력이 필요해질 때 그 경계를 C++ 모듈로 분리하고 Python에는 안정적인 API만
-노출합니다. 이 계획은 v0.0.04에도 v0.0.05에도 구현된 항목이 아닙니다.
+노출합니다. 이 계획은 v0.0.04~v0.0.06에 구현된 항목이 아닙니다.
 
 ## 코드 보이싱 결과의 의미
 
@@ -152,7 +223,7 @@ ASIO 입출력이 필요해질 때 그 경계를 C++ 모듈로 분리하고 Pyth
 # 프로젝트 폴더의 형제 위치에 Python 3.12 가상환경을 만든 경우
 & ..\.venv\Scripts\python.exe -m compileall -q .
 & ..\.venv\Scripts\python.exe -m unittest discover -s tests -v
-& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.05.json
+& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.06.json
 & ..\.venv\Scripts\python.exe app.py
 ```
 
@@ -187,7 +258,7 @@ ZIP에서 해당 파일을 복사한 뒤 실행하세요.
 1. 재현 테스트를 추가하고 코드를 수정합니다.
 2. 모든 함수의 한국어 docstring과 사용자용 한·영 문자열을 유지합니다.
 3. `catalog.APP_VERSION`, 최신 `CHANGELOG`, `version_info.txt`, spec, 문서와
-   파일명을 다음 패치인 `0.0.06`으로 정확히 한 단계 올립니다.
+   파일명을 다음 패치인 `0.0.07`로 정확히 한 단계 올립니다.
 4. 함수 색인과 제3자 라이선스 목록을 다시 생성합니다.
 5. 단위 테스트, 소스 자체 진단, 실제 짧은 Demucs 분리, 패키지 자체 진단을
    통과시킵니다.

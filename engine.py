@@ -22,6 +22,7 @@ import numpy as np
 from catalog import APP_VERSION, MODEL_GUIDE_REVISION, TARGET_FIRMWARE, TEMPLATES
 from devices import device_by_id, device_label, is_supported_device
 from i18n import choice_code, choice_label, tr
+from reference_compare import build_reference_profile
 from separator import (
     SEPARATOR_SAMPLE_RATE,
     SeparationError,
@@ -111,7 +112,7 @@ def decode_to_pcm_wav(
     end_seconds: float,
     destination: str | Path,
     sample_rate: int,
-    progress: Callable[[int, str], None] | None = None,
+    progress: Callable[[float, str], None] | None = None,
     language: str = "ko",
 ) -> float:
     """선택 구간 또는 최대 20분 전체를 표준 PCM WAV로 디코딩한다."""
@@ -185,7 +186,7 @@ def decode_segment(
     source: str | Path,
     start_seconds: float,
     end_seconds: float,
-    progress: Callable[[int, str], None] | None = None,
+    progress: Callable[[float, str], None] | None = None,
     language: str = "ko",
 ) -> tuple[np.ndarray, int, float]:
     """선택 구간 또는 전체 곡을 22.05 kHz 스테레오 배열로 디코딩한다."""
@@ -837,7 +838,7 @@ def analyze_file(
     mix_mode: str,
     output_mode: str,
     reference_url: str = "",
-    progress: Callable[[int, str], None] | None = None,
+    progress: Callable[[float, str], None] | None = None,
     device_id: str = "tone_master_pro",
     language: str = "ko",
     cancel_requested: Callable[[], bool] | None = None,
@@ -901,6 +902,7 @@ def analyze_file(
         progress(70, tr("progress.decode_done", language))
         progress(72, tr("progress.features", language))
     raw_features = extract_features(samples, sample_rate, language)
+    reference_spectrum = build_reference_profile(samples, sample_rate)
     if progress:
         progress(80, tr("progress.features_done", language))
         progress(82, tr("progress.voicing", language))
@@ -964,6 +966,7 @@ def analyze_file(
         },
         "features": asdict(features),
         "raw_features": asdict(raw_features),
+        "reference_spectrum": reference_spectrum,
         "chord_voicing": voicing_analysis_dict(voicing_analysis),
         "recipes": recipes,
         "warnings": warnings,

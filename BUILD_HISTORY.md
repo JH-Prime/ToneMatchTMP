@@ -8,11 +8,94 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 | 버전 | 상태 | 범위 |
 |---|---|---|
+| `0.0.06` | 포터블 개발 프리뷰 빌드·검증 완료 | Reference Compare, 실시간 분석 진행률, 콘솔 없는 EXE 모델 오류 수정 |
 | `0.0.05` | 포터블 개발 프리뷰 빌드·검증 완료 | Windows 입력/loopback 실시간 파형·FFT 스펙트럼, bounded 최신 프레임 처리 |
 | `0.0.04` | 포터블 개발 프리뷰 빌드·검증 완료 | 자동/CPU/CUDA 진단·벤치마크, NumPy 네이티브 최적화, 출력 경로별 Amp/Cab 체인 정정 |
 | `0.0.03` | 포터블 개발 프리뷰 빌드 완료 | 포터블 개발 ZIP, 한·영 handoff, 로그·빌드 이력, NumPy 코드/보이싱 분석(실험) |
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
+
+## 0.0.06 — Reference spectrum versus live Current
+
+- 작업일 / Work dates: `2026-09-06–07 KST`; final build date: `2026-09-07 KST`
+- 상태 / Status: `BUILT AND VERIFIED — unsigned CPU portable developer preview`
+- 기반 / Based on: v0.0.05 live input spectrum analyzer and bounded latest-frame monitor
+
+### 이 버전에 속하는 변경 / Changes owned by this version
+
+- 파일 분석에 실제 사용한 PCM에서 레벨 정규화 Reference 주파수 프로필 생성·결과 저장
+- 풀믹스는 Demucs guitar stem, 분리 생략은 디코딩한 로컬/녹음 소스를 Reference로 사용
+- 기존 v0.0.05 WASAPI 실시간 모니터의 최신 프레임을 Current로 재사용
+- Low, Low Mid, Mid, Presence, Treble, Air 6밴드의 `Reference | Current | Δ` 표시
+- Reference와 Current의 샘플레이트가 달라도 공통 주파수 그리드로 보간하고 전체 power를 각각 정규화
+- 0 dB 중심 주파수별 `Δ(Current−Reference)` 그래프와 무음·비유한 입력·나이퀴스트 경계 처리
+- 기준 프로필·밴드 집계·실시간 비교·Tk 표시의 실제 장치 없는 결정론적 회귀 범위
+- 전체 단계 수치 %·경과 시간, 모델 실제 다운로드 수신량과 Demucs 내부 완료 블록의 음원 처리 초 표시
+- 입력 옵션을 스크롤해도 분석 버튼·진행률·현재 단계가 항상 보이는 고정 영역
+- 콘솔 없는 EXE의 `stdout/stderr=None` 보호 및 HF 오류를 legacy 출력 오류로 덮던 모델 로딩 경로 수정
+- 캐시 우선 safetensors 로드, 모델 오류 원인 분류, 내부 블록 취소와 미완성 출력 정리
+
+### 검증 경계 / Verification boundary
+
+Reference Compare는 파일 분석이 만든 Reference와 기존 실시간 모니터의 Current를
+레벨 정규화해 비교합니다. Δ 부호는 항상 `Current−Reference`입니다. 전체 입력
+게인을 맞추거나 원곡 장비·DSP를 복원하는 기능이 아니며, 통계적 정확도 또는
+Match %로 표현하지 않습니다. 참고 URL은 외부 브라우저 열기와 출처 기록 전용이고
+URL의 오디오를 다운로드·분석하지 않습니다.
+
+Live Brightness, Body, Gain, Compression, Ambience, Match % 미터, 자동 EQ/TMP
+파라미터 추천·적용, 프리셋 쓰기, C++ 오디오 엔진, ASIO와 WASAPI Exclusive는
+v0.0.06에 포함되지 않습니다.
+
+전체 %는 처리 단계에 배정한 진행률이며 남은 시간의 비율이나 ETA가 아닙니다.
+첫 모델 다운로드의 실제 수신량과 캐시 재사용 분석을 별도로 검증했습니다.
+
+### 릴리스 게이트 결과 / Release gate result
+
+- [x] 앱·spec·Windows 파일 정보·빌드 스크립트의 `0.0.06` 동기화 확인
+- [x] Python 3.12 경고-as-error 전체 자동 테스트 통과 — `80 tests`
+- [x] 소스 자체 진단 `ok: true`, Reference Compare, 3 recipes, 11 developer blocks
+- [x] Windows WASAPI 장치 열거 — 4개(입력 1, loopback 3), 실제 오디오 캡처 없음
+- [x] 패키지 EXE 자체 진단 및 새 압축 해제 EXE 독립 자체 진단 통과
+- [x] 새 임시 폴더 ZIP 압축 해제와 `MANIFEST.json` 4,446개 파일별 크기·SHA-256 재검증
+- [x] 필수 v0.0.06 소스·테스트·FFmpeg 포함, 모델 가중치 없음, 공개 로그 개인 경로 없음
+- [x] 제공 MP3 252.61초 전체 CPU 분석: 소스 첫 모델 다운로드 포함 109.204초, EXE 캐시 재사용 화면 `01:42`, 추천 3개와 기준 6대역 표시
+- [x] EXE 창에서 소수점 진행률·경과 시간·처리한 음원 초·완료 상태·Reference Compare 시각 확인
+- [x] 숨긴 Tk 1080×720 한·영 화면의 고정 진행 영역과 긴 상태 문자열 회귀 테스트
+- [ ] 실제 마이크/loopback Reference Compare, 네트워크 차단 상태의 실행과 코드 서명 — `NOT TESTED`
+- [ ] 실제 CUDA GPU 추론 — `NOT TESTED: CPU-only release environment unless later verified`
+
+### 최종 산출물 기록 / Final artifact record
+
+ZIP은 자기 자신의 해시를 내부 문서에 넣을 수 없으므로 최종 값은 ZIP과 함께 배포할
+`ToneMatchTMP-v0.0.06-SHA256SUMS.txt`를 기준으로 합니다. 내부 개별 파일 크기와
+해시는 `MANIFEST.json`에 있습니다. 내부 문서를 최종 반영한 뒤에도 압축 해제
+검증을 다시 실행하고, 통과한 바이트만 업로드합니다.
+
+| 산출물 | 바이트 | SHA-256 | 검증 |
+|---|---:|---|---|
+| `ToneMatchTMP-v0.0.06.exe` | `MANIFEST.json` | 형제 체크섬 파일 | package / fresh-extract self-test |
+| `ToneMatchTMP-v0.0.06-Windows-x64-Portable-Dev.zip` | GitHub release asset | 형제 체크섬 파일 | fresh-extract manifest verification |
+| `ToneMatchTMP-v0.0.06-SELF-TEST.json` | `MANIFEST.json` | 형제 체크섬 파일 | `ok: true` |
+| `ToneMatchTMP-v0.0.06-build.log` | `MANIFEST.json` | 형제 체크섬 파일 | private-path audit |
+
+샘플은 반주 음원으로 분리 guitar stem이 약했습니다(RMS 약 −63.25 dBFS).
+위 결과는 실행·진행률 검증이며 원곡 톤 복원의 정확성을 보증하지 않습니다.
+사용자 음원과 로컬 분석 로그는 공개 ZIP 또는 저장소에 포함하지 않았습니다.
+
+ZIP 내용이나 문서를 바꾸면 형제 체크섬과 manifest를 반드시 다시 계산합니다.
+
+### 권장 로그 생성 / Suggested build log
+
+```powershell
+$buildLog = Join-Path (Get-Location) "ToneMatchTMP-v0.0.06-BUILD.log"
+Start-Transcript -LiteralPath $buildLog -Force
+try {
+    .\build.ps1
+} finally {
+    Stop-Transcript
+}
+```
 
 ## 0.0.05 — Live input spectrum analyzer
 

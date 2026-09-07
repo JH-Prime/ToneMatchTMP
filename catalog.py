@@ -8,18 +8,69 @@
 from __future__ import annotations
 
 
-APP_VERSION = "0.0.05"
+APP_VERSION = "0.0.06"
 TARGET_FIRMWARE = "1.8.58"
 MODEL_GUIDE_REVISION = "Rev. J (2026-07)"
-BUILD_DATE = "2026-09-05"
+BUILD_DATE = "2026-09-07"
 
 
 # 앱 내부의 변경 기록 화면과 배포 문서가 함께 사용하는 단일 원본이다.
-# 이후 패치는 0.0.02, 0.0.03, 0.0.04, 0.0.05처럼 한 단계씩 올리고 최신 항목을 맨 위에 둔다.
+# 이후 패치는 0.0.02, 0.0.03, 0.0.04처럼 한 단계씩 올리고 최신 항목을 맨 위에 둔다.
 CHANGELOG: list[dict] = [
     {
-        "version": "0.0.05",
+        "version": "0.0.06",
         "date": BUILD_DATE,
+        "status": "공개 개발 프리뷰",
+        "status_en": "Public development preview",
+        "changes": [
+            "로컬 파일 또는 Demucs로 분리한 guitar stem에서 레벨 정규화 기준 스펙트럼을 생성해 분석 결과에 저장",
+            "기존 WASAPI 실시간 모니터를 Current 입력으로 재사용하는 Reference Compare 탭 추가",
+            "Low·Low Mid·Mid·Presence·Treble·Air 6밴드의 Reference·Current·Δ(Current−Reference) 비교 표시",
+            "샘플레이트가 다른 기준과 실시간 입력을 같은 주파수 그리드로 보간하고 전체 레벨 영향을 제거한 톤 형상 비교",
+            "주파수별 차이를 0 dB 중심 그래프로 표시하고 무음·비유한 입력·나이퀴스트 범위를 안전하게 처리",
+            "기준 프로필 생성·밴드 집계·실시간 비교와 Tk 표시를 실제 오디오 장치 없이 검증하는 회귀 테스트 추가",
+            "분석 화면에 단계 가중 전체 진행률과 250 ms 타이머 기반 경과 시간을 상시 표시",
+            "모델의 실제 수신량·파일 진행률과 Demucs 내부 완료 블록 기준 음원 처리 초를 표시하고 블록 경계 취소 지원",
+            "콘솔 없는 EXE의 stdout·stderr None 출력 오류를 방지하고 공식 safetensors 캐시 우선 로딩으로 조용한 구형 모델 폴백 제거",
+            "모델 준비 실패를 네트워크·캐시 권한/디스크·메모리·기타 모델/런타임 원인으로 구분",
+        ],
+        "changes_en": [
+            "Builds and stores a level-normalized reference spectrum from the analyzed local file or Demucs-isolated guitar stem",
+            "Added a Reference Compare tab that reuses the existing WASAPI live monitor as the Current input",
+            "Shows Reference, Current, and delta (Current minus Reference) for Low, Low Mid, Mid, Presence, Treble, and Air",
+            "Interpolates reference and live input onto a common frequency grid and removes overall-level bias for tone-shape comparison",
+            "Plots frequency-by-frequency difference around a 0 dB center while safely handling silence, non-finite input, and Nyquist limits",
+            "Added hardware-free regression coverage for profile generation, band aggregation, live comparison, and Tk rendering",
+            "Always displays stage-weighted overall analysis progress and elapsed time on a 250 ms UI timer",
+            "Reports actual model transfer bytes/file progress and audio duration from completed internal Demucs blocks, with block-boundary cancellation",
+            "Guards missing stdout/stderr in the windowed EXE and explicitly loads cached official safetensors without silent legacy-model fallback",
+            "Distinguishes network, cache permissions/disk, memory, and other model/runtime setup failures",
+        ],
+        "known_issues": [
+            "Reference Compare는 레벨 정규화된 스펙트럼 차이이며 통계적 정확도나 매칭 확률이 아님",
+            "분석 전체 %는 단계 진행률이며 남은 시간의 비율이나 ETA가 아님; 진행 중인 추론 블록·네트워크 대기에서는 갱신과 취소가 지연될 수 있음",
+            "Brightness·Body·Gain·Compression·Ambience 실시간 미터와 Match %는 후속 버전 범위임",
+            "차이를 자동 EQ/TMP 설정으로 변환하거나 프리셋을 기기에 쓰지 않음",
+            "기준 URL은 외부 브라우저 열기와 출처 기록 전용이며 URL의 오디오를 다운로드·분석하지 않음",
+            "Python/NumPy와 WASAPI 공유 모드 기반이며 C++·ASIO·WASAPI Exclusive 엔진은 후속 범위임",
+            "실제 지연과 사용 가능 장치는 Windows 드라이버·오디오 인터페이스·loopback 지원에 따라 달라짐",
+            "코드 서명 인증서가 없는 개발 빌드라 Windows가 실행 경고를 표시할 수 있음",
+        ],
+        "known_issues_en": [
+            "Reference Compare is a level-normalized spectral difference, not statistical accuracy or a match probability",
+            "Overall analysis percentage is stage progress, not a time estimate or ETA; an active inference block or network wait can delay updates and cancellation",
+            "Live Brightness, Body, Gain, Compression, Ambience, and Match-percent meters remain later-version work",
+            "It does not convert differences into automatic EQ/TMP settings or write presets to the device",
+            "Reference URLs are browser shortcuts and source records only; their audio is not downloaded or analyzed",
+            "The path uses Python/NumPy and WASAPI shared mode; C++, ASIO, and WASAPI Exclusive remain future work",
+            "Actual latency and available devices depend on Windows drivers, the audio interface, and loopback support",
+            "This unsigned development build may trigger a Windows warning",
+        ],
+    },
+    {
+        "version": "0.0.05",
+        # 이전 릴리스 날짜가 다음 빌드의 BUILD_DATE 변경을 따라가지 않게 고정한다.
+        "date": "2026-09-05",
         "status": "공개 개발 프리뷰",
         "status_en": "Public development preview",
         "changes": [

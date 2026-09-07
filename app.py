@@ -1,4 +1,4 @@
-"""ToneMatch TMP v0.0.05 데스크톱 애플리케이션.
+"""ToneMatch TMP v0.0.06 데스크톱 애플리케이션.
 
 로컬 오디오·영상 또는 Windows PC 재생음 녹음을 받아 AI로 guitar stem만
 분리하고, Tone Master Pro에 수동 적용할 설명 가능한 톤 체인을 추천한다.
@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import atexit
 import json
 import math
 import multiprocessing
@@ -15,6 +16,7 @@ import queue
 import sys
 import tempfile
 import threading
+import time
 import traceback
 import wave
 import webbrowser
@@ -25,6 +27,18 @@ from tkinter import filedialog, messagebox
 import tkinter as tk
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
+
+
+def _ensure_standard_streams() -> None:
+    """콘솔 없는 EXE에서도 외부 라이브러리가 표준 출력에 안전하게 쓰도록 한다."""
+    for name in ("stdout", "stderr"):
+        if getattr(sys, name) is None:
+            stream = open(os.devnull, "w", encoding="utf-8")
+            setattr(sys, name, stream)
+            atexit.register(stream.close)
+
+
+_ensure_standard_streams()
 
 import numpy as np
 
@@ -54,6 +68,7 @@ from engine import (
     save_json,
 )
 from i18n import LANGUAGE_LABELS, choice_code, choice_label, choice_values, language_code, tr
+from reference_compare import ReferenceCompareError, compare_live_frame
 from recorder import (
     MAX_RECORD_SECONDS,
     CaptureDevice,
@@ -158,8 +173,12 @@ class ToneMatchApp:
         self.spectrum_stop_requested = False
         self.spectrum_frames: queue.Queue[tuple[int, SpectrumFrame]] = queue.Queue(maxsize=1)
         self.last_spectrum_frame: SpectrumFrame | None = None
+        self.last_reference_comparison: dict | None = None
         self.events: queue.Queue[tuple] = queue.Queue()
         self.analysis_cancel_event = threading.Event()
+        self.analysis_started_at: float | None = None
+        self.analysis_elapsed_seconds = 0.0
+        self.analysis_progress_percent = 0.0
         self.record_stop_event = threading.Event()
         self.closing = False
         self.temporary_recordings: set[Path] = set()
@@ -203,6 +222,7 @@ class ToneMatchApp:
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
         self.root.after(50, self._drain_spectrum_frames)
         self.root.after(80, self._drain_events)
+        self.root.after(250, self._tick_analysis_progress)
         self.root.after(180, self._start_hardware_probe)
 
     @property
@@ -434,18 +454,22 @@ class ToneMatchApp:
         self.output_combo = ttk.Combobox(options, textvariable=self.output_var, values=choice_values("output", self.language), state="readonly")
         self.output_combo.grid(row=3, column=0, columnspan=2, sticky="ew")
 
-        analyze_area = ttk.Frame(left, style="Panel.TFrame")
-        analyze_area.grid(row=11, column=0, sticky="ew", pady=(12, 0))
+        # 입력 옵션을 스크롤해도 분석 버튼·진행률·현재 단계는 항상 보존한다.
+        analyze_area = ttk.Frame(left_shell, style="Panel.TFrame", padding=(16, 10, 16, 12))
+        analyze_area.grid(row=1, column=0, columnspan=2, sticky="ew")
         analyze_area.columnconfigure(0, weight=1)
         self.analyze_button = ttk.Button(analyze_area, text=tr("ui.analyze", self.language), style="Accent.TButton", command=self._start_analysis)
         self.analyze_button.grid(row=0, column=0, sticky="ew")
         self.cancel_button = ttk.Button(analyze_area, text=tr("ui.cancel_analysis", self.language), style="Danger.TButton", command=self._cancel_analysis, state="disabled")
         self.cancel_button.grid(row=0, column=1, padx=(6, 0))
-        self.progress_var = tk.DoubleVar(value=0)
+        self.progress_var = tk.DoubleVar(value=self.analysis_progress_percent)
         self.progress = ttk.Progressbar(analyze_area, variable=self.progress_var, maximum=100)
         self.progress.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(8, 4))
+        self.progress_detail_var = tk.StringVar()
+        ttk.Label(analyze_area, textvariable=self.progress_detail_var, style="Panel.TLabel", wraplength=375).grid(row=2, column=0, columnspan=2, sticky="w", pady=(0, 4))
+        self._refresh_analysis_progress()
         self.status_var = tk.StringVar(value=tr("status.choose_file", self.language))
-        ttk.Label(analyze_area, textvariable=self.status_var, style="Muted.TLabel", wraplength=375).grid(row=2, column=0, columnspan=2, sticky="w")
+        ttk.Label(analyze_area, textvariable=self.status_var, style="Muted.TLabel", wraplength=375).grid(row=3, column=0, columnspan=2, sticky="w")
 
         note = tk.Label(left, text=tr("ui.tip", self.language), bg="#0d171f", fg=COLORS["muted"], justify="left", anchor="w", wraplength=375, padx=10, pady=8, font=(self.ui_font, 8))
         note.grid(row=12, column=0, sticky="ew", pady=(9, 0))
@@ -499,6 +523,7 @@ class ToneMatchApp:
         self.voicing_text.tag_configure("warning", foreground=COLORS["warning"], spacing1=10)
 
         self._build_spectrum_tab()
+        self._build_reference_compare_tab()
 
         self.diag_tab = ttk.Frame(self.notebook, style="Alt.TFrame", padding=12)
         self.notebook.add(self.diag_tab, text=tr("ui.diagnostics", self.language))
@@ -549,7 +574,7 @@ class ToneMatchApp:
         if self.result:
             self._show_result(self.result, reset_notebook=False)
         if self.last_spectrum_frame is not None:
-            self._apply_spectrum_frame(self.last_spectrum_frame)
+            self._apply_spectrum_frame(self.last_spectrum_frame, update_comparison=False)
 
     def _build_debug_tab(self) -> None:
         """처리 순서도, 클릭형 실제 소스, 런타임 로그와 디버그 번들 버튼을 만든다."""
@@ -689,6 +714,120 @@ class ToneMatchApp:
         self.spectrum_canvas = tk.Canvas(self.spectrum_tab, height=250, bg="#081017", highlightbackground=COLORS["border"], highlightthickness=1, bd=0)
         self.spectrum_canvas.grid(row=6, column=0, sticky="nsew", pady=(3, 0))
         self.spectrum_canvas.bind("<Configure>", self._spectrum_canvas_resized)
+
+    def _build_reference_compare_tab(self) -> None:
+        """분석한 기준 스펙트럼과 실시간 입력의 레벨 정규화 차이 탭을 만든다."""
+        self.reference_compare_tab = ttk.Frame(self.notebook, style="Alt.TFrame", padding=12)
+        self.notebook.add(self.reference_compare_tab, text=tr("ui.reference_compare_tab", self.language))
+        self.reference_compare_tab.columnconfigure(0, weight=1)
+        self.reference_compare_tab.rowconfigure(3, weight=0)
+        self.reference_compare_tab.rowconfigure(6, weight=1)
+
+        controls = ttk.Frame(self.reference_compare_tab, style="Alt.TFrame")
+        controls.grid(row=0, column=0, sticky="ew", pady=(0, 5))
+        controls.columnconfigure(1, weight=1)
+        ttk.Label(
+            controls,
+            text=tr("ui.spectrum_device", self.language),
+            background=COLORS["panel_alt"],
+            foreground=COLORS["text"],
+            font=(self.ui_font, 10, "bold"),
+        ).grid(row=0, column=0, sticky="w", padx=(0, 9))
+        self.reference_capture_combo = ttk.Combobox(controls, textvariable=self.capture_var, state="readonly")
+        self.reference_capture_combo.grid(row=0, column=1, sticky="ew")
+        self.reference_capture_combo.bind("<<ComboboxSelected>>", self._capture_device_changed)
+        self.reference_refresh_button = ttk.Button(
+            controls,
+            text=tr("ui.refresh_devices", self.language),
+            command=self._refresh_capture_devices,
+        )
+        self.reference_refresh_button.grid(row=0, column=2, padx=(7, 0))
+        self.reference_compare_button = ttk.Button(
+            controls,
+            text=tr("ui.start_reference_compare", self.language),
+            style="Accent.TButton",
+            command=lambda: self._toggle_spectrum_monitor(require_reference=True),
+        )
+        self.reference_compare_button.grid(row=0, column=3, padx=(7, 0))
+
+        self.reference_status_var = tk.StringVar(value=tr("status.reference_missing", self.language))
+        ttk.Label(
+            self.reference_compare_tab,
+            textvariable=self.reference_status_var,
+            background=COLORS["panel_alt"],
+            foreground=COLORS["muted"],
+            font=(self.ui_font, 9),
+            wraplength=760,
+            justify="left",
+        ).grid(row=1, column=0, sticky="ew", pady=(0, 5))
+
+        self.reference_file_var = tk.StringVar(value="—")
+        reference_row = ttk.Frame(self.reference_compare_tab, style="Alt.TFrame")
+        reference_row.grid(row=2, column=0, sticky="ew", pady=(0, 7))
+        ttk.Label(
+            reference_row,
+            text=f"{tr('ui.reference_file', self.language)}:",
+            background=COLORS["panel_alt"],
+            foreground=COLORS["text"],
+            font=(self.ui_font, 9, "bold"),
+        ).pack(side="left")
+        ttk.Label(
+            reference_row,
+            textvariable=self.reference_file_var,
+            background=COLORS["panel_alt"],
+            foreground=COLORS["accent"],
+            font=(self.ui_font, 9),
+        ).pack(side="left", padx=(6, 0))
+
+        table_frame = ttk.Frame(self.reference_compare_tab, style="Alt.TFrame")
+        table_frame.grid(row=3, column=0, sticky="ew", pady=(0, 6))
+        table_frame.columnconfigure(0, weight=1)
+        self.reference_tree = ttk.Treeview(
+            table_frame,
+            columns=("band", "reference", "current", "delta"),
+            show="headings",
+            height=6,
+            selectmode="none",
+        )
+        headings = (
+            ("band", tr("ui.compare_band", self.language), 230, "w"),
+            ("reference", tr("ui.compare_reference", self.language), 120, "center"),
+            ("current", tr("ui.compare_current", self.language), 120, "center"),
+            ("delta", tr("ui.compare_delta", self.language), 150, "center"),
+        )
+        for column, label, width, anchor in headings:
+            self.reference_tree.heading(column, text=label)
+            self.reference_tree.column(column, width=width, minwidth=90, stretch=column == "band", anchor=anchor)
+        self.reference_tree.tag_configure("positive", foreground=COLORS["blue"])
+        self.reference_tree.tag_configure("negative", foreground=COLORS["warning"])
+        self.reference_tree.grid(row=0, column=0, sticky="ew")
+
+        ttk.Label(
+            self.reference_compare_tab,
+            text=tr("ui.reference_compare_note", self.language),
+            background=COLORS["panel_alt"],
+            foreground=COLORS["muted"],
+            font=(self.ui_font, 8),
+            wraplength=760,
+            justify="left",
+        ).grid(row=4, column=0, sticky="ew", pady=(0, 6))
+        ttk.Label(
+            self.reference_compare_tab,
+            text=tr("ui.reference_difference", self.language),
+            background=COLORS["panel_alt"],
+            foreground=COLORS["text"],
+            font=(self.ui_font, 9, "bold"),
+        ).grid(row=5, column=0, sticky="w")
+        self.reference_canvas = tk.Canvas(
+            self.reference_compare_tab,
+            height=250,
+            bg="#081017",
+            highlightbackground=COLORS["border"],
+            highlightthickness=1,
+            bd=0,
+        )
+        self.reference_canvas.grid(row=6, column=0, sticky="nsew", pady=(3, 0))
+        self.reference_canvas.bind("<Configure>", self._reference_canvas_resized)
 
     def _spectrum_is_running(self) -> bool:
         """실시간 스펙트럼 세션이 종료 이벤트 처리 전까지 활성인지 반환한다."""
@@ -840,7 +979,164 @@ class ToneMatchApp:
                 tags=("dynamic",),
             )
 
-    def _apply_spectrum_frame(self, frame: SpectrumFrame) -> None:
+    @staticmethod
+    def _reference_plot_y(delta_db: float, height: int) -> float:
+        """±18 dB 비교 차이를 캔버스 세로 좌표로 제한해 변환한다."""
+        top = 10.0
+        bottom = max(top + 1.0, float(height) - 25.0)
+        delta = min(18.0, max(-18.0, float(delta_db)))
+        return top + ((18.0 - delta) / 36.0) * (bottom - top)
+
+    def _reference_canvas_resized(self, _event: object | None = None) -> None:
+        """비교 탭 크기가 바뀌면 차이 축과 마지막 유효 곡선을 다시 그린다."""
+        if self.closing:
+            return
+        self._draw_reference_grid()
+        if self.last_reference_comparison is not None:
+            self._draw_reference_difference(self.last_reference_comparison)
+
+    def _draw_reference_grid(self) -> None:
+        """레퍼런스 차이 캔버스에 로그 주파수축과 ±18 dB 기준선을 그린다."""
+        if not hasattr(self, "reference_canvas") or not self.reference_canvas.winfo_exists():
+            return
+        canvas = self.reference_canvas
+        width = canvas.winfo_width()
+        height = canvas.winfo_height()
+        canvas.delete("grid")
+        if width < 100 or height < 70:
+            return
+        left, right = 46.0, float(width) - 11.0
+        top, bottom = 10.0, float(height) - 25.0
+        for delta in (18, 12, 6, 0, -6, -12, -18):
+            y = self._reference_plot_y(float(delta), height)
+            color = "#385263" if delta == 0 else "#20303b"
+            width_px = 2 if delta == 0 else 1
+            canvas.create_line(left, y, right, y, fill=color, width=width_px, tags=("grid",))
+            canvas.create_text(40, y, text=f"{delta:+d}", fill=COLORS["muted"], anchor="e", font=("Consolas", 7), tags=("grid",))
+        for frequency, label in ((20, "20"), (50, "50"), (100, "100"), (200, "200"), (500, "500"), (1_000, "1k"), (2_000, "2k"), (5_000, "5k"), (10_000, "10k"), (20_000, "20k")):
+            x = self._spectrum_plot_x(float(frequency), width)
+            canvas.create_line(x, top, x, bottom, fill="#15232c", width=1, tags=("grid",))
+            canvas.create_text(x, float(height) - 13.0, text=label, fill=COLORS["muted"], anchor="center", font=("Consolas", 7), tags=("grid",))
+        canvas.create_text(left, 2, text="Δ dB", fill=COLORS["muted"], anchor="nw", font=("Consolas", 7), tags=("grid",))
+
+    def _draw_reference_difference(self, comparison: dict) -> None:
+        """현재−기준의 주파수별 정규화 dB 차이를 로그 축에 그린다."""
+        if not hasattr(self, "reference_canvas") or not self.reference_canvas.winfo_exists():
+            return
+        canvas = self.reference_canvas
+        canvas.delete("dynamic")
+        width = canvas.winfo_width()
+        height = canvas.winfo_height()
+        if width < 100 or height < 70:
+            return
+        frequencies = np.asarray(comparison.get("frequencies_hz", ()), dtype=np.float64)
+        deltas = np.asarray(comparison.get("delta_db", ()), dtype=np.float64)
+        if frequencies.ndim != 1 or deltas.shape != frequencies.shape:
+            return
+        mask = np.isfinite(frequencies) & np.isfinite(deltas) & (frequencies >= 20.0) & (frequencies <= 20_000.0)
+        if not np.any(mask):
+            return
+        frequencies = frequencies[mask]
+        deltas = np.clip(deltas[mask], -18.0, 18.0)
+        x_values = np.asarray([self._spectrum_plot_x(value, width) for value in frequencies], dtype=np.float64)
+        y_values = np.asarray([self._reference_plot_y(value, height) for value in deltas], dtype=np.float64)
+        pixels = np.rint(x_values).astype(np.int64)
+        unique_pixels, first_indices = np.unique(pixels, return_index=True)
+        reduced_x = unique_pixels.astype(np.float64)
+        counts = np.diff(np.append(first_indices, len(y_values)))
+        reduced_y = np.add.reduceat(y_values, first_indices) / counts
+        coordinates = np.column_stack((reduced_x, reduced_y)).reshape(-1).tolist()
+        if len(coordinates) >= 4:
+            canvas.create_line(*coordinates, fill=COLORS["accent"], width=1.8, tags=("dynamic",))
+
+    @staticmethod
+    def _format_frequency_range(low_hz: object, high_hz: object) -> str:
+        """대역 경계를 Hz 또는 kHz가 섞인 짧은 화면 문자열로 바꾼다."""
+        def compact(value: object) -> str:
+            """한 주파수 값을 읽기 쉬운 Hz/kHz 숫자로 축약한다."""
+            frequency = float(value)
+            if frequency >= 1_000.0:
+                return f"{frequency / 1_000.0:g}k"
+            return f"{frequency:g}"
+
+        return f"{compact(low_hz)}–{compact(high_hz)} Hz"
+
+    @staticmethod
+    def _reference_band_level(band: dict) -> float:
+        """프로필 밴드의 버전 호환 레벨 키를 유한 실수로 읽는다."""
+        value = band.get("reference_db", band.get("relative_db", band.get("level_db", 0.0)))
+        level = float(value)
+        return level if math.isfinite(level) else 0.0
+
+    def _populate_reference_rows(self, comparison: dict | None = None) -> None:
+        """기준 프로필 또는 최신 비교를 Reference·Current·Δ 여섯 행으로 표시한다."""
+        if not hasattr(self, "reference_tree") or not self.reference_tree.winfo_exists():
+            return
+        self.reference_tree.delete(*self.reference_tree.get_children())
+        profile = self.result.get("reference_spectrum") if self.result else None
+        if not isinstance(profile, dict):
+            return
+        bands = comparison.get("bands", ()) if comparison else profile.get("bands", ())
+        for band in bands:
+            if not isinstance(band, dict):
+                continue
+            band_id = str(band.get("id", ""))
+            band_name = tr(f"band.{band_id}", self.language)
+            if band_name == f"band.{band_id}":
+                band_name = str(band.get("name", band_id or "—"))
+            try:
+                frequency_range = self._format_frequency_range(band.get("low_hz", 0.0), band.get("high_hz", 0.0))
+            except (TypeError, ValueError):
+                frequency_range = "—"
+            label = f"{band_name} · {frequency_range}"
+            if not band.get("available", True):
+                self.reference_tree.insert("", "end", values=(band_name, "—", "—", "—"))
+                continue
+            if comparison:
+                reference_db = float(band.get("reference_db", 0.0))
+                current_db = float(band.get("current_db", 0.0))
+                delta_db = float(band.get("delta_db", current_db - reference_db))
+                tag = "positive" if delta_db > 0.05 else "negative" if delta_db < -0.05 else ""
+                values = (label, f"{reference_db:.1f} dB", f"{current_db:.1f} dB", f"{delta_db:+.1f} dB")
+            else:
+                reference_db = self._reference_band_level(band)
+                tag = ""
+                values = (label, f"{reference_db:.1f} dB", "—", "—")
+            self.reference_tree.insert("", "end", values=values, tags=(tag,) if tag else ())
+
+    def _refresh_reference_profile(self, reset_comparison: bool = False) -> None:
+        """현재 분석 결과의 기준 파일·밴드·상태를 비교 탭에 반영한다."""
+        if not hasattr(self, "reference_status_var"):
+            return
+        profile = self.result.get("reference_spectrum") if self.result else None
+        if not isinstance(profile, dict):
+            self.reference_file_var.set("—")
+            self.reference_status_var.set(tr("status.reference_missing", self.language))
+            self.last_reference_comparison = None
+            self._populate_reference_rows()
+            if hasattr(self, "reference_canvas"):
+                self.reference_canvas.delete("dynamic")
+            self._update_spectrum_availability()
+            return
+        file_name = str(self.result.get("source", {}).get("file_name", "—"))
+        self.reference_file_var.set(file_name)
+        if reset_comparison:
+            self.last_reference_comparison = None
+        if self._spectrum_is_running():
+            self.reference_status_var.set(tr("status.reference_running", self.language, file=file_name, rate=21.5))
+        elif self.last_reference_comparison is None:
+            self.reference_status_var.set(tr("status.reference_ready", self.language, file=file_name))
+        else:
+            self.reference_status_var.set(tr("status.reference_stopped", self.language))
+        self._populate_reference_rows(self.last_reference_comparison)
+        self._draw_reference_grid()
+        if self.last_reference_comparison is not None:
+            self._draw_reference_difference(self.last_reference_comparison)
+        elif hasattr(self, "reference_canvas"):
+            self.reference_canvas.delete("dynamic")
+        self._update_spectrum_availability()
+
+    def _apply_spectrum_frame(self, frame: SpectrumFrame, update_comparison: bool = True) -> None:
         """최신 스펙트럼 프레임의 수치와 두 캔버스를 Tk 메인 스레드에서 갱신한다."""
         if self.closing or not hasattr(self, "spectrum_rms_var"):
             return
@@ -851,6 +1147,23 @@ class ToneMatchApp:
         self.spectrum_centroid_var.set(f"{centroid:.0f} Hz" if centroid > 0.0 else "—")
         self._draw_waveform(frame)
         self._draw_spectrum(frame)
+        profile = self.result.get("reference_spectrum") if self.result else None
+        if update_comparison and isinstance(profile, dict):
+            try:
+                comparison = compare_live_frame(profile, frame)
+            except ReferenceCompareError as exc:
+                if "silent" in str(exc).lower():
+                    self.reference_status_var.set(tr("status.reference_quiet", self.language))
+                else:
+                    self.reference_status_var.set(tr("status.reference_failed", self.language))
+                    self._append_debug_log(f"reference compare error · {type(exc).__name__} · {exc}")
+            else:
+                self.last_reference_comparison = comparison
+                self._populate_reference_rows(comparison)
+                self._draw_reference_difference(comparison)
+                if self._spectrum_is_running():
+                    file_name = str(self.result.get("source", {}).get("file_name", "—"))
+                    self.reference_status_var.set(tr("status.reference_running", self.language, file=file_name, rate=21.5))
 
     def _clear_spectrum_frame_queue(self) -> None:
         """새 세션 전에 남아 있는 이전 스펙트럼 화면 프레임을 버린다."""
@@ -884,7 +1197,12 @@ class ToneMatchApp:
                 latest = self.spectrum_frames.get_nowait()
         except queue.Empty:
             pass
-        if latest is not None and latest[0] == self.spectrum_session_id:
+        if (
+            latest is not None
+            and latest[0] == self.spectrum_session_id
+            and self._spectrum_is_running()
+            and not self.spectrum_stop_requested
+        ):
             self._apply_spectrum_frame(latest[1])
         if not self.closing:
             try:
@@ -892,14 +1210,19 @@ class ToneMatchApp:
             except tk.TclError:
                 pass
 
-    def _toggle_spectrum_monitor(self) -> None:
-        """선택한 녹음 장치의 실시간 스펙트럼 시작 또는 중지를 요청한다."""
+    def _toggle_spectrum_monitor(self, require_reference: bool = False) -> None:
+        """선택한 장치의 공용 실시간 스펙트럼 또는 레퍼런스 비교를 토글한다."""
         if self._spectrum_is_running():
             if self.spectrum_stop_event is not None:
                 self.spectrum_stop_event.set()
             self.spectrum_stop_requested = True
             self.spectrum_status_var.set(tr("status.spectrum_stopping", self.language))
+            if self.result and isinstance(self.result.get("reference_spectrum"), dict):
+                self.reference_status_var.set(tr("status.reference_stopping", self.language))
             self._update_spectrum_availability()
+            return
+        if require_reference and not (self.result and isinstance(self.result.get("reference_spectrum"), dict)):
+            self.reference_status_var.set(tr("status.reference_missing", self.language))
             return
         other_busy = bool(
             (self.worker and self.worker.is_alive())
@@ -919,7 +1242,13 @@ class ToneMatchApp:
         self.spectrum_stop_event = stop_event
         self.spectrum_stop_requested = False
         self._clear_spectrum_frame_queue()
+        self.last_reference_comparison = None
+        self._populate_reference_rows()
+        self.reference_canvas.delete("dynamic")
         self.spectrum_status_var.set(tr("status.spectrum_running", self.language, rate=21.5))
+        if self.result and isinstance(self.result.get("reference_spectrum"), dict):
+            file_name = str(self.result.get("source", {}).get("file_name", "—"))
+            self.reference_status_var.set(tr("status.reference_running", self.language, file=file_name, rate=21.5))
         self._append_debug_log(f"spectrum start · {self.capture_device_id} · session={session_id}")
         self.spectrum_worker = threading.Thread(
             target=self._spectrum_monitor_worker,
@@ -964,11 +1293,16 @@ class ToneMatchApp:
         self.spectrum_worker = None
         self.spectrum_stop_event = None
         self.spectrum_stop_requested = False
+        self._clear_spectrum_frame_queue()
         if error is None:
             self.spectrum_status_var.set(tr("status.spectrum_stopped", self.language))
+            if self.result and isinstance(self.result.get("reference_spectrum"), dict):
+                self.reference_status_var.set(tr("status.reference_stopped", self.language))
             self._append_debug_log(f"spectrum stop · session={session_id}")
         else:
             self.spectrum_status_var.set(tr("status.spectrum_failed", self.language))
+            if self.result and isinstance(self.result.get("reference_spectrum"), dict):
+                self.reference_status_var.set(tr("status.reference_failed", self.language))
             self._append_debug_log(f"spectrum error · {type(error).__name__} · {error}\n{detail}")
             messagebox.showerror(APP_NAME, str(error))
         self._change_input_method()
@@ -1000,6 +1334,23 @@ class ToneMatchApp:
         selector_enabled = bool(self.capture_device_id and not active and not other_busy)
         self.spectrum_capture_combo.configure(state="readonly" if selector_enabled else "disabled")
         self.spectrum_refresh_button.configure(state="normal" if not active and not other_busy else "disabled")
+        if hasattr(self, "reference_compare_button") and self.reference_compare_button.winfo_exists():
+            has_reference = bool(self.result and isinstance(self.result.get("reference_spectrum"), dict))
+            if active:
+                self.reference_compare_button.configure(
+                    text=tr("ui.stop_reference_compare", self.language),
+                    style="Danger.TButton",
+                    state="disabled" if self.spectrum_stop_requested or not has_reference else "normal",
+                )
+            else:
+                enabled = bool(has_reference and self.capture_device_id and not other_busy)
+                self.reference_compare_button.configure(
+                    text=tr("ui.start_reference_compare", self.language),
+                    style="Accent.TButton",
+                    state="normal" if enabled else "disabled",
+                )
+            self.reference_capture_combo.configure(state="readonly" if selector_enabled else "disabled")
+            self.reference_refresh_button.configure(state="normal" if not active and not other_busy else "disabled")
         if active:
             for widget in self.record_only_widgets:
                 widget.configure(state="disabled")
@@ -1216,6 +1567,8 @@ class ToneMatchApp:
         self.capture_combo.configure(values=capture_values)
         if hasattr(self, "spectrum_capture_combo"):
             self.spectrum_capture_combo.configure(values=capture_values)
+        if hasattr(self, "reference_capture_combo"):
+            self.reference_capture_combo.configure(values=capture_values)
         selected = next((item for item in devices if item.id == self.capture_device_id), None)
         if selected is None:
             selected = next((item for item in devices if item.is_loopback), devices[0] if devices else None)
@@ -1377,7 +1730,7 @@ class ToneMatchApp:
             self.debug_log.see("end")
             self.debug_log.configure(state="disabled")
 
-    def _set_debug_progress(self, progress: int, message: str) -> None:
+    def _set_debug_progress(self, progress: float, message: str) -> None:
         """진행률로 활성·완료 블록을 계산하고 순서도와 로그를 갱신한다."""
         self.active_debug_block = block_for_progress(progress)
         active_order = block_by_id(self.active_debug_block)["order"]
@@ -1385,7 +1738,30 @@ class ToneMatchApp:
         if progress >= 100:
             self.completed_debug_blocks.add("result")
         self._draw_debug_diagram()
-        self._append_debug_log(f"{progress:3d}% · {self.active_debug_block} · {message}")
+        self._append_debug_log(f"{progress:5.1f}% · {self.active_debug_block} · {message}")
+
+    def _refresh_analysis_progress(self) -> None:
+        """실제 콜백의 전체 단계 진행률과 독립적인 경과 시간을 표시한다."""
+        if self.analysis_started_at is not None:
+            self.analysis_elapsed_seconds = max(0.0, time.monotonic() - self.analysis_started_at)
+        seconds = int(self.analysis_elapsed_seconds)
+        elapsed = f"{seconds // 60:02d}:{seconds % 60:02d}"
+        self.progress_detail_var.set(tr("progress.overall", self.language, percent=self.analysis_progress_percent, elapsed=elapsed))
+
+    def _tick_analysis_progress(self) -> None:
+        """다운로드나 추론 콜백을 기다리는 동안에도 경과 시간을 계속 갱신한다."""
+        if self.closing:
+            return
+        self._refresh_analysis_progress()
+        try:
+            self.root.after(250, self._tick_analysis_progress)
+        except tk.TclError:
+            pass
+
+    def _finish_analysis_progress(self) -> None:
+        """완료·오류·취소 시 마지막 진행률과 소요 시간을 화면에 보존한다."""
+        self._refresh_analysis_progress()
+        self.analysis_started_at = None
 
     def _choose_audio(self) -> None:
         """파일 선택 창에서 오디오 또는 영상 경로를 받아 입력 상태를 갱신한다."""
@@ -1453,7 +1829,12 @@ class ToneMatchApp:
             f"separation={self.mix_code} · compute={self.compute_backend_code}"
         )
         self.analysis_cancel_event.clear()
+        self.analysis_started_at = time.monotonic()
+        self.analysis_elapsed_seconds = 0.0
+        self.analysis_progress_percent = 2.0
         self.progress_var.set(2)
+        self._refresh_analysis_progress()
+        self._refresh_reference_profile(reset_comparison=True)
         self.status_var.set(tr("status.preparing", self.language))
         self.analyze_button.configure(state="disabled", text=tr("ui.analyzing", self.language))
         self.cancel_button.configure(state="normal")
@@ -1478,7 +1859,7 @@ class ToneMatchApp:
         self._update_analysis_availability()
 
     def _cancel_analysis(self) -> None:
-        """Demucs의 현재 30초 조각이 끝난 뒤 멈추도록 안전한 취소 신호를 보낸다."""
+        """다운로드 또는 Demucs 내부 처리 구간 경계에서 멈추도록 취소 신호를 보낸다."""
         if self.worker and self.worker.is_alive():
             self.analysis_cancel_event.set()
             self.cancel_button.configure(state="disabled")
@@ -1487,7 +1868,7 @@ class ToneMatchApp:
 
     def _analysis_worker(self, request: dict) -> None:
         """전체 기타 분석을 실행하고 결과 또는 오류를 메인 UI 큐에 전달한다."""
-        def progress(value: int, text: str) -> None:
+        def progress(value: float, text: str) -> None:
             """엔진 콜백을 Tk 메인 스레드용 진행 이벤트로 변환한다."""
             self.events.put(("progress", value, text))
 
@@ -1503,9 +1884,14 @@ class ToneMatchApp:
             while True:
                 event = self.events.get_nowait()
                 if event[0] == "progress":
-                    self.progress_var.set(event[1])
-                    self.status_var.set(event[2])
-                    self._set_debug_progress(event[1], event[2])
+                    value = float(event[1])
+                    if math.isfinite(value):
+                        self.analysis_progress_percent = max(self.analysis_progress_percent, min(100.0, max(0.0, value)))
+                    self.progress_var.set(self.analysis_progress_percent)
+                    self._refresh_analysis_progress()
+                    if not self.analysis_cancel_event.is_set():
+                        self.status_var.set(event[2])
+                    self._set_debug_progress(self.analysis_progress_percent, event[2])
                 elif event[0] == "done":
                     self._show_result(event[1])
                 elif event[0] == "error":
@@ -1556,7 +1942,7 @@ class ToneMatchApp:
 
     def _show_error(self, exc: Exception, detail: str) -> None:
         """분석 실패 상태를 복구하고 사용자 메시지와 영구 개발 로그를 남긴다."""
-        self.progress_var.set(0)
+        self._finish_analysis_progress()
         self.status_var.set(tr("status.failed", self.language))
         self.analyze_button.configure(text=tr("ui.analyze", self.language))
         self.cancel_button.configure(state="disabled")
@@ -1571,6 +1957,8 @@ class ToneMatchApp:
     def _show_result(self, result: dict, reset_notebook: bool = True) -> None:
         """추천 체인 세 개, 기타 stem 진단과 상태를 현재 언어 화면에 표시한다."""
         self.result = result
+        self.analysis_progress_percent = 100.0
+        self._finish_analysis_progress()
         self._set_debug_progress(100, tr("progress.complete", self.language))
         self.progress_var.set(100)
         features = result["features"]
@@ -1590,6 +1978,7 @@ class ToneMatchApp:
                 f"inference={float(separation.get('inference_total_seconds', 0.0)):.2f}s"
             )
         self._populate_diagnostics()
+        self._refresh_reference_profile(reset_comparison=reset_notebook)
         if reset_notebook:
             self.notebook.select(0)
         self.status_var.set(tr("status.complete", self.language))
@@ -1750,6 +2139,20 @@ class ToneMatchApp:
                 return
             value = self.voicing_text.get("1.0", "end-1c")
             log_detail = "chord voicing"
+        elif selected_tab == str(self.reference_compare_tab):
+            if not self.result or not isinstance(self.result.get("reference_spectrum"), dict):
+                return
+            headings = "\t".join(
+                (
+                    tr("ui.compare_band", self.language),
+                    tr("ui.compare_reference", self.language),
+                    tr("ui.compare_current", self.language),
+                    tr("ui.compare_delta", self.language),
+                )
+            )
+            rows = ["\t".join(str(part) for part in self.reference_tree.item(item, "values")) for item in self.reference_tree.get_children()]
+            value = "\n".join((headings, *rows, "", tr("ui.reference_compare_note", self.language)))
+            log_detail = "reference comparison"
         elif selected_tab == str(self.diag_tab):
             if not self.result:
                 return
@@ -1787,7 +2190,7 @@ class ToneMatchApp:
         destination = filedialog.asksaveasfilename(title=tr("dialog.debug_bundle_title", self.language), defaultextension=".zip", initialfile=initial, filetypes=(("ZIP", "*.zip"),))
         if not destination:
             return
-        source_names = ("app.py", "catalog.py", "debug_info.py", "devices.py", "engine.py", "i18n.py", "recorder.py", "report.py", "separator.py", "spectrum.py", "voicing.py")
+        source_names = ("app.py", "catalog.py", "debug_info.py", "devices.py", "engine.py", "i18n.py", "recorder.py", "reference_compare.py", "report.py", "separator.py", "spectrum.py", "voicing.py")
         diagnostics = {
             "app_version": APP_VERSION,
             "build_date": BUILD_DATE,
@@ -1879,15 +2282,26 @@ def run_self_test(output_path: str | Path) -> int:
             _write_self_test_audio(source)
             result = analyze_file(source, 0, 8, "unknown", "isolated", "frfr", language="ko")
             english = relocalize_result(result, "en")
+        sample_axis = np.arange(2048, dtype=np.float64) / 44_100
+        live_sample = 0.3 * np.sin(2.0 * np.pi * 440.0 * sample_axis)
+        comparison = compare_live_frame(result["reference_spectrum"], analyze_spectrum_frame(live_sample, 44_100))
+        reference_compare_ok = (
+            len(result["reference_spectrum"]["bands"]) == 6
+            and len(comparison["bands"]) == 6
+            and bool(np.all(np.isfinite(comparison["delta_db"])))
+            and english.get("reference_spectrum") == result["reference_spectrum"]
+        )
         debug_sources_ok = all("def " in code_for_block(block["id"]) and "소스 위치를 찾지 못했습니다" not in code_for_block(block["id"]) for block in PIPELINE_BLOCKS)
         separator_status = separator_runtime_status()
         payload = {
-            "ok": len(result.get("recipes", [])) == 3 and debug_sources_ok and english.get("language") == "en" and bool(separator_status.get("available")),
+            "ok": len(result.get("recipes", [])) == 3 and debug_sources_ok and english.get("language") == "en" and bool(separator_status.get("available")) and reference_compare_ok,
             "app_version": APP_VERSION,
             "ffmpeg_analysis": True,
             "developer_source_blocks": len(PIPELINE_BLOCKS),
             "developer_sources_ok": debug_sources_ok,
             "english_localization": english.get("language") == "en",
+            "reference_compare_ok": reference_compare_ok,
+            "reference_bands": len(result["reference_spectrum"]["bands"]),
             "separator_runtime": separator_status,
             "top_recipe": result["recipes"][0]["name"],
             "recipe_count": len(result["recipes"]),

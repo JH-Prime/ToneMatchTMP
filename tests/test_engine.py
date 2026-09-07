@@ -171,6 +171,12 @@ class EngineAnalysisTests(unittest.TestCase):
         result = self._analyze_result(self.base)
 
         self.assertEqual(result["schema"], "tonematch-tmp-recipe/v1")
+        reference = result["reference_spectrum"]
+        self.assertEqual(reference["schema"], "tonematch.reference-spectrum.v1")
+        self.assertEqual(
+            [band["id"] for band in reference["bands"]],
+            ["low", "low_mid", "mid", "presence", "treble", "air"],
+        )
         self.assertEqual(len(result["recipes"]), 3)
         self.assertEqual(len({item["template_id"] for item in result["recipes"]}), 3)
 
@@ -231,6 +237,27 @@ class EngineAnalysisTests(unittest.TestCase):
                     [block["category"] for block in english["recipes"][0]["blocks"]],
                     categories,
                 )
+                self.assertIs(english["reference_spectrum"], result["reference_spectrum"])
+                self.assertEqual(english["reference_spectrum"], result["reference_spectrum"])
+
+    def test_reference_profile_is_deterministic_and_finite(self) -> None:
+        """같은 최종 PCM은 항상 같은 유한 참조 곡선과 6대역 값을 만들어야 한다."""
+        first = engine.build_reference_profile(self.base, self.sample_rate, max_frames=32)
+        second = engine.build_reference_profile(self.base, self.sample_rate, max_frames=32)
+
+        self.assertEqual(first, second)
+        self.assertEqual(first["sample_rate_hz"], self.sample_rate)
+        self.assertGreater(first["active_frames"], 0)
+        self.assertLessEqual(first["active_frames"], first["sampled_frames"])
+        numeric_values = (
+            first["frequencies_hz"]
+            + first["frequency_edges_hz"]
+            + first["normalized_power"]
+            + first["relative_db"]
+            + [band["relative_db"] for band in first["bands"]]
+        )
+        self.assertTrue(np.all(np.isfinite(np.asarray(numeric_values, dtype=np.float64))))
+        self.assertAlmostEqual(sum(first["normalized_power"]), 1.0, places=12)
 
     def test_catalog_cabinet_positions_are_structured_and_valid(self) -> None:
         """모든 TMP 캐비닛 조합의 마이크 위치·거리·축이 검증 가능한 형식이어야 한다."""
@@ -282,6 +309,7 @@ class EngineAnalysisTests(unittest.TestCase):
         self.assertEqual(parsed["target_firmware"], result["target_firmware"])
         self.assertEqual(len(parsed["recipes"]), 3)
         self.assertEqual(parsed["source"]["reference_url"], unsafe_url)
+        self.assertEqual(parsed["reference_spectrum"], result["reference_spectrum"])
         self.assertIn("합성", json.dumps(parsed, ensure_ascii=False))
 
         self.assertTrue(html_text.startswith("<!doctype html>"))
@@ -294,6 +322,29 @@ class EngineAnalysisTests(unittest.TestCase):
         self.assertNotIn("<guitar>", html_text)
         self.assertIn("&lt;guitar&gt;", html_text)
         self.assertIn("&amp;label=", html_text)
+        self.assertIn("참조 비교", html_text)
+        self.assertIn("Reference | Current | Δ", html_text)
+        self.assertIn("Current와 Δ는 실시간 입력 세션 값", html_text)
+        for band in result["reference_spectrum"]["bands"]:
+            self.assertIn(band["name"], html_text)
+
+        escaped_result = json.loads(json.dumps(result, ensure_ascii=False))
+        escaped_result["reference_spectrum"]["bands"][0]["name"] = '<Low & "hot">'
+        legacy_result = json.loads(json.dumps(result, ensure_ascii=False))
+        legacy_result.pop("reference_spectrum")
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output_directory = Path(temporary_directory)
+            escaped_path = output_directory / "escaped.html"
+            legacy_path = output_directory / "legacy.html"
+            report.save_html(escaped_result, escaped_path)
+            report.save_html(legacy_result, legacy_path)
+            escaped_html = escaped_path.read_text(encoding="utf-8")
+            legacy_html = legacy_path.read_text(encoding="utf-8")
+
+        self.assertNotIn('<Low & "hot">', escaped_html)
+        self.assertIn("&lt;Low &amp; &quot;hot&quot;&gt;", escaped_html)
+        self.assertNotIn("reference-compare", legacy_html)
+        self.assertNotIn("참조 비교", legacy_html)
 
 
 if __name__ == "__main__":

@@ -124,18 +124,22 @@ PIPELINE_BLOCKS: list[dict] = [
         "title_en": "DSP feature extraction",
         "short": "FFT · 레벨 · 공간 · 반복",
         "short_en": "FFT · level · space · repeats",
-        "description": "실시간 입력은 채널별 FFT와 롤링 파워 평균으로 파형·스펙트럼·RMS·Peak·중심 주파수를 표시하고, 파일 분석은 밴드 에너지·다이내믹·제로 크로싱·온셋 자기상관·스테레오 폭으로 톤 지문을 계산합니다.",
-        "description_en": "For live input, uses per-channel FFT and rolling power averages to show waveform, spectrum, RMS, peak, and centroid; for file analysis, computes a tone fingerprint from band energy, dynamics, zero crossings, onset autocorrelation, and stereo width.",
+        "description": "파일 분석은 톤 지문과 레벨 정규화 기준 스펙트럼을 만들고, 실시간 입력은 채널별 FFT와 롤링 파워 평균으로 파형·스펙트럼을 표시하면서 같은 격자의 현재−기준 dB 차이를 계산합니다.",
+        "description_en": "File analysis builds a tone fingerprint and level-normalized reference spectrum. Live input uses per-channel FFT and rolling power averages for the waveform and spectrum, then computes Current-minus-Reference dB on the same grid.",
         "inputs": "스테레오 PCM",
         "inputs_en": "Stereo PCM",
-        "outputs": "ToneFeatures 원본 측정값",
-        "outputs_en": "Raw ToneFeatures measurements",
+        "outputs": "ToneFeatures 원본 측정값, 기준 프로필, 실시간 차이",
+        "outputs_en": "Raw ToneFeatures measurements, reference profile, live difference",
         "symbols": [
             ("spectrum.py", "analyze_spectrum_frame"),
             ("spectrum.py", "SpectrumSmoother.push"),
+            ("reference_compare.py", "build_reference_profile"),
+            ("reference_compare.py", "compare_live_frame"),
             ("app.py", "ToneMatchApp._apply_spectrum_frame"),
             ("app.py", "ToneMatchApp._draw_waveform"),
             ("app.py", "ToneMatchApp._draw_spectrum"),
+            ("app.py", "ToneMatchApp._populate_reference_rows"),
+            ("app.py", "ToneMatchApp._draw_reference_difference"),
             ("engine.py", "_frames"),
             ("engine.py", "_frame_rms"),
             ("engine.py", "_band_ratio"),
@@ -230,8 +234,8 @@ PIPELINE_BLOCKS: list[dict] = [
         "title_en": "Result assembly",
         "short": "진단 · 경고 · 적용 순서",
         "short_en": "Diagnostics · warnings · steps",
-        "description": "원본/보정 특징과 추천 3개, 주의사항, 적용 순서를 버전이 명시된 JSON 구조로 조립합니다.",
-        "description_en": "Assembles raw/corrected features, three recipes, warnings, and application steps into a versioned JSON structure.",
+        "description": "원본/보정 특징, 기준 스펙트럼, 추천 3개, 주의사항과 적용 순서를 버전이 명시된 JSON 구조로 조립합니다.",
+        "description_en": "Assembles raw/corrected features, the reference spectrum, three recipes, warnings, and application steps into a versioned JSON structure.",
         "inputs": "특징과 레시피",
         "inputs_en": "Features and recipes",
         "outputs": "tonematch-tmp-recipe/v1 결과",
@@ -370,11 +374,11 @@ def code_for_block(block_id: str) -> str:
 def changelog_as_text(entries: list[dict], language: str = "ko") -> str:
     """구조화된 변경 기록을 앱 화면용 한국어 또는 영어 텍스트로 변환한다."""
     if language == "en":
-        lines = ["ToneMatch TMP · Changelog", "Patch rule: 0.0.01 → 0.0.02 → 0.0.03 → 0.0.04 → 0.0.05 …", ""]
+        lines = ["ToneMatch TMP · Changelog", "Patch rule: 0.0.01 → 0.0.02 → 0.0.03 → 0.0.04 → 0.0.05 → 0.0.06 …", ""]
         changes_heading = "Changes"
         limits_heading = "Known limitations"
     else:
-        lines = ["ToneMatch TMP · 변경 기록", "패치 규칙: 0.0.01 → 0.0.02 → 0.0.03 → 0.0.04 → 0.0.05 …", ""]
+        lines = ["ToneMatch TMP · 변경 기록", "패치 규칙: 0.0.01 → 0.0.02 → 0.0.03 → 0.0.04 → 0.0.05 → 0.0.06 …", ""]
         changes_heading = "변경사항"
         limits_heading = "알려진 제한"
     for entry in entries:
