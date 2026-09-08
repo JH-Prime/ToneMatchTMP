@@ -374,11 +374,11 @@ def code_for_block(block_id: str) -> str:
 def changelog_as_text(entries: list[dict], language: str = "ko") -> str:
     """구조화된 변경 기록을 앱 화면용 한국어 또는 영어 텍스트로 변환한다."""
     if language == "en":
-        lines = ["ToneMatch TMP · Changelog", "Patch rule: 0.0.01 → 0.0.02 → 0.0.03 → 0.0.04 → 0.0.05 → 0.0.06 …", ""]
+        lines = ["ToneMatch TMP · Changelog", "Patch rule: 0.0.01 → 0.0.02 → 0.0.03 → 0.0.04 → 0.0.05 → 0.0.07 …", ""]
         changes_heading = "Changes"
         limits_heading = "Known limitations"
     else:
-        lines = ["ToneMatch TMP · 변경 기록", "패치 규칙: 0.0.01 → 0.0.02 → 0.0.03 → 0.0.04 → 0.0.05 → 0.0.06 …", ""]
+        lines = ["ToneMatch TMP · 변경 기록", "패치 규칙: 0.0.01 → 0.0.02 → 0.0.03 → 0.0.04 → 0.0.05 → 0.0.07 …", ""]
         changes_heading = "변경사항"
         limits_heading = "알려진 제한"
     for entry in entries:

@@ -1,12 +1,16 @@
-# ToneMatch TMP 0.0.06
+# ToneMatch TMP 0.0.07
 
 ToneMatch TMP is an unofficial, pre-release Windows desktop tool that analyzes a
 local audio/video file or Windows playback capture, isolates the guitar stem,
 and recommends three starting-point tone chains for Fender Tone Master Pro.
-It also provides an experimental chord/voicing timeline. Version 0.0.06 stores a
-level-normalized spectrum from the analyzed guitar source and compares it with the
-existing live Windows input or playback-loopback monitor. The release/build date
-is 2026-09-07 KST. Version 0.0.05 introduced the live visual spectrum.
+It also provides an experimental chord/voicing timeline. Version 0.0.07 improves
+repeated chord evidence, noise/harmonic handling and antiphase stereo, adds clearly
+labeled original-mix harmony assistance when the isolated guitar is weak, and
+adjusts the UI for smaller Windows work areas. The release/build reference date is
+2026-09-08 KST. Version 0.0.06 introduced normalized Reference Compare and detailed
+analysis progress; version 0.0.05 introduced the live visual spectrum. Verified
+test and package outcomes are recorded in `QA_REPORT_v0.0.07.json` and
+`BUILD_HISTORY.md`; this feature summary is not proof that a release gate passed.
 
 한국어 설치·사용 안내는 [README_KO.md](README_KO.md)를 먼저 읽어 주세요.
 
@@ -26,7 +30,13 @@ is 2026-09-07 KST. Version 0.0.05 introduced the live visual spectrum.
   guitar stem, compared against Current live input as Reference, Current, and delta
   (Current minus Reference) across six stable frequency bands
 - Three ordered TMP recipes with output-route-specific Amp/Cab rules, plus JSON, HTML, and clipboard output
-- Experimental chord, pitch-class, bass/inversion, register, spacing, and playable-candidate cues
+- Experimental chord/pitch-class timeline with source labels, original-file times,
+  unknown intervals and evidence diagnostics; guitar-source results may include
+  bass/inversion, register, spacing and playable-candidate cues
+- Optional original-mix harmony reference when separated guitar evidence is weak,
+  without claiming guitar fingering, bass or inversion from the full mix
+- Work-area-aware startup sizing and a fixed-height, scrollable analysis status
+  area that does not expand indefinitely after analysis
 - Native NumPy vector optimization for repeated chord/voicing spectrum work
 - Clickable 11-stage developer diagram with bundled source, Korean docstrings, logs, and changelog
 - Quad Cortex and Line 6 Helix are visible extension placeholders only
@@ -58,6 +68,21 @@ show processed audio seconds; they do not update on every CPU cycle. Cancellatio
 is checked at those block boundaries and download callbacks, so a running block
 or pending network operation can still delay cancellation. No reliable ETA is
 claimed.
+
+The chord tab is independent of tone matching. When a separated guitar stem is
+very weak or has little chord evidence, the same selected range of the original
+local mix can be analyzed as a **harmony reference**. The source is labeled
+`original_mix`; its events do not claim guitar shapes, register, spacing, bass or
+inversion. This does not replace the guitar PCM used for tone features, Reference
+Compare or recipes. A weak stem produces a warning; a signal too close to true
+silence for tone analysis still stops the analysis.
+
+Chord evidence is not transcription accuracy or the recipe match percentage.
+Repeated support is required for stable candidates; missing evidence remains
+unknown instead of being filled with an invented chord. Source-relative offsets,
+active/reliable frame counts and signal level help explain empty or partial
+results, but drums, single-note parts, dense mixes and separation artifacts can
+still defeat the experimental estimator.
 
 The portable EXE ships with the CPU runtime for broad Windows compatibility.
 CUDA is available only after installing the separate source-development CUDA
@@ -102,7 +127,7 @@ Set-Location .\ToneMatchTMP
 py -3.12 -m venv ..\.venv
 & ..\.venv\Scripts\python.exe -m pip install -r requirements.txt
 & ..\.venv\Scripts\python.exe -m unittest discover -s tests -v
-& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.06.json
+& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.07.json
 & ..\.venv\Scripts\python.exe app.py
 ```
 

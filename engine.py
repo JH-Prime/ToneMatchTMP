@@ -830,6 +830,79 @@ def _application_steps(output_mode: str, language: str) -> list[str]:
     ]
 
 
+def _analyze_chord_sources(
+    samples: np.ndarray,
+    sample_rate: int,
+    *,
+    source: str | Path,
+    start_seconds: float,
+    end_seconds: float,
+    language: str,
+    separation_requested: bool,
+    progress: Callable[[float, str], None] | None = None,
+    cancel_requested: Callable[[], bool] | None = None,
+) -> dict:
+    """기타 코드 근거가 약할 때만 원본 화성을 별도 참고로 분석하고 출처를 보존한다."""
+    def check_cancelled() -> None:
+        """추가 화성 분석 때문에 사용자의 취소 요청이 무시되지 않도록 확인한다."""
+        if cancel_requested and cancel_requested():
+            raise AnalysisError(tr("error.cancelled", language))
+
+    check_cancelled()
+    primary = voicing_analysis_dict(analyze_voicings(samples, sample_rate))
+    primary["analysis_source"] = "guitar_stem" if separation_requested else "provided_audio"
+    primary["source_start_seconds"] = float(start_seconds)
+    primary_coverage = float(primary.get("tonal_coverage", 0.0))
+    rms_dbfs = db(math.sqrt(float(np.mean(np.square(samples, dtype=np.float64))))) if samples.size else -240.0
+    needs_fallback = separation_requested and (primary_coverage < 0.10 or rms_dbfs < -50.0)
+    fallback = {
+        "attempted": bool(needs_fallback),
+        "selected": False,
+        "reason": "weak_guitar_stem" if rms_dbfs < -50.0 else "insufficient_chord_evidence" if needs_fallback else "not_needed",
+        "primary_tonal_coverage": primary_coverage,
+        "primary_input_rms_dbfs": round(rms_dbfs, 3),
+    }
+    primary["fallback"] = fallback
+    check_cancelled()
+    if not needs_fallback:
+        return primary
+    if progress:
+        progress(83, tr("progress.voicing_mix", language))
+    try:
+        mixture, mixture_rate, _duration = decode_segment(source, start_seconds, end_seconds, None, language)
+        check_cancelled()
+        candidate = voicing_analysis_dict(analyze_voicings(mixture, mixture_rate))
+    except (AnalysisError, ValueError) as exc:
+        check_cancelled()
+        fallback["reason"] = "fallback_unavailable"
+        fallback["error_type"] = type(exc).__name__
+        return primary
+    check_cancelled()
+    coverage = float(candidate.get("tonal_coverage", 0.0))
+    reliable_frames = int(candidate.get("diagnostics", {}).get("reliable_frame_count", 0))
+    mixture_dbfs = db(math.sqrt(float(np.mean(np.square(mixture, dtype=np.float64))))) if mixture.size else -240.0
+    weak_separation = rms_dbfs < -50.0 and mixture_dbfs - rms_dbfs >= 12.0
+    fallback["candidate_tonal_coverage"] = coverage
+    fallback["candidate_input_rms_dbfs"] = round(mixture_dbfs, 3)
+    if coverage >= 0.15 and (weak_separation or coverage >= primary_coverage + 0.05) and reliable_frames >= 3:
+        fallback["selected"] = True
+        candidate["analysis_source"] = "original_mix"
+        candidate["source_start_seconds"] = float(start_seconds)
+        candidate["fallback"] = fallback
+        candidate["primary_diagnostics"] = primary.get("diagnostics", {})
+        # 반주 전체의 화성을 실제 기타 운지 또는 기타의 저음·음역으로 오인하지 않는다.
+        for event in candidate.get("events", []):
+            event["candidate_shapes"] = ()
+            event["register"] = "unknown"
+            event["spacing"] = "unknown"
+            event["bass_pc"] = None
+            event["inversion"] = "unknown"
+            event["symbol"] = str(event.get("symbol", "?")).split("/")[0]
+        return candidate
+    fallback["reason"] = "no_better_harmony"
+    return primary
+
+
 def analyze_file(
     source: str | Path,
     start_seconds: float,
@@ -906,7 +979,11 @@ def analyze_file(
     if progress:
         progress(80, tr("progress.features_done", language))
         progress(82, tr("progress.voicing", language))
-    voicing_analysis = analyze_voicings(samples, sample_rate)
+    voicing_analysis = _analyze_chord_sources(
+        samples, sample_rate, source=source, start_seconds=start_seconds, end_seconds=end_seconds,
+        language=language, separation_requested=separation_requested, progress=progress,
+        cancel_requested=cancel_requested,
+    )
     if progress:
         progress(85, tr("progress.voicing_done", language))
     # 분리를 마친 오디오와 이미 기타 단독인 파일은 모두 isolated 보정을 적용한다.
@@ -927,6 +1004,8 @@ def analyze_file(
     ]
     if separation_requested:
         warnings.append(tr("warning.separation_experimental", language))
+        if float(separation_data.get("guitar_rms_dbfs", 0.0)) < -50.0:
+            warnings.append(tr("warning.weak_guitar", language))
     elif features.mix_contamination > 0.52:
         warnings.append(tr("warning.full_mix", language))
     if raw_features.clipping_percent > 0.5:
@@ -967,7 +1046,7 @@ def analyze_file(
         "features": asdict(features),
         "raw_features": asdict(raw_features),
         "reference_spectrum": reference_spectrum,
-        "chord_voicing": voicing_analysis_dict(voicing_analysis),
+        "chord_voicing": voicing_analysis,
         "recipes": recipes,
         "warnings": warnings,
         "application_steps": _application_steps(output_code, language),
@@ -1004,6 +1083,8 @@ def relocalize_result(result: dict, language: str) -> dict:
     warnings = [tr("warning.inference", language), tr("warning.manual_apply", language)]
     if result.get("source_separation", {}).get("used"):
         warnings.append(tr("warning.separation_experimental", language))
+        if float(result["source_separation"].get("guitar_rms_dbfs", 0.0)) < -50.0:
+            warnings.append(tr("warning.weak_guitar", language))
     elif features.mix_contamination > 0.52:
         warnings.append(tr("warning.full_mix", language))
     if result.get("raw_features", {}).get("clipping_percent", 0.0) > 0.5:

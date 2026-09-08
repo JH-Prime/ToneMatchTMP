@@ -1,0 +1,134 @@
+{
+  "schema": "tonematch-qa/v1",
+  "app_version": "0.0.07",
+  "prepared_at": "2026-09-08",
+  "tested_at": "2026-09-08",
+  "status": "passed",
+  "platform": "Windows 11 x64 / Python 3.12.14 / CPU portable",
+  "checks": {
+    "compileall": "passed",
+    "unit_tests": {
+      "status": "passed",
+      "count": 121,
+      "warnings_as_errors": true,
+      "focus": [
+        "Phase-safe chord evidence, harmonics/noise/single-note rejection, tuning and quiet input",
+        "Adjacent-window support, evidence-score sentinel handling and unknown timeline preservation at event limits",
+        "Weak-stem original-mix harmony fallback without changing tone features, Reference or recipes",
+        "Cancellation, optional fallback failure, bilingual HTML escaping and original-file timestamps",
+        "GUI source/unknown/diagnostics rendering, legacy-result compatibility and mix guitar-claim suppression",
+        "Small hidden-Tk layouts at 960x600, 1024x688 and 1280x640 with scaling 2.0 in Korean/English, including long completion/error status",
+        "Existing spectrum, capture, device, separation progress, route and export regressions"
+      ]
+    },
+    "source_self_test": {
+      "status": "passed",
+      "ok": true,
+      "ffmpeg_analysis": true,
+      "developer_blocks": 11,
+      "english_localization": true,
+      "reference_compare_ok": true,
+      "reference_bands": 6,
+      "recipe_count": 3,
+      "model_cached": true,
+      "torch": "2.13.0+cpu",
+      "demucs": "4.1.0",
+      "cuda_available": false
+    },
+    "provided_mp3_source_analysis": {
+      "status": "passed",
+      "source": "User-provided stereo 44.1 kHz 320 kbps MP3; audio, stems and raw logs remain local",
+      "duration_seconds": 252.61,
+      "elapsed_seconds": 104.844,
+      "compute_device": "cpu",
+      "model_downloaded_during_run": false,
+      "windowed_none_streams_guard": true,
+      "progress_events": 75,
+      "completed_chunks": 9,
+      "recipe_count": 3,
+      "reference_bands": 6,
+      "guitar_stem_rms_dbfs": -63.245,
+      "chord_source": "original_mix",
+      "harmony_event_count": 38,
+      "total_timeline_events": 73,
+      "chord_supported_windows": 79,
+      "analyzed_windows": 421,
+      "tonal_coverage": 0.1876,
+      "events_truncated": false,
+      "guitar_shapes_or_slash_bass_claims": 0,
+      "boundary": "Execution, source selection and conservative evidence checks only. Coverage is not transcription accuracy; no ground-truth chord chart was available."
+    },
+    "packaged_exe_self_test": {
+      "status": "passed",
+      "ok": true,
+      "independent_fresh_extract": true,
+      "reference_compare_ok": true
+    },
+    "packaged_gui_analysis": {
+      "status": "passed",
+      "displayed_elapsed": "01:47",
+      "duration_seconds": 252.61,
+      "requested_device": "auto",
+      "resolved_device": "cpu",
+      "model_cache_reused": true,
+      "real_model_download": false,
+      "observed_overall_percent": [
+        18,
+        30.1,
+        46.2,
+        51.1,
+        56.1,
+        63.3,
+        82,
+        100
+      ],
+      "recipe_count": 3,
+      "reference_bands": 6,
+      "chord_source": "original_mix",
+      "harmony_event_count": 38,
+      "source_and_gui_chord_results": "exactly matching",
+      "local_json_export": "passed",
+      "min_client_size": [
+        960,
+        600
+      ],
+      "min_captured_window_size": [
+        962,
+        632
+      ],
+      "initial_captured_window_size": [
+        1322,
+        912
+      ],
+      "completion_footer_visible": true,
+      "input_scroll_preserves_footer": true,
+      "long_export_path_status_bounded": true,
+      "unknown_and_mix_source_labels_visible": true,
+      "actual_mic_or_loopback_captured": false
+    },
+    "portable_archive": {
+      "status": "passed",
+      "fresh_extract": true,
+      "manifest_entries": 4447,
+      "required_sources": "matching",
+      "manifest_sizes_and_sha256": "passed",
+      "model_weights_absent": true,
+      "private_paths_in_public_log": "absent",
+      "final_hash_authority": "Sibling ToneMatchTMP-v0.0.07-SHA256SUMS.txt; all file hashes and a fresh EXE self-test are rechecked after final QA documentation packaging."
+    },
+    "review": {
+      "status": "passed",
+      "blocking_findings": 0,
+      "historical_v006_and_earlier_sections": "unchanged"
+    },
+    "build_warnings": {
+      "status": "reviewed_nonblocking",
+      "notes": "PyInstaller emitted optional tensorboard/pycparser-table and non-Windows library/deprecation warnings; packaged self-tests and real MP3 analysis passed. No dependency versions changed."
+    }
+  },
+  "not_run": [
+    "Ground-truth chord transcription accuracy for the supplied backing track; detection coverage is not accuracy.",
+    "Actual NVIDIA CUDA inference, microphone/loopback capture, network-disabled run and code signing.",
+    "Live feature meters, automatic EQ/preset writing, C++ real-time audio, ASIO and WASAPI Exclusive are not implemented."
+  ]
+}

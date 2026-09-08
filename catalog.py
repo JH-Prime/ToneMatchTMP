@@ -8,18 +8,48 @@
 from __future__ import annotations
 
 
-APP_VERSION = "0.0.06"
+APP_VERSION = "0.0.07"
 TARGET_FIRMWARE = "1.8.58"
 MODEL_GUIDE_REVISION = "Rev. J (2026-07)"
-BUILD_DATE = "2026-09-07"
+BUILD_DATE = "2026-09-08"
 
 
 # 앱 내부의 변경 기록 화면과 배포 문서가 함께 사용하는 단일 원본이다.
 # 이후 패치는 0.0.02, 0.0.03, 0.0.04처럼 한 단계씩 올리고 최신 항목을 맨 위에 둔다.
 CHANGELOG: list[dict] = [
     {
-        "version": "0.0.06",
+        "version": "0.0.07",
         "date": BUILD_DATE,
+        "status": "공개 개발 프리뷰",
+        "status_en": "Public development preview",
+        "changes": [
+            "스테레오 역상 상쇄와 배음·잡음 영향을 줄이고 반복되는 코드 근거를 확인하는 보수적 타임라인 개선",
+            "기타 분리음이 약하면 원본 믹스 화성을 별도 참고 분석하며 출처·미확정 구간·진단 수치 표시",
+            "원본 화성 참고를 기타 운지·역위로 표현하지 않고 톤 추천과 Reference 분석 신호는 유지",
+            "GUI·JSON·HTML의 선택 구간 시간과 코드 근거·한계 안내 통일",
+            "Windows 작업 영역에 맞춘 창 크기와 스크롤 가능한 고정 상태 영역으로 분석 후 하단 잘림 개선",
+        ],
+        "changes_en": [
+            "Improves conservative chord timelines with phase-safe pitch evidence, harmonic/noise rejection and repeated-window support",
+            "Checks original-mix harmony separately when guitar-stem evidence is weak, labeling source, unknown spans and diagnostics",
+            "Never presents mix harmony as detected guitar shapes or inversions; tone and Reference analysis signals remain unchanged",
+            "Aligns selected-file timestamps, evidence and limitations across GUI, JSON and HTML",
+            "Fits startup to the Windows work area and bounds the scrollable status footer to prevent post-analysis clipping",
+        ],
+        "known_issues": [
+            "코드는 실험적 후보이며 정답 확률·악보·기타 타브가 아님; 빠른 코드 변화와 약한 근거는 미확정일 수 있음",
+            "원본 믹스 참고에는 건반·베이스 등도 포함됨; 매우 약한 기타 stem의 톤 추천 정확도를 보증하지 않음",
+            "서명 없는 CPU 프리뷰이며 실제 CUDA·ASIO·C++ 실시간 엔진·자동 프리셋 쓰기는 제공하지 않음",
+        ],
+        "known_issues_en": [
+            "Chords are experimental candidates, not accuracy probabilities, notation or guitar tabs; fast or weak evidence may stay unknown",
+            "Original-mix harmony includes other instruments and does not validate tone recipes from a very weak guitar stem",
+            "Unsigned CPU preview; no verified CUDA hardware run, ASIO, C++ real-time engine or automatic preset writing",
+        ],
+    },
+    {
+        "version": "0.0.06",
+        "date": "2026-09-07",
         "status": "공개 개발 프리뷰",
         "status_en": "Public development preview",
         "changes": [

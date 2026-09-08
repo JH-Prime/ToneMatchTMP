@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+
 
 LANGUAGE_LABELS = {"ko": "한국어", "en": "English"}
 
@@ -288,6 +290,21 @@ TEXT: dict[str, dict[str, str]] = {
     "ui.voicing_tab": {"ko": "코드 보이싱 · 실험", "en": "Chord voicing · Experimental"},
     "ui.voicing_intro": {"ko": "guitar stem에서 추정한 시간대별 화음입니다. 정확한 현·프렛 검출이 아니며 운지는 연주 후보입니다.", "en": "Time-based harmony estimated from the guitar stem. Strings/frets are not detected; shapes are playable candidates."},
     "ui.voicing_empty": {"ko": "신뢰할 수 있는 코드 구간을 찾지 못했습니다.", "en": "No sufficiently reliable chord segment was found."},
+    "ui.voicing_source_guitar_stem": {"ko": "분석 대상 · AI가 분리한 기타 신호. 코드는 추정 후보이며 실제 현·프렛 검출은 아닙니다.", "en": "Analyzed source · AI-isolated guitar. Chords are estimates, not detected strings or frets."},
+    "ui.voicing_source_provided_audio": {"ko": "분석 대상 · 사용자가 선택한 오디오. 기타 외 악기가 포함되면 전체 화성이 반영될 수 있습니다.", "en": "Analyzed source · User-selected audio. Other instruments may contribute to the harmony."},
+    "ui.voicing_source_original_mix": {"ko": "분석 대상 · 원본 믹스의 화성 참고(기타 전용 아님). 건반·베이스 등도 포함되므로 기타 보이싱·운지로 해석하지 마세요.", "en": "Analyzed source · Original-mix harmony reference, not guitar-only. Keys/bass may contribute; this is not detected guitar voicing or fingering."},
+    "ui.voicing_diagnostics": {"ko": "코드 근거가 있는 창 {reliable}/{total} · 활성 창 {active} · 입력 RMS {rms} dBFS", "en": "Chord-supported windows {reliable}/{total} · Active windows {active} · Input RMS {rms} dBFS"},
+    "ui.voicing_time_note": {"ko": "시간은 원본 파일 위치입니다(선택 구간 시작 {start:.1f}초). 코드 신뢰도는 템플릿 근거 점수이며 상단 톤 분석 신뢰도·정답 확률과 다릅니다.", "en": "Times refer to the original file (selection starts at {start:.1f}s). Chord confidence is a template-evidence score, separate from tone-analysis confidence and not an accuracy probability."},
+    "ui.voicing_fallback_selected": {"ko": "기타 분리음의 근거가 약해 원본 믹스를 보조 분석했습니다. 톤 추천과 Reference Compare의 분석 신호는 바꾸지 않았습니다.", "en": "Limited guitar-stem evidence triggered a separate original-mix analysis. Tone recipes and Reference Compare still use the original analysis signal."},
+    "ui.voicing_fallback_unavailable": {"ko": "원본 보조 분석을 완료하지 못해 기타 신호 결과를 유지했습니다. 원본 파일이 그대로 있는지 확인해 주세요.", "en": "The auxiliary analysis was unavailable; guitar results were retained. Check that the original file is still accessible."},
+    "ui.voicing_fallback_no_better": {"ko": "원본 믹스도 확인했지만 더 안정적인 코드 근거를 얻지 못해 기존 결과를 유지했습니다.", "en": "The original mix did not provide stronger chord evidence, so the original results were retained."},
+    "ui.voicing_weak_stem": {"ko": "분리된 기타 신호가 매우 약합니다. 기타가 실제로 포함된 음원인지 확인하고 아래 후보를 청음으로 검토하세요.", "en": "The isolated guitar signal is very weak. Check that audible guitar is present and review any candidates by ear."},
+    "ui.voicing_hint_generic": {"ko": "보완 방법 · 화음이 뚜렷하게 유지되는 10–30초 구간을 선택하세요. 단음 리프·드럼·잡음만 있는 구간은 코드로 확정하지 않습니다.", "en": "Try a 10–30 second passage with sustained, audible harmony. Single-note riffs, drums and noise alone are not confirmed as chords."},
+    "ui.voicing_hint_quiet": {"ko": "입력이 무음이거나 측정하기에 너무 약합니다. 더 잘 들리는 구간이나 기타가 포함된 원본을 선택하세요.", "en": "The input is silent or too weak to measure. Choose an audible passage or a source containing guitar."},
+    "ui.voicing_mix_profile": {"ko": "원본 믹스 화성 참고", "en": "Original-mix harmony reference"},
+    "ui.voicing_unknown": {"ko": "? · 코드 미확정", "en": "? · Chord undetermined"},
+    "ui.voicing_truncated": {"ko": "표시 제한 · 전체 {total}개 구간을 {shown}개로 요약했습니다. 제한 때문에 생략된 후보는 미확정 구간으로 표시합니다.", "en": "Display limit · Summarized {total} segments into {shown}. Candidates omitted by the limit are shown as undetermined spans."},
+    "warning.weak_guitar": {"ko": "분리된 기타 신호가 매우 약해 톤 추천이 불안정할 수 있습니다. 반주곡에 기타가 포함되어 있는지 확인하세요. 원본 믹스 화성 참고는 기타 톤 분석을 대체하지 않습니다.", "en": "The isolated guitar is very weak, so tone recommendations may be unreliable. Check whether the backing track contains guitar. Original-mix harmony does not replace guitar-tone analysis."},
     "ui.voicing_time": {"ko": "시간", "en": "Time"},
     "ui.voicing_chord": {"ko": "추정 코드", "en": "Estimated chord"},
     "ui.voicing_notes": {"ko": "구성음 후보", "en": "Candidate pitch classes"},
@@ -309,6 +326,7 @@ TEXT: dict[str, dict[str, str]] = {
     "voicing.inversion.unknown": {"ko": "역위 불명", "en": "inversion unknown"},
     "progress.voicing": {"ko": "guitar stem에서 시간대별 코드·보이싱 특성을 추정하는 중…", "en": "Estimating time-based chord and voicing characteristics from the guitar stem…"},
     "progress.voicing_done": {"ko": "코드 보이싱 타임라인 계산 완료", "en": "Chord-voicing timeline complete"},
+    "progress.voicing_mix": {"ko": "기타 코드 근거가 약해 원본 믹스의 화성을 보조 분석 중…", "en": "Limited guitar-chord evidence · checking original-mix harmony…"},
     "dialog.wait_for_task": {"ko": "녹음·분석·실시간 스펙트럼 작업이 끝난 뒤 다시 시도해 주세요.", "en": "Try again after recording, analysis, or live spectrum monitoring finishes."},
     "dialog.debug_bundle_title": {"ko": "다른 PC용 디버그 번들 저장", "en": "Save debug bundle for another PC"},
     "status.debug_bundle_saved": {"ko": "디버그 번들 저장 완료 · {path}", "en": "Debug bundle saved · {path}"},
@@ -339,6 +357,35 @@ def tr(key: str, language: str = "ko", **values: object) -> str:
         return localized.format(**values)
     except (KeyError, ValueError):
         return localized
+
+
+def voicing_context_lines(analysis: dict, language: str = "ko") -> list[str]:
+    """GUI와 HTML에서 코드의 분석 출처·근거·보조 분석·실패 안내를 일관되게 만든다."""
+    source = analysis.get("analysis_source", "guitar_stem")
+    if source not in {"guitar_stem", "provided_audio", "original_mix"}:
+        source = "provided_audio"
+    lines = [tr(f"ui.voicing_source_{source}", language)]
+    diagnostics = analysis.get("diagnostics", {})
+    fallback = analysis.get("fallback", {})
+    if fallback.get("selected"):
+        lines.append(tr("ui.voicing_fallback_selected", language))
+    elif fallback.get("attempted"):
+        key = "ui.voicing_fallback_unavailable" if fallback.get("reason") == "fallback_unavailable" else "ui.voicing_fallback_no_better"
+        lines.append(tr(key, language))
+    if float(fallback.get("primary_input_rms_dbfs", 0.0)) < -50.0 and source == "guitar_stem":
+        lines.append(tr("ui.voicing_weak_stem", language))
+    if diagnostics:
+        level = float(diagnostics.get("input_rms_dbfs", -240.0))
+        rms = f"{level:.1f}" if math.isfinite(level) else "—"
+        lines.append(tr("ui.voicing_diagnostics", language, reliable=diagnostics.get("reliable_frame_count", 0),
+                        total=diagnostics.get("analyzed_frame_count", 0), active=diagnostics.get("active_frame_count", 0), rms=rms))
+    if not any(event.get("chord_type", "unknown") != "unknown" for event in analysis.get("events", [])):
+        quiet = diagnostics.get("active_frame_count") == 0 or diagnostics.get("reason") in {"silence", "too_quiet", "silence_or_too_quiet", "silent_or_very_quiet"}
+        lines.append(tr("ui.voicing_hint_quiet" if quiet else "ui.voicing_hint_generic", language))
+    if diagnostics.get("events_truncated"):
+        lines.append(tr("ui.voicing_truncated", language, total=diagnostics.get("event_count_before_limit", 0), shown=len(analysis.get("events", []))))
+    lines.append(tr("ui.voicing_time_note", language, start=float(analysis.get("source_start_seconds", 0.0))))
+    return lines
 
 
 def choice_label(group: str, code: str, language: str = "ko") -> str:

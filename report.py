@@ -8,7 +8,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from engine import human_feature_rows
-from i18n import tr
+from i18n import tr, voicing_context_lines
 from voicing import pitch_class_names
 
 
@@ -228,26 +228,46 @@ def save_html(result: dict, path: str | Path) -> None:
     )
     isolation_text = _rt("isolated", language) if result.get("source_separation", {}).get("used") else _rt("skipped", language)
     reference_compare_html = _reference_compare_html(result, language)
+    voicing_analysis = dict(result.get("chord_voicing", {}))
+    voicing_analysis.setdefault("source_start_seconds", source.get("start_seconds", 0.0))
+    voicing_analysis.setdefault(
+        "analysis_source", "guitar_stem" if result.get("source_separation", {}).get("used") else "provided_audio",
+    )
+    voicing_context = "".join(
+        f"<p>{html.escape(line)}</p>"
+        for line in voicing_context_lines(voicing_analysis, language)
+    )
+    voicing_offset = float(voicing_analysis.get("source_start_seconds", source.get("start_seconds", 0.0)))
+    mixed_harmony = voicing_analysis.get("analysis_source") == "original_mix"
     voicing_rows = []
-    for event in result.get("chord_voicing", {}).get("events", []):
-        if event.get("chord_type") == "unknown":
-            continue
-        notes = pitch_class_names(event.get("pitch_classes", ())) or "—"
-        profile = " · ".join(
-            (
-                tr(f"voicing.register.{event.get('register', 'unknown')}", language),
-                tr(f"voicing.spacing.{event.get('spacing', 'unknown')}", language),
-                tr(f"voicing.inversion.{event.get('inversion', 'unknown')}", language),
+    for event in voicing_analysis.get("events", []):
+        unknown = event.get("chord_type", "unknown") == "unknown"
+        notes = "—" if unknown else pitch_class_names(event.get("pitch_classes", ())) or "—"
+        if unknown:
+            profile = "—"
+        elif mixed_harmony:
+            profile = tr("ui.voicing_mix_profile", language)
+        else:
+            profile = " · ".join(
+                (
+                    tr(f"voicing.register.{event.get('register', 'unknown')}", language),
+                    tr(f"voicing.spacing.{event.get('spacing', 'unknown')}", language),
+                    tr(f"voicing.inversion.{event.get('inversion', 'unknown')}", language),
+                )
             )
-        )
         shapes = "<br>".join(
             f"{html.escape(str(shape['label']))}: E A D G B e = {html.escape(' '.join(str(value) for value in shape['frets_low_e_to_high_e']))}"
-            for shape in event.get("candidate_shapes", [])
+            for shape in (event.get("candidate_shapes", []) if not mixed_harmony and not unknown else [])
         )
+        symbol = "?" if unknown else str(event["symbol"])
+        if mixed_harmony:
+            symbol = symbol.split("/", 1)[0]
+        confidence = "—" if unknown else f"{int(round(event['confidence'] * 100))}%"
+        unknown_label = f"<br>{html.escape(tr('ui.voicing_unknown', language))}" if unknown else ""
         voicing_rows.append(
             "<tr>"
-            f"<td>{event['start_seconds']:.1f}s–{event['end_seconds']:.1f}s</td>"
-            f"<td><b>{html.escape(str(event['symbol']))}</b><br>{int(round(event['confidence'] * 100))}%</td>"
+            f"<td>{event['start_seconds'] + voicing_offset:.1f}s–{event['end_seconds'] + voicing_offset:.1f}s</td>"
+            f"<td><b>{html.escape(symbol)}</b><br>{confidence}{unknown_label}</td>"
             f"<td>{html.escape(notes)}</td><td>{html.escape(profile)}</td><td>{shapes or '—'}</td>"
             "</tr>"
         )
@@ -279,7 +299,7 @@ table{{width:100%;border-collapse:collapse}} th,td{{padding:7px 9px;border-botto
 </div>
 {reference_compare_html}
 {''.join(recipes_html)}
-<section class="card recipe"><div class="rank">{tr('ui.voicing_tab', language)}</div><h2>{tr('ui.voicing_chord', language)}</h2><p>{tr('ui.voicing_intro', language)}</p><table><thead><tr><th>{tr('ui.voicing_time', language)}</th><th>{tr('ui.voicing_chord', language)}</th><th>{tr('ui.voicing_notes', language)}</th><th>{tr('ui.voicing_profile', language)}</th><th>{tr('ui.playable_shapes', language)}</th></tr></thead><tbody>{voicing_body}</tbody></table><p class="correction">{tr('ui.voicing_limit', language)}</p></section>
+<section class="card recipe"><div class="rank">{tr('ui.voicing_tab', language)}</div><h2>{tr('ui.voicing_chord', language)}</h2>{voicing_context}<table><thead><tr><th>{tr('ui.voicing_time', language)}</th><th>{tr('ui.voicing_chord', language)}</th><th>{tr('ui.voicing_notes', language)}</th><th>{tr('ui.voicing_profile', language)}</th><th>{tr('ui.playable_shapes', language)}</th></tr></thead><tbody>{voicing_body}</tbody></table><p class="correction">{tr('ui.voicing_limit', language)}</p></section>
 <div class="grid">
   <section class="card warning"><h2>{_rt('warnings', language)}</h2><ul>{warnings}</ul></section>
   <section class="card"><h2>{_rt('steps', language)}</h2><ol>{steps}</ol></section>

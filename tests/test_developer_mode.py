@@ -20,7 +20,7 @@ if str(MODULE_DIR) not in sys.path:
 
 import catalog  # noqa: E402
 import debug_info  # noqa: E402
-from app import ToneMatchApp  # noqa: E402
+from app import ToneMatchApp, _center_window  # noqa: E402
 from i18n import LANGUAGE_LABELS, tr  # noqa: E402
 from reference_compare import build_reference_profile  # noqa: E402
 from spectrum import analyze_spectrum_frame  # noqa: E402
@@ -241,9 +241,9 @@ class DeveloperModeTests(unittest.TestCase):
                 patch.object(ToneMatchApp, "_load_settings"),
                 patch.object(ToneMatchApp, "_save_settings"),
                 patch.object(root, "after"),
+                patch("app._window_work_area", return_value=(0, 0, 1112, 784)),
             ):
                 application = ToneMatchApp(root)
-                root.geometry("1080x720")
                 for language in ("ko", "en"):
                     application.language_var.set(LANGUAGE_LABELS[language])
                     application._change_language()
@@ -271,12 +271,12 @@ class DeveloperModeTests(unittest.TestCase):
                             self.assertEqual(footer.grid_info()["row"], 1)
                             self.assertEqual(application.left_canvas.grid_info()["row"], 0)
                             detail_label = footer.grid_slaves(row=2, column=0)[0]
-                            status_label = footer.grid_slaves(row=3, column=0)[0]
+                            status_area = footer.grid_slaves(row=3, column=0)[0]
                             self.assertEqual(str(detail_label.cget("textvariable")), str(application.progress_detail_var))
-                            self.assertEqual(str(status_label.cget("textvariable")), str(application.status_var))
+                            self.assertEqual(application.status_text.get("1.0", "end-1c"), application.status_var.get())
                             fixed_widgets = (
                                 footer, application.analyze_button, application.cancel_button,
-                                application.progress, detail_label, status_label,
+                                application.progress, detail_label, status_area, application.status_text,
                             )
                             original_positions = []
                             for widget in fixed_widgets:
@@ -299,6 +299,117 @@ class DeveloperModeTests(unittest.TestCase):
                                 [(widget.winfo_rootx(), widget.winfo_rooty()) for widget in fixed_widgets],
                                 original_positions,
                             )
+        finally:
+            root.destroy()
+
+    def test_initial_window_and_minimum_fit_the_usable_work_area(self) -> None:
+        """작업 표시줄과 제목 표시줄 여유를 뺀 화면보다 초기·최소 창이 커지면 안 된다."""
+        root = Mock()
+        for work_area in ((0, 0, 1280, 680), (0, 0, 1024, 728), (0, 40, 960, 640)):
+            with self.subTest(work_area=work_area), patch("app._window_work_area", return_value=work_area):
+                _center_window(root, 1320, 880)
+                geometry = root.geometry.call_args.args[0]
+                match = re.fullmatch(r"(\d+)x(\d+)\+(\d+)\+(\d+)", geometry)
+                self.assertIsNotNone(match)
+                width, height, x, y = map(int, match.groups())
+                min_width, min_height = root.minsize.call_args.args
+                left, top, right, bottom = work_area
+                self.assertLessEqual(min_width, width)
+                self.assertLessEqual(min_height, height)
+                self.assertGreaterEqual(x, left)
+                self.assertGreaterEqual(y, top)
+                self.assertLessEqual(x + width + 8, right)
+                self.assertLessEqual(y + height + 32, bottom)
+
+    def test_small_scaled_layout_does_not_grow_after_result_or_long_status(self) -> None:
+        """작은 고배율 화면에서도 긴 결과·오류가 입력 영역과 고정 진행 영역을 밀어내지 않아야 한다."""
+        for width, height in ((960, 600), (1024, 688), (1280, 640)):
+            root = tk.Tk()
+            root.withdraw()
+            original_scaling = float(root.tk.call("tk", "scaling"))
+            try:
+                root.tk.call("tk", "scaling", 2.0)
+                with (
+                    patch.object(ToneMatchApp, "_load_settings"),
+                    patch.object(ToneMatchApp, "_save_settings"),
+                    patch.object(root, "after"),
+                    patch("app._window_work_area", return_value=(0, 0, width + 32, height + 64)),
+                ):
+                    application = ToneMatchApp(root)
+                    for language in ("ko", "en"):
+                        application.language_var.set(LANGUAGE_LABELS[language])
+                        application._change_language()
+                        application.result_title_var.set("Room 335 · Clean fusion guitar · 78%")
+                        application.summary_var.set(tr("result.feature_summary", language, sat=23, bright=45, body=8, amb=59, conf=100))
+                        application.analysis_progress_percent = 100.0
+                        application.analysis_elapsed_seconds = 105.0
+                        application._refresh_analysis_progress()
+                        footer_geometry = None
+                        for status in (tr("status.complete", language), "HTTPS error\n" * 100):
+                            with self.subTest(size=(width, height), language=language, status=status[:30]):
+                                application.status_var.set(status)
+                                application.left_canvas.yview_moveto(0.0)
+                                root.update_idletasks()
+                                self.assertEqual(root.state(), "withdrawn")
+                                self.assertEqual((root.winfo_width(), root.winfo_height()), (width, height))
+                                self.assertEqual(application.status_text.get("1.0", "end-1c"), status)
+                                self.assertGreater(application.left_canvas.winfo_height(), 100)
+                                self.assertAlmostEqual(application.left_canvas.yview()[0], 0.0)
+                                footer = application.progress.master
+                                geometry = (footer.winfo_x(), footer.winfo_y(), footer.winfo_width(), footer.winfo_height())
+                                if footer_geometry is None:
+                                    footer_geometry = geometry
+                                self.assertEqual(geometry, footer_geometry)
+                                self.assertGreaterEqual(application.status_text.winfo_height(), application.status_text.winfo_reqheight())
+                                visible_widgets = (
+                                    footer, application.analyze_button, application.cancel_button,
+                                    application.progress, application.status_text,
+                                    application.result_title_label, application.result_summary_label,
+                                    application.export_json_button, application.export_html_button,
+                                    application.copy_button, application.notebook,
+                                )
+                                for widget in visible_widgets:
+                                    x = widget.winfo_rootx() - root.winfo_rootx()
+                                    y = widget.winfo_rooty() - root.winfo_rooty()
+                                    self.assertGreaterEqual(x, 0)
+                                    self.assertGreaterEqual(y, 0)
+                                    self.assertLessEqual(x + widget.winfo_width(), width)
+                                    self.assertLessEqual(y + widget.winfo_height(), height)
+                                self.assertGreater(application.notebook.winfo_height(), 100)
+                                self.assertLess(application.result_title_label.winfo_rooty(), application.export_json_button.winfo_rooty())
+                                if status.startswith("HTTPS"):
+                                    self.assertLess(application.status_text.yview()[1], 1.0)
+                                    application.status_text.yview_moveto(1.0)
+                                    self.assertAlmostEqual(application.status_text.yview()[1], 1.0)
+            finally:
+                root.tk.call("tk", "scaling", original_scaling)
+                root.destroy()
+
+    def test_input_scroll_clamps_after_content_becomes_shorter(self) -> None:
+        """입력 카드 내용이 줄면 예전 맨 아래 위치나 빈 스크롤 여백이 남지 않아야 한다."""
+        root = tk.Tk()
+        root.withdraw()
+        try:
+            with (
+                patch.object(root, "after"),
+                patch.object(ToneMatchApp, "_load_settings"),
+                patch("app._window_work_area", return_value=(0, 0, 1112, 784)),
+            ):
+                application = ToneMatchApp(root)
+                root.update_idletasks()
+                self.assertEqual((root.winfo_width(), root.winfo_height()), (1080, 720))
+                application.left_canvas.yview_moveto(1.0)
+                self.assertGreater(application.left_canvas.yview()[0], 0.0)
+                content = application.root.nametowidget(application.left_canvas.itemcget(application.left_canvas_window, "window"))
+                for widget in content.winfo_children():
+                    widget.grid_remove()
+                content.configure(height=30)
+                root.update_idletasks()
+                application._sync_left_scroll_region()
+                root.update_idletasks()
+                self.assertEqual(application.left_canvas.yview(), (0.0, 1.0))
+                application.left_canvas.yview_moveto(1.0)
+                self.assertEqual(application.left_canvas.yview(), (0.0, 1.0))
         finally:
             root.destroy()
 

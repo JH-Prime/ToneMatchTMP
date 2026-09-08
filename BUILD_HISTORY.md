@@ -8,12 +8,63 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 | 버전 | 상태 | 범위 |
 |---|---|---|
+| `0.0.07` | 포터블 개발 프리뷰 빌드·검증 완료 | 코드 근거·원본 화성 참고·반응형 분석 UI |
 | `0.0.06` | 포터블 개발 프리뷰 빌드·검증 완료 | Reference Compare, 실시간 분석 진행률, 콘솔 없는 EXE 모델 오류 수정 |
 | `0.0.05` | 포터블 개발 프리뷰 빌드·검증 완료 | Windows 입력/loopback 실시간 파형·FFT 스펙트럼, bounded 최신 프레임 처리 |
 | `0.0.04` | 포터블 개발 프리뷰 빌드·검증 완료 | 자동/CPU/CUDA 진단·벤치마크, NumPy 네이티브 최적화, 출력 경로별 Amp/Cab 체인 정정 |
 | `0.0.03` | 포터블 개발 프리뷰 빌드 완료 | 포터블 개발 ZIP, 한·영 handoff, 로그·빌드 이력, NumPy 코드/보이싱 분석(실험) |
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
+
+## 0.0.07 — Chord evidence and responsive analysis layout
+
+- 작업일 / Work date: `2026-09-08 KST`
+- 상태 / Status: `BUILT AND VERIFIED — unsigned CPU portable developer preview`
+- 기반 / Based on: v0.0.06 analysis progress and Reference Compare
+
+### 이 버전에 속하는 변경 / Changes owned by this version
+
+- 스테레오 역상 상쇄를 피하는 채널별 피치 근거, 배음·잡음 억제, 반복 창의 코드 근거 확인
+- 단음·잡음·짧은 불안정 후보를 미확정으로 보존하며 코드 근거 점수를 정답 확률과 구분
+- 기타 stem이 매우 약하거나 코드 근거가 부족할 때 원본 믹스 화성을 별도로 보조 분석
+- 원본 화성 참고는 기타 운지·역위·최저음 검출로 표현하지 않으며 톤 추천과 Reference PCM은 유지
+- GUI·JSON·HTML에 분석 출처·진단·선택 구간의 원본 파일 시각·미확정 구간 표시
+- 작업 표시줄을 제외한 Windows 작업 영역에 맞춘 창 크기, 고정 높이의 스크롤 상태 영역, 입력 스크롤 보정
+- 긴 결과 제목과 내보내기 버튼의 줄 배치로 작은 창의 하단 잘림 개선
+
+### 검증 경계 / Verification boundary
+
+코드 검출 구간 비율은 정확도가 아닙니다. 정답 코드 악보가 없는 사용자 샘플은 실행·출처·안정성 검증에만 사용합니다.
+원본 믹스에는 베이스·건반 등 여러 악기가 포함되며 기타 보이싱을 확인해 주지 않습니다.
+음원·중간 stem·개인 분석 로그는 로컬에만 보관하고 공개 저장소와 ZIP에서 제외합니다.
+
+Chord coverage is not accuracy. The supplied backing track has no verified ground-truth chord chart.
+Mix harmony remains an explicitly labeled reference; tone recipes and Reference Compare still use the guitar stem.
+CUDA hardware, microphone/loopback capture, offline network disabling and code signing are not validated in this patch.
+No live feature meters, automatic EQ/preset writing, C++ engine, ASIO or WASAPI Exclusive were added.
+
+### 릴리스 게이트 결과 / Release gate result
+
+- [x] Python 3.12 전체 자동 테스트 `121 tests`, warnings-as-errors, compileall 통과
+- [x] 소스·패키지·새 압축 해제 EXE 자체 진단 `ok: true`, 추천 3개, Reference 6밴드, 개발자 블록 11개
+- [x] 사용자 제공 252.61초 MP3 전체 CPU 분석: 소스 `104.844초`, EXE 표시 `01:47`; 모델 캐시 재사용
+- [x] 실제 EXE의 단계 진행률·완료 상태·원본 화성 참고·미확정 구간·JSON 저장 확인
+- [x] 원본 화성 후보 38구간, 전체 타임라인 73구간; 421창 중 79창에 반복 코드 근거, 그 외 미확정 — 정답률 아님
+- [x] 소스와 실제 EXE JSON의 코드 결과 정확히 일치; 기타 운지·slash-bass 주장 없음
+- [x] 실제 EXE 960×600 클라이언트 창에서 완료 footer·폼 스크롤·긴 저장 경로 상태 유지
+- [x] 숨긴 Tk 960×600 / 1024×688 / 1280×640, scaling 2.0, 한/영, 긴 완료·오류 문자열 회귀
+- [x] 새 ZIP 압축 해제 후 manifest 4,447개 크기·SHA-256, 필수 소스 일치, 모델 가중치·공개 로그 개인 경로 없음
+- [x] 읽기 전용 코드·문서 감사에서 릴리스 차단 문제 없음; 이전 버전 이력 불변
+- [ ] 정답 악보 대비 코드 채보 정확도, 실제 CUDA·마이크/loopback 캡처·네트워크 차단·코드 서명 — `NOT TESTED`
+
+샘플의 분리 기타 RMS는 약 −63.25 dBFS였습니다. 검출 구간 수는 원본 믹스의 참고 후보이며
+기타 보이싱이나 톤 추천의 정확성을 보증하지 않습니다. 확정 결과와 한계는 `QA_REPORT_v0.0.07.json`에 기록합니다.
+
+### 최종 산출물 기록 / Final artifact record
+
+최종 EXE·ZIP·자체 진단·manifest·공개 빌드 로그 해시는 ZIP 옆
+`ToneMatchTMP-v0.0.07-SHA256SUMS.txt`가 기준입니다. ZIP 내부 개별 파일의 크기·해시는
+`MANIFEST.json`으로 확인합니다. 문서 변경 후에도 새 압축 해제 검증을 반복합니다.
 
 ## 0.0.06 — Reference spectrum versus live Current
 

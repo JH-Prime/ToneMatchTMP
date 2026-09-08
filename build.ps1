@@ -5,7 +5,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$Version = "0.0.06"
+$Version = "0.0.07"
 $AppBaseName = "ToneMatchTMP-v$Version"
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $PythonExe = [System.IO.Path]::GetFullPath((Join-Path $ProjectDir "..\.venv\Scripts\python.exe"))

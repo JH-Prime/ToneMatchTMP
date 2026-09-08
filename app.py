@@ -1,4 +1,4 @@
-"""ToneMatch TMP v0.0.06 데스크톱 애플리케이션.
+"""ToneMatch TMP v0.0.07 데스크톱 애플리케이션.
 
 로컬 오디오·영상 또는 Windows PC 재생음 녹음을 받아 AI로 guitar stem만
 분리하고, Tone Master Pro에 수동 적용할 설명 가능한 톤 체인을 추천한다.
@@ -67,7 +67,7 @@ from engine import (
     relocalize_result,
     save_json,
 )
-from i18n import LANGUAGE_LABELS, choice_code, choice_label, choice_values, language_code, tr
+from i18n import LANGUAGE_LABELS, choice_code, choice_label, choice_values, language_code, tr, voicing_context_lines
 from reference_compare import ReferenceCompareError, compare_live_frame
 from recorder import (
     MAX_RECORD_SECONDS,
@@ -104,16 +104,35 @@ COLORS = {
 }
 
 
+def _window_work_area(window: tk.Tk) -> tuple[int, int, int, int]:
+    """작업 표시줄을 제외한 Windows 주 모니터 영역을 얻고 다른 환경에서는 화면으로 대체한다."""
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            rectangle = wintypes.RECT()
+            if ctypes.windll.user32.SystemParametersInfoW(48, 0, ctypes.byref(rectangle), 0):
+                if rectangle.right > rectangle.left and rectangle.bottom > rectangle.top:
+                    return rectangle.left, rectangle.top, rectangle.right, rectangle.bottom
+        except (AttributeError, OSError):
+            pass
+    return 0, 0, window.winfo_screenwidth(), window.winfo_screenheight()
+
+
 def _center_window(window: tk.Tk, width: int, height: int) -> None:
-    """주 모니터 가운데에 창을 배치하되 작은 화면 경계를 넘지 않게 한다."""
-    window.update_idletasks()
-    screen_w = window.winfo_screenwidth()
-    screen_h = window.winfo_screenheight()
-    actual_width = min(width, max(980, screen_w - 40))
-    actual_height = min(height, max(700, screen_h - 80))
-    x = max(0, (screen_w - actual_width) // 2)
-    y = max(0, (screen_h - actual_height) // 2)
+    """작업 영역과 창 테두리 여유 안에서 초기 크기와 최소 크기를 함께 정한다."""
+    left, top, right, bottom = _window_work_area(window)
+    work_width, work_height = right - left, bottom - top
+    available_width = max(1, work_width - 32)
+    available_height = max(1, work_height - 64)
+    actual_width = min(width, available_width)
+    actual_height = min(height, available_height)
+    window.minsize(min(960, available_width), min(600, available_height))
+    x = left + max(0, (work_width - actual_width) // 2)
+    y = top + max(0, (work_height - actual_height - 32) // 2)
     window.geometry(f"{actual_width}x{actual_height}+{x}+{y}")
+    window.update_idletasks()
 
 
 def _portable_root() -> Path:
@@ -158,7 +177,6 @@ class ToneMatchApp:
         """영구 상태를 준비하고 전체 Tkinter 화면과 이벤트 루프를 구성한다."""
         self.root = root
         self.root.title(f"{APP_NAME} · v{APP_VERSION}")
-        self.root.minsize(1080, 720)
         _center_window(root, 1320, 880)
         self.root.configure(bg=COLORS["bg"])
         self.data_root = _runtime_data_root()
@@ -307,14 +325,36 @@ class ToneMatchApp:
         ttk.Label(parent, text=text, style="Muted.TLabel").grid(row=row, column=column, columnspan=columnspan, sticky="w", pady=(7, 3))
 
     def _sync_left_scroll_region(self, _event: object | None = None) -> None:
-        """입력 카드 내용 높이가 바뀔 때 스크롤 가능한 전체 영역을 다시 계산한다."""
+        """입력 내용이 짧아져도 빈 영역을 스크롤하지 않도록 범위와 현재 위치를 제한한다."""
         if hasattr(self, "left_canvas") and self.left_canvas.winfo_exists():
-            self.left_canvas.configure(scrollregion=self.left_canvas.bbox("all"))
+            bounds = self.left_canvas.bbox(self.left_canvas_window)
+            if bounds is None:
+                return
+            viewport_height = max(1, self.left_canvas.winfo_height())
+            content_height = max(1, bounds[3])
+            self.left_canvas.configure(scrollregion=(0, 0, max(1, bounds[2]), max(viewport_height, content_height)))
+            if content_height <= viewport_height:
+                self.left_canvas.yview_moveto(0.0)
 
     def _resize_left_scroll_content(self, event: tk.Event) -> None:
         """창 너비가 바뀌어도 입력 카드 내부 프레임이 캔버스 폭을 정확히 채우게 한다."""
         if hasattr(self, "left_canvas") and self.left_canvas.winfo_exists():
             self.left_canvas.itemconfigure(self.left_canvas_window, width=max(1, event.width))
+            self._sync_left_scroll_region()
+
+    def _refresh_status_text(self, *_args: object) -> None:
+        """긴 상태 메시지를 고정 높이의 읽기 전용 스크롤 영역에 표시한다."""
+        self.status_text.configure(state="normal")
+        self.status_text.delete("1.0", "end")
+        self.status_text.insert("1.0", self.status_var.get())
+        self.status_text.configure(state="disabled")
+        self.status_text.yview_moveto(0.0)
+
+    def _resize_result_labels(self, event: tk.Event) -> None:
+        """긴 결과 제목과 요약을 실제 결과 패널 너비에 맞춰 줄바꿈한다."""
+        width = max(1, event.width - 32)
+        self.result_title_label.configure(wraplength=width)
+        self.result_summary_label.configure(wraplength=width)
 
     def _enable_left_mousewheel(self, _event: object | None = None) -> None:
         """포인터가 입력 카드 위에 있을 때 휠을 해당 세로 스크롤에 연결한다."""
@@ -341,7 +381,7 @@ class ToneMatchApp:
         self.compute_var.set(choice_label("compute", self.compute_backend_code, self.language))
         self.input_method_var.set(_input_method_label(self.input_method_code, self.language))
 
-        shell = ttk.Frame(self.root, padding=(22, 18, 22, 14))
+        shell = ttk.Frame(self.root, padding=(14, 12, 14, 10))
         shell.pack(fill="both", expand=True)
         shell.columnconfigure(0, weight=0, minsize=420)
         shell.columnconfigure(1, weight=1)
@@ -373,7 +413,7 @@ class ToneMatchApp:
         left_shell.grid(row=1, column=0, sticky="nsew", padx=(0, 13))
         left_shell.rowconfigure(0, weight=1)
         left_shell.columnconfigure(0, weight=1)
-        self.left_canvas = tk.Canvas(left_shell, bg=COLORS["panel"], highlightthickness=0, borderwidth=0, width=404)
+        self.left_canvas = tk.Canvas(left_shell, bg=COLORS["panel"], highlightthickness=0, borderwidth=0, width=404, height=1)
         self.left_canvas.grid(row=0, column=0, sticky="nsew")
         left_scroll = ttk.Scrollbar(left_shell, orient="vertical", command=self.left_canvas.yview)
         left_scroll.grid(row=0, column=1, sticky="ns")
@@ -469,7 +509,16 @@ class ToneMatchApp:
         ttk.Label(analyze_area, textvariable=self.progress_detail_var, style="Panel.TLabel", wraplength=375).grid(row=2, column=0, columnspan=2, sticky="w", pady=(0, 4))
         self._refresh_analysis_progress()
         self.status_var = tk.StringVar(value=tr("status.choose_file", self.language))
-        ttk.Label(analyze_area, textvariable=self.status_var, style="Muted.TLabel", wraplength=375).grid(row=3, column=0, columnspan=2, sticky="w")
+        status_area = ttk.Frame(analyze_area, style="Panel.TFrame")
+        status_area.grid(row=3, column=0, columnspan=2, sticky="ew")
+        status_area.columnconfigure(0, weight=1)
+        self.status_text = tk.Text(status_area, width=1, height=3, wrap="word", bg=COLORS["panel"], fg=COLORS["muted"], selectbackground=COLORS["border"], font=(self.ui_font, 9), relief="flat", borderwidth=0, highlightthickness=0, padx=0, pady=0, state="disabled")
+        self.status_text.grid(row=0, column=0, sticky="ew")
+        status_scroll = ttk.Scrollbar(status_area, orient="vertical", command=self.status_text.yview)
+        status_scroll.grid(row=0, column=1, sticky="ns")
+        self.status_text.configure(yscrollcommand=status_scroll.set)
+        self.status_var.trace_add("write", self._refresh_status_text)
+        self._refresh_status_text()
 
         note = tk.Label(left, text=tr("ui.tip", self.language), bg="#0d171f", fg=COLORS["muted"], justify="left", anchor="w", wraplength=375, padx=10, pady=8, font=(self.ui_font, 8))
         note.grid(row=12, column=0, sticky="ew", pady=(9, 0))
@@ -481,15 +530,20 @@ class ToneMatchApp:
         top.grid(row=0, column=0, sticky="ew", pady=(0, 9))
         top.columnconfigure(0, weight=1)
         self.result_title_var = tk.StringVar(value=tr("ui.result", self.language))
-        ttk.Label(top, textvariable=self.result_title_var, style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
-        self.export_json_button = ttk.Button(top, text=tr("ui.save_json", self.language), command=self._export_json, state="disabled")
-        self.export_json_button.grid(row=0, column=1, padx=(6, 0))
-        self.export_html_button = ttk.Button(top, text=tr("ui.html_report", self.language), command=self._export_html, state="disabled")
-        self.export_html_button.grid(row=0, column=2, padx=(6, 0))
-        self.copy_button = ttk.Button(top, text=tr("ui.copy_recipe", self.language), command=self._copy_recipe, state="disabled")
-        self.copy_button.grid(row=0, column=3, padx=(6, 0))
+        self.result_title_label = ttk.Label(top, textvariable=self.result_title_var, style="CardTitle.TLabel", width=1, wraplength=700)
+        self.result_title_label.grid(row=0, column=0, sticky="ew")
+        result_actions = ttk.Frame(top, style="Panel.TFrame")
+        result_actions.grid(row=1, column=0, sticky="e", pady=(5, 0))
+        self.export_json_button = ttk.Button(result_actions, text=tr("ui.save_json", self.language), command=self._export_json, state="disabled")
+        self.export_json_button.grid(row=0, column=0)
+        self.export_html_button = ttk.Button(result_actions, text=tr("ui.html_report", self.language), command=self._export_html, state="disabled")
+        self.export_html_button.grid(row=0, column=1, padx=(6, 0))
+        self.copy_button = ttk.Button(result_actions, text=tr("ui.copy_recipe", self.language), command=self._copy_recipe, state="disabled")
+        self.copy_button.grid(row=0, column=2, padx=(6, 0))
         self.summary_var = tk.StringVar(value=tr("ui.empty_summary", self.language))
-        ttk.Label(right, textvariable=self.summary_var, style="Muted.TLabel", wraplength=780).grid(row=1, column=0, sticky="ew", pady=(0, 9))
+        self.result_summary_label = ttk.Label(right, textvariable=self.summary_var, style="Muted.TLabel", wraplength=700, width=1)
+        self.result_summary_label.grid(row=1, column=0, sticky="ew", pady=(0, 9))
+        right.bind("<Configure>", self._resize_result_labels)
 
         self.notebook = ttk.Notebook(right)
         self.notebook.grid(row=2, column=0, sticky="nsew")
@@ -2018,28 +2072,41 @@ class ToneMatchApp:
 
     def _render_voicing(self, analysis: dict) -> None:
         """실험 보이싱 타임라인과 연주 후보를 별도 결과 탭에 표시한다."""
+        result = getattr(self, "result", None) or {}
+        analysis = dict(analysis)
+        analysis.setdefault("source_start_seconds", result.get("source", {}).get("start_seconds", 0.0))
+        analysis.setdefault("analysis_source", "guitar_stem" if result.get("source_separation", {}).get("used", True) else "provided_audio")
         widget = self.voicing_text
         widget.configure(state="normal")
         widget.delete("1.0", "end")
         widget.insert("end", tr("ui.voicing_tab", self.language) + "\n", "heading")
-        widget.insert("end", tr("ui.voicing_intro", self.language) + "\n", "intro")
+        for line in voicing_context_lines(analysis, self.language):
+            widget.insert("end", line + "\n", "intro")
+        widget.insert("end", "\n")
         events = analysis.get("events", [])
-        reliable = [event for event in events if event.get("chord_type") != "unknown"]
+        reliable = [event for event in events if event.get("chord_type", "unknown") != "unknown"]
         if not reliable:
             widget.insert("end", tr("ui.voicing_empty", self.language) + "\n", "warning")
-        for event in reliable:
-            start = self._format_time(float(event["start_seconds"]))
-            end = self._format_time(float(event["end_seconds"]))
+        offset = float(analysis.get("source_start_seconds", 0.0))
+        is_mix = analysis.get("analysis_source") == "original_mix"
+        for event in events:
+            start = self._format_time(offset + float(event["start_seconds"]))
+            end = self._format_time(offset + float(event["end_seconds"]))
+            if event.get("chord_type", "unknown") == "unknown":
+                widget.insert("end", f"{start}–{end}   {tr('ui.voicing_unknown', self.language)}\n", "warning")
+                continue
             confidence = int(round(float(event["confidence"]) * 100))
-            widget.insert("end", f"{start}–{end}   {event['symbol']}   {confidence}%\n", "event")
+            symbol = str(event["symbol"]).split("/")[0] if is_mix else event["symbol"]
+            widget.insert("end", f"{start}–{end}   {symbol}   {confidence}%\n", "event")
             notes = pitch_class_names(event.get("pitch_classes", ())) or "—"
             register = tr(f"voicing.register.{event.get('register', 'unknown')}", self.language)
             spacing = tr(f"voicing.spacing.{event.get('spacing', 'unknown')}", self.language)
             inversion = tr(f"voicing.inversion.{event.get('inversion', 'unknown')}", self.language)
             widget.insert("end", f"{tr('ui.voicing_notes', self.language)} · {notes}\n", "detail")
-            widget.insert("end", f"{tr('ui.voicing_profile', self.language)} · {register} · {spacing} · {inversion}\n", "detail")
+            profile = tr("ui.voicing_mix_profile", self.language) if is_mix else f"{register} · {spacing} · {inversion}"
+            widget.insert("end", f"{tr('ui.voicing_profile', self.language)} · {profile}\n", "detail")
             shapes = event.get("candidate_shapes", [])
-            if shapes:
+            if shapes and not is_mix:
                 widget.insert("end", tr("ui.playable_shapes", self.language) + "\n", "warning")
                 for shape in shapes:
                     frets = " ".join(str(value) for value in shape["frets_low_e_to_high_e"])

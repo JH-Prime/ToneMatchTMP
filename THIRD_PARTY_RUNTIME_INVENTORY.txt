@@ -1,4 +1,4 @@
-ToneMatch TMP 0.0.06 - Python Runtime/Build Dependency Inventory
+ToneMatch TMP 0.0.07 - Python Runtime/Build Dependency Inventory
 =================================================================
 
 Generated from the pinned requirements and installed package metadata.

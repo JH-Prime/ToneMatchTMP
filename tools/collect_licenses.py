@@ -45,7 +45,7 @@ def collect(requirements: Path, destination: Path, inventory: Path) -> None:
         shutil.rmtree(destination)
     destination.mkdir(parents=True, exist_ok=True)
     lines = [
-        "ToneMatch TMP 0.0.06 - Python Runtime/Build Dependency Inventory",
+        "ToneMatch TMP 0.0.07 - Python Runtime/Build Dependency Inventory",
         "=================================================================",
         "",
         "Generated from the pinned requirements and installed package metadata.",
