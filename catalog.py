@@ -8,18 +8,50 @@
 from __future__ import annotations
 
 
-APP_VERSION = "0.0.07"
+APP_VERSION = "0.0.08"
 TARGET_FIRMWARE = "1.8.58"
 MODEL_GUIDE_REVISION = "Rev. J (2026-07)"
-BUILD_DATE = "2026-09-08"
+BUILD_DATE = "2026-09-10"
 
 
 # 앱 내부의 변경 기록 화면과 배포 문서가 함께 사용하는 단일 원본이다.
 # 이후 패치는 0.0.02, 0.0.03, 0.0.04처럼 한 단계씩 올리고 최신 항목을 맨 위에 둔다.
 CHANGELOG: list[dict] = [
     {
-        "version": "0.0.07",
+        "version": "0.0.08",
         "date": BUILD_DATE,
+        "status": "공개 개발 프리뷰",
+        "status_en": "Public development preview",
+        "changes": [
+            "실시간 PCM 누적·채널별 FFT·최근 4프레임 평활화를 사전 할당 버퍼의 C++17 DSP 엔진으로 분리",
+            "버전 C ABI 1과 ctypes 브리지로 번들 DLL 호환성·수명·잠금을 관리하고 실제 C++/NumPy 백엔드 표시",
+            "DLL 누락·비호환 시 NumPy 기준 경로로 폴백하며 미완성 FFT 입력은 다음 블록까지 보존",
+            "네이티브 소스·헤더·브리지·테스트·명시적 Zig 빌드 경로를 포터블 개발 패키지에 포함",
+            "SoundCard 캡처·Python/Tk·AI 분리·오프라인 톤/Reference/코드 분석과 기존 UI 보완 유지",
+        ],
+        "changes_en": [
+            "Moves live PCM accumulation, per-channel FFT and four-frame smoothing into a C++17 DSP engine with preallocated buffers",
+            "Uses versioned C ABI 1 and a ctypes bridge for bundled-DLL compatibility, lifetime and locking, showing the actual C++/NumPy backend",
+            "Falls back to the NumPy reference path when native code is missing or incompatible and retains partial FFT input for the next block",
+            "Includes native source/header, bridge, tests and an explicit Zig build path in the portable developer package",
+            "Preserves SoundCard capture, Python/Tk, AI isolation, offline tone/Reference/chord analysis and previous UI fixes",
+        ],
+        "known_issues": [
+            "전환 범위는 실시간 DSP이며 C++ 장치 입출력·ASIO·WASAPI Exclusive·하드 실시간 엔진이 아님",
+            "Python 복사·잠금과 공유 모드 캡처 비용이 남음; 전체 곡 Demucs 가속이나 모든 입력에서의 성능 향상을 보증하지 않음",
+            "실시간 톤 특징·Match %·자동 EQ/TMP 설정·기기 프리셋 쓰기는 포함하지 않음",
+            "코드·보이싱은 실험적 참고이며 정답률·확정 타브가 아님; CUDA 실제 하드웨어 검증과 코드 서명은 별도",
+        ],
+        "known_issues_en": [
+            "The migration covers live DSP, not C++ device I/O, ASIO, WASAPI Exclusive or a hard-real-time engine",
+            "Python copies, locks and shared-mode capture remain; no whole-song Demucs acceleration or universal performance improvement is guaranteed",
+            "Live tone-feature/Match-percent meters, automatic EQ/TMP settings and device preset writing are not included",
+            "Chord/voicing output remains experimental guidance, not accuracy or detected tablature; real CUDA validation and code signing are separate",
+        ],
+    },
+    {
+        "version": "0.0.07",
+        "date": "2026-09-08",
         "status": "공개 개발 프리뷰",
         "status_en": "Public development preview",
         "changes": [

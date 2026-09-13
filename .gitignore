@@ -37,6 +37,10 @@ captures/
 *.log
 *.zip
 *.exe
+*.dll
+*.lib
+*.pdb
+*.obj
 
 # Audio/video belongs to the user and must not be committed accidentally
 *.wav

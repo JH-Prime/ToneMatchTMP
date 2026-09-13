@@ -1,0 +1,208 @@
+{
+  "schema": "tonematch-qa/v1",
+  "app_version": "0.0.08",
+  "prepared_at": "2026-09-10",
+  "tested_at": "2026-09-11",
+  "status": "passed",
+  "platform": "Windows 11 x64 / Python 3.12.14 / CPU portable",
+  "checks": {
+    "compileall": "passed",
+    "unit_tests": {
+      "status": "passed",
+      "count": 162,
+      "warnings_as_errors": true,
+      "native_tests_skipped": 0,
+      "focus": [
+        "24 native ABI/parity/lifetime tests; 17 app integration and bilingual backend/layout tests",
+        "Existing 960x600 completion/footer, voicing, isolation/progress, reference, capture and export regressions"
+      ]
+    },
+    "native_dsp": {
+      "status": "passed",
+      "ok": true,
+      "runtime": {
+        "available": true,
+        "backend": "cpp",
+        "abi_version": 1,
+        "library": "tonematch_dsp.dll",
+        "error": null
+      },
+      "completed_windows": 15,
+      "max_absolute_errors": {
+        "waveform": 0,
+        "frequency_hz": 0,
+        "spectrum_db": 2.1316282072803006e-14,
+        "rms_db": 1.2434497875801753e-14,
+        "peak_db": 0,
+        "centroid_hz": 1.0913936421275139e-11
+      },
+      "benchmark": {
+        "scope": "Synthetic PCM push including Python bridge, FFT and smoothing; excludes capture, GUI, AI and offline analysis",
+        "python": "3.12.14",
+        "numpy": "2.2.6",
+        "platform": "Windows",
+        "architecture": "AMD64",
+        "rate_hz": 44100,
+        "channels": 2,
+        "fft_size": 2048,
+        "history_size": 4,
+        "input_dtype": "float32",
+        "warmup_per_round": 32,
+        "rounds": 5,
+        "iterations_per_round": 512,
+        "block_duration_ms": 46.439909297052154,
+        "measurements": {
+          "cpp": {
+            "median_ms": 0.1494,
+            "p95_ms": 0.17020999999999994,
+            "p99_ms": 0.24120999999999984,
+            "max_ms": 0.3934
+          },
+          "numpy": {
+            "median_ms": 0.6513,
+            "p95_ms": 0.8026649999999996,
+            "p99_ms": 1.1240169999999996,
+            "max_ms": 1.6195
+          }
+        },
+        "median_speedup_numpy_over_cpp": 4.359437751004016
+      },
+      "native_cases": 24,
+      "app_integration_cases": 17,
+      "independent_review": {
+        "configurations": 9,
+        "outputs": 18,
+        "max_spectrum_error_db": 9.24e-14
+      },
+      "binary": {
+        "abi_version": 1,
+        "format": "PE32+ AMD64 DLL",
+        "compiler": "Zig 0.15.2 c++",
+        "sha256": "50e8c5111c13e7740f84c5c124ced51a787caba7e7eaf2bd29b1044f171a3a5e",
+        "size_bytes": 349184,
+        "imports": "Windows KERNEL32 and UCRT API sets only",
+        "exports": 7
+      }
+    },
+    "source_self_test": {
+      "status": "passed",
+      "ok": true,
+      "recipe_count": 3,
+      "reference_bands": 6,
+      "developer_source_blocks": 11,
+      "native_dsp": {
+        "available": true,
+        "backend": "cpp",
+        "abi_version": 1,
+        "library": "tonematch_dsp.dll",
+        "error": null,
+        "smoke_ok": true,
+        "parity_ok": true,
+        "max_magnitude_error_db": 5.262279501039302e-11,
+        "frames_checked": 4,
+        "partial_buffer_reset_ok": true,
+        "capture_device_tested": false
+      },
+      "model_cached": true,
+      "torch": "2.13.0+cpu",
+      "demucs": "4.1.0"
+    },
+    "packaged_exe_self_test": {
+      "status": "passed",
+      "ok": true,
+      "backend": "cpp",
+      "abi_version": 1,
+      "parity_ok": true,
+      "independent_fresh_extract": true
+    },
+    "packaged_gui": {
+      "status": "passed",
+      "tested_at": "2026-09-11",
+      "real_exe": true,
+      "analyzed_source": "User-provided Room 335 stereo MP3, local only",
+      "duration_seconds": 252.61,
+      "displayed_elapsed_runs": [
+        "01:45",
+        "01:47"
+      ],
+      "recipe_count": 3,
+      "reference_bands": 6,
+      "compute_device": "cpu",
+      "model_cache_reused": true,
+      "model_downloaded": false,
+      "initial_captured_window_size": [
+        1322,
+        912
+      ],
+      "minimum_client_size": [
+        960,
+        600
+      ],
+      "minimum_captured_window_size": [
+        962,
+        632
+      ],
+      "completion_footer_visible": true,
+      "input_scroll_preserves_footer": true,
+      "long_json_save_path_bounded": true,
+      "live_dsp_heading_visible": true,
+      "live_backend_state": "pending until first capture block; no real capture started",
+      "actual_mic_or_loopback_captured": false,
+      "chord_source": "original_mix",
+      "total_timeline_events": 73,
+      "v007_chord_json_comparison": "exact match",
+      "json_export": "passed; private file excluded from release",
+      "exe_sha256": "B77F5AFF7BCC315E72E8D13363556D024751123FDF46B220594F07D1147A2150"
+    },
+    "portable_archive": {
+      "status": "passed",
+      "manifest_entries": 4476,
+      "source_input_count": 41,
+      "manifest_sizes_and_sha256": "passed",
+      "native_dll_and_sources": "matching",
+      "native_licenses": "matching",
+      "model_weights_absent": true,
+      "mp3_absent": true,
+      "private_paths_in_public_log": "absent",
+      "final_hash_authority": "Sibling ToneMatchTMP-v0.0.08-SHA256SUMS.txt; final documentation requires re-extraction and re-verification.",
+      "fresh_extract": true
+    },
+    "review": {
+      "status": "passed",
+      "blocking_findings": 0,
+      "historical_v007_and_earlier_sections": "unchanged"
+    },
+    "provided_mp3_native_parity": {
+      "status": "passed",
+      "scope": "Full user-provided MP3 decoded to PCM in memory; explicit C++ versus NumPy live DSP only",
+      "decoded_duration_seconds": 252.60988662131518,
+      "decoded_frames": 11140096,
+      "complete_fft_windows_checked": 5439,
+      "pcm_pushes": 12971,
+      "final_incomplete_frames": 1024,
+      "final_incomplete_policy": "Retained until close/reset; not zero-padded, not analyzed, and discarded at stop/reset",
+      "max_absolute_errors": {
+        "waveform": 0,
+        "frequencies_hz": 0,
+        "magnitudes_dbfs": 1.2512657576735364e-10,
+        "rms_dbfs": 5.861977570020827e-14,
+        "peak_dbfs": 1.7763568394002505e-15,
+        "spectral_centroid_hz": 6.821210263296962e-12
+      },
+      "tail_windows_checked": 20,
+      "actual_capture": false,
+      "audio_saved_or_uploaded": false
+    },
+    "build_warnings": {
+      "status": "reviewed_nonblocking",
+      "notes": "PyInstaller optional tensorboard/pycparser-table and non-Windows/deprecation warnings; strict source tests and packaged C++ self-test passed."
+    }
+  },
+  "not_run": [
+    "Real microphone/loopback capture, round-trip audio latency, CUDA hardware, offline network disabling and code signing.",
+    "C++ device I/O, ASIO, WASAPI Exclusive, hard real-time guarantees, new live tone-feature/Match-percent meters and automatic preset writing are not implemented.",
+    "No claim of faster Demucs or whole-song offline analysis; this migration only covers the live DSP worker.",
+    "Chord detection coverage is not transcription accuracy; no ground-truth chart was supplied."
+  ],
+  "build_date": "2026-09-10"
+}

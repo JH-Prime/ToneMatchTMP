@@ -1,4 +1,4 @@
-"""ToneMatch TMP v0.0.07 데스크톱 애플리케이션.
+"""ToneMatch TMP v0.0.08 데스크톱 애플리케이션.
 
 로컬 오디오·영상 또는 Windows PC 재생음 녹음을 받아 AI로 guitar stem만
 분리하고, Tone Master Pro에 수동 적용할 설명 가능한 톤 체인을 추천한다.
@@ -68,6 +68,7 @@ from engine import (
     save_json,
 )
 from i18n import LANGUAGE_LABELS, choice_code, choice_label, choice_values, language_code, tr, voicing_context_lines
+from native_dsp import create_spectrum_engine, native_runtime_info
 from reference_compare import ReferenceCompareError, compare_live_frame
 from recorder import (
     MAX_RECORD_SECONDS,
@@ -80,7 +81,7 @@ from recorder import (
 )
 from report import recipe_as_text, save_html
 from separator import separator_runtime_status
-from spectrum import SpectrumFrame, SpectrumSmoother, analyze_spectrum_frame
+from spectrum import SpectrumFrame, analyze_spectrum_frame
 from voicing import pitch_class_names
 
 
@@ -189,6 +190,8 @@ class ToneMatchApp:
         self.spectrum_stop_event: threading.Event | None = None
         self.spectrum_session_id = 0
         self.spectrum_stop_requested = False
+        self.spectrum_backend: str | None = None
+        self.spectrum_fallback_reason: str | None = None
         self.spectrum_frames: queue.Queue[tuple[int, SpectrumFrame]] = queue.Queue(maxsize=1)
         self.last_spectrum_frame: SpectrumFrame | None = None
         self.last_reference_comparison: dict | None = None
@@ -747,13 +750,26 @@ class ToneMatchApp:
             tk.Label(card, text=tr(label_key, self.language), bg="#101a22", fg=COLORS["muted"], font=(self.ui_font, 8)).pack(anchor="w", padx=10, pady=(7, 0))
             tk.Label(card, textvariable=variable, bg="#101a22", fg=COLORS["accent"], font=("Consolas", 13, "bold")).pack(anchor="w", padx=10, pady=(1, 7))
 
+        waveform_heading = ttk.Frame(self.spectrum_tab, style="Alt.TFrame")
+        waveform_heading.grid(row=3, column=0, sticky="ew")
+        waveform_heading.columnconfigure(1, weight=1)
         ttk.Label(
-            self.spectrum_tab,
+            waveform_heading,
             text=tr("ui.waveform", self.language),
             background=COLORS["panel_alt"],
             foreground=COLORS["text"],
             font=(self.ui_font, 9, "bold"),
-        ).grid(row=3, column=0, sticky="w")
+        ).grid(row=0, column=0, sticky="w")
+        self.spectrum_backend_var = tk.StringVar(value=self._spectrum_backend_text())
+        ttk.Label(
+            waveform_heading,
+            textvariable=self.spectrum_backend_var,
+            background=COLORS["panel_alt"],
+            foreground=COLORS["muted"],
+            font=(self.ui_font, 8),
+            width=1,
+            anchor="e",
+        ).grid(row=0, column=1, sticky="ew", padx=(8, 0))
         self.waveform_canvas = tk.Canvas(self.spectrum_tab, height=130, bg="#081017", highlightbackground=COLORS["border"], highlightthickness=1, bd=0)
         self.waveform_canvas.grid(row=4, column=0, sticky="nsew", pady=(3, 8))
         self.waveform_canvas.bind("<Configure>", self._spectrum_canvas_resized)
@@ -1295,6 +1311,9 @@ class ToneMatchApp:
         stop_event = threading.Event()
         self.spectrum_stop_event = stop_event
         self.spectrum_stop_requested = False
+        self.spectrum_backend = None
+        self.spectrum_fallback_reason = None
+        self.spectrum_backend_var.set(self._spectrum_backend_text())
         self._clear_spectrum_frame_queue()
         self.last_reference_comparison = None
         self._populate_reference_rows()
@@ -1319,21 +1338,77 @@ class ToneMatchApp:
         stop_event: threading.Event,
         language: str,
     ) -> None:
-        """장치 블록을 FFT 프레임으로 바꿔 UI bounded 큐에 공급한다."""
-        smoother = SpectrumSmoother(history_size=4)
+        """단일 장치의 PCM을 스트리밍 DSP로 처리하고 최신 결과와 상태만 큐에 넣는다."""
+        engine = None
+        configuration = None
+        failure = None
 
         def handle_block(block: np.ndarray, sample_rate: int) -> None:
-            """녹음 콜백의 PCM 블록을 분석하고 최근 네 프레임을 평활화한다."""
+            """첫 PCM에서 엔진을 만들고 임의 길이 블록을 고정 FFT 구간으로 누적한다."""
+            nonlocal engine, configuration
             if stop_event.is_set():
                 return
-            frame = analyze_spectrum_frame(block, sample_rate)
-            self._offer_latest_spectrum(session_id, smoother.push(frame))
+            samples = np.asarray(block)
+            if samples.ndim not in (1, 2):
+                raise ValueError("Live PCM must be mono or frames-by-channels.")
+            channels = 1 if samples.ndim == 1 else samples.shape[1]
+            current_configuration = (sample_rate, channels)
+            if current_configuration != configuration:
+                previous_engine, engine = engine, None
+                if previous_engine is not None:
+                    previous_engine.close()
+                engine = create_spectrum_engine(
+                    sample_rate, channels, backend="auto", fft_size=2048, history_size=4,
+                )
+                configuration = current_configuration
+                self.events.put(("spectrum_backend", session_id, engine.backend, engine.fallback_reason))
+            frame = engine.push(samples)
+            if frame is not None and not stop_event.is_set():
+                self._offer_latest_spectrum(session_id, frame)
 
         try:
             monitor_capture_device(device_id, stop_event, handle_block, language)
-            self.events.put(("spectrum_finished", session_id))
         except Exception as exc:
-            self.events.put(("spectrum_error", session_id, exc, traceback.format_exc()))
+            failure = (exc, traceback.format_exc())
+        finally:
+            if engine is not None:
+                try:
+                    engine.close()
+                except Exception as exc:
+                    if failure is None:
+                        failure = (exc, traceback.format_exc())
+        if failure is None:
+            self.events.put(("spectrum_finished", session_id))
+        else:
+            self.events.put(("spectrum_error", session_id, failure[0], failure[1]))
+
+    def _spectrum_backend_text(self) -> str:
+        """실제 선택된 DSP와 대체 사유를 개인 경로 없는 짧은 한 줄로 만든다."""
+        if self.spectrum_backend == "cpp":
+            return tr("status.spectrum_backend_cpp", self.language)
+        if self.spectrum_backend == "numpy":
+            reason = str(self.spectrum_fallback_reason or "")
+            reason_key = "unavailable"
+            if "not installed" in reason:
+                reason_key = "missing"
+            elif "ABI" in reason:
+                reason_key = "abi"
+            return tr(f"status.spectrum_backend_numpy_{reason_key}", self.language)
+        return tr("status.spectrum_backend_pending", self.language)
+
+    def _apply_spectrum_backend(self, session_id: int, backend: str, reason: str | None) -> None:
+        """현재 활성 세션의 DSP 선택 이벤트만 Tk 스레드에서 화면과 진단에 반영한다."""
+        if (
+            session_id != self.spectrum_session_id or self.closing
+            or self.spectrum_stop_requested or not self._spectrum_is_running()
+            or backend not in {"cpp", "numpy"}
+        ):
+            return
+        self.spectrum_backend = backend
+        self.spectrum_fallback_reason = reason
+        text = self._spectrum_backend_text()
+        self.spectrum_backend_var.set(text)
+        self._append_debug_log(f"spectrum DSP · session={session_id} · {text}")
 
     def _finish_spectrum_monitor(
         self,
@@ -1959,6 +2034,8 @@ class ToneMatchApp:
                     self._recording_failed(event[1], event[2])
                 elif event[0] == "hardware_status":
                     self._apply_hardware_status(event[1])
+                elif event[0] == "spectrum_backend":
+                    self._apply_spectrum_backend(event[1], event[2], event[3])
                 elif event[0] == "spectrum_finished":
                     self._finish_spectrum_monitor(event[1])
                 elif event[0] == "spectrum_error":
@@ -2257,7 +2334,7 @@ class ToneMatchApp:
         destination = filedialog.asksaveasfilename(title=tr("dialog.debug_bundle_title", self.language), defaultextension=".zip", initialfile=initial, filetypes=(("ZIP", "*.zip"),))
         if not destination:
             return
-        source_names = ("app.py", "catalog.py", "debug_info.py", "devices.py", "engine.py", "i18n.py", "recorder.py", "reference_compare.py", "report.py", "separator.py", "spectrum.py", "voicing.py")
+        source_names = ("app.py", "catalog.py", "debug_info.py", "devices.py", "engine.py", "i18n.py", "native_dsp.py", "native/tonematch_dsp.cpp", "native/tonematch_dsp.h", "recorder.py", "reference_compare.py", "report.py", "separator.py", "spectrum.py", "voicing.py")
         diagnostics = {
             "app_version": APP_VERSION,
             "build_date": BUILD_DATE,
@@ -2265,6 +2342,8 @@ class ToneMatchApp:
             "platform": platform.platform(),
             "compute_preference": self.compute_backend_code,
             "separator": self.hardware_status or {"status": "not_probed"},
+            "native_dsp": native_runtime_info(),
+            "last_live_dsp_backend": self.spectrum_backend,
             "data_root": str(self.data_root),
         }
         try:
@@ -2339,6 +2418,60 @@ def _write_self_test_audio(path: Path, sample_rate: int = 44_100, duration: floa
         wav_file.writeframes(pcm.tobytes())
 
 
+def _self_test_native_dsp() -> dict:
+    """실제 DLL 또는 명시적 대체 경로에서 합성 PCM 누적·위상·평활화·초기화를 검증한다."""
+    runtime = native_runtime_info()
+    backend = "cpp" if runtime["available"] else "numpy"
+    engine = create_spectrum_engine(48_000, 2, backend=backend)
+    reference = None
+    try:
+        reference = create_spectrum_engine(48_000, 2, backend="numpy")
+        axis = np.arange(2048 * 8 + 127, dtype=np.float64) / 48_000
+        tone = 0.31 * np.sin(2.0 * np.pi * 440.0 * axis) + 0.07 * np.sin(2.0 * np.pi * 1723.0 * axis)
+        samples = np.column_stack((tone, -tone))
+        samples[5000:6000] *= 0.3
+        sizes = (31, 1000, 17, 4000, 2000, 3, 7000, len(samples) - 14051)
+        cursor = 0
+        frames_checked = 0
+        max_magnitude_error = 0.0
+        parity_ok = True
+        for size in sizes:
+            actual = engine.push(samples[cursor : cursor + size])
+            expected = reference.push(samples[cursor : cursor + size])
+            cursor += size
+            if actual is None or expected is None:
+                parity_ok = parity_ok and actual is None and expected is None
+                continue
+            frames_checked += 1
+            max_magnitude_error = max(max_magnitude_error, float(np.max(np.abs(actual.magnitudes_dbfs - expected.magnitudes_dbfs))))
+            parity_ok = parity_ok and (
+                np.allclose(actual.waveform, expected.waveform, rtol=0, atol=1e-7)
+                and np.allclose(actual.frequencies_hz, expected.frequencies_hz, rtol=0, atol=1e-9)
+                and np.allclose(actual.magnitudes_dbfs, expected.magnitudes_dbfs, rtol=0, atol=1e-6)
+                and abs(actual.rms_dbfs - expected.rms_dbfs) < 1e-9
+                and abs(actual.peak_dbfs - expected.peak_dbfs) < 1e-9
+                and abs(actual.spectral_centroid_hz - expected.spectral_centroid_hz) < 1e-6
+            )
+        engine.reset()
+        pending = engine.push(np.zeros((2047, 2)))
+        silent = engine.push(np.zeros((1, 2)))
+        reset_ok = pending is None and silent is not None and bool(np.all(silent.magnitudes_dbfs == -120.0)) and silent.rms_dbfs == -120.0
+        return {
+            **runtime,
+            "backend": engine.backend,
+            "smoke_ok": bool(parity_ok and reset_ok and frames_checked > 0),
+            "parity_ok": bool(parity_ok) if backend == "cpp" else False,
+            "max_magnitude_error_db": max_magnitude_error if backend == "cpp" else None,
+            "frames_checked": frames_checked,
+            "partial_buffer_reset_ok": bool(reset_ok),
+            "capture_device_tested": False,
+        }
+    finally:
+        if reference is not None:
+            reference.close()
+        engine.close()
+
+
 def run_self_test(output_path: str | Path) -> int:
     """합성 기타로 오프라인 분석·한영 변환·개발자 소스와 런타임을 검사한다."""
     destination = Path(output_path).resolve()
@@ -2360,8 +2493,9 @@ def run_self_test(output_path: str | Path) -> int:
         )
         debug_sources_ok = all("def " in code_for_block(block["id"]) and "소스 위치를 찾지 못했습니다" not in code_for_block(block["id"]) for block in PIPELINE_BLOCKS)
         separator_status = separator_runtime_status()
+        native_dsp_status = _self_test_native_dsp()
         payload = {
-            "ok": len(result.get("recipes", [])) == 3 and debug_sources_ok and english.get("language") == "en" and bool(separator_status.get("available")) and reference_compare_ok,
+            "ok": len(result.get("recipes", [])) == 3 and debug_sources_ok and english.get("language") == "en" and bool(separator_status.get("available")) and reference_compare_ok and native_dsp_status["smoke_ok"],
             "app_version": APP_VERSION,
             "ffmpeg_analysis": True,
             "developer_source_blocks": len(PIPELINE_BLOCKS),
@@ -2370,6 +2504,7 @@ def run_self_test(output_path: str | Path) -> int:
             "reference_compare_ok": reference_compare_ok,
             "reference_bands": len(result["reference_spectrum"]["bands"]),
             "separator_runtime": separator_status,
+            "native_dsp": native_dsp_status,
             "top_recipe": result["recipes"][0]["name"],
             "recipe_count": len(result["recipes"]),
             "target_firmware": result["target_firmware"],

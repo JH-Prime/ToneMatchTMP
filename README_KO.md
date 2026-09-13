@@ -1,10 +1,18 @@
-# ToneMatch TMP 0.0.07
+# ToneMatch TMP 0.0.08
 
-로컬 오디오·영상 또는 Windows PC 재생음을 분석해 Fender Tone Master Pro용 톤 레시피 3개를 추천하는 비공식 Windows 프리뷰입니다. v0.0.07은 코드 후보의 반복 근거·잡음·배음·스테레오 역상 처리를 보완하고, 분리 기타가 약할 때 원본 믹스를 출처가 명확한 화성 참고로 사용합니다. 분석 완료 후 긴 상태 문구와 작은 작업 영역 때문에 화면 아래가 밀리는 UI도 보완합니다. 릴리스·빌드 기준일은 2026-09-08 KST입니다. v0.0.06의 Reference Compare·수치 진행률, v0.0.05의 실시간 스펙트럼과 v0.0.04의 연산 장치·Amp/Cab 계약은 유지합니다. 실제 테스트·패키지 검증 상태는 `QA_REPORT_v0.0.07.json`과 `BUILD_HISTORY.md`를 기준으로 합니다.
+로컬 오디오·영상 또는 Windows PC 재생음을 분석해 Fender Tone Master Pro용 톤 레시피 3개를 추천하는 비공식 Windows 프리뷰입니다. v0.0.08은 C++ 엔진 전환을 우선하여 실시간 PCM 누적 버퍼·채널별 FFT·최근 4프레임 평활화를 C++17로 분리하고 실제 사용 중인 C++/NumPy 백엔드를 표시합니다. Python/Tk 화면, SoundCard 캡처, AI 분리와 오프라인 톤·Reference·코드 분석은 유지합니다. v0.0.07의 코드 후보·원본 믹스 화성 참고·작은 화면 보완도 그대로입니다. 릴리스·빌드 기준일은 2026-09-10 KST이며 실제 테스트·패키지 검증 상태는 `QA_REPORT_v0.0.08.json`과 `BUILD_HISTORY.md`를 기준으로 합니다.
 
 추천 카탈로그는 Tone Master Pro 펌웨어 1.8.58과 Model Guide Rev. J의 공개 모델명·컨트롤명을 기준으로 작성했습니다.
 
 > 이 프로그램은 원곡 장비나 Fender DSP를 식별·복제하지 않습니다. `매칭 %`는 정확도 확률이 아니라 측정 특징에 가까운 시작점을 정렬하기 위한 내부 유사도와 분석 신뢰도의 조합입니다.
+
+## v0.0.08 검증 요약
+
+실제 C++ 실행을 포함한 자동 테스트 162개를 통과했습니다. 이 PC의 실시간 DSP 처리
+중앙값은 C++ 0.1494 ms / NumPy 0.6513 ms로 약 4.36배 차이가 났습니다(각 2,560회).
+캡처·GUI·AI·전체 곡 분석은 이 측정에서 제외합니다. 제공된 252.61초 MP3의 완성 FFT
+창 5,439개가 허용 오차 내에서 일치했고, 실제 EXE 전체 AI 분석과 960×600 완료 화면도
+확인했습니다. 빌드는 2026-09-10, 최종 검증은 2026-09-11 KST입니다. 미검증 범위는 QA를 확인하세요.
 
 ## 처음 사용하기 전에
 
@@ -19,7 +27,7 @@
 
 ## 로컬 파일 빠른 사용법
 
-1. `ToneMatchTMP-v0.0.07.exe`를 실행합니다. 서명되지 않은 프리뷰라 Windows가 경고하면 배포자가 제공한 SHA-256과 파일 해시를 먼저 비교하세요.
+1. `ToneMatchTMP-v0.0.08.exe`를 실행합니다. 서명되지 않은 프리뷰라 Windows가 경고하면 배포자가 제공한 SHA-256과 파일 해시를 먼저 비교하세요.
 2. 입력 방법에서 `로컬 오디오/영상 파일`을 선택하고, 직접 보유하거나 분석 권한이 있는 파일을 고릅니다.
 3. 시작·끝 시간을 초 단위로 지정합니다.
    - 최소 분석 길이는 3초입니다.
@@ -58,10 +66,12 @@
 - Tk UI는 50 ms마다 최신 측정치를 확인해 약 20 Hz로 화면을 갱신합니다. 장치·드라이버 상황에 따라 실제 간격은 달라질 수 있습니다.
 - 최신 블록의 입력 파형, 20 Hz~20 kHz 로그 주파수 스펙트럼, RMS/Peak dBFS와 스펙트럼 중심 주파수를 표시합니다.
 - 좌우 채널을 먼저 섞어 역상 성분을 지우지 않도록 채널별 FFT 파워를 계산한 뒤 평균합니다. 스펙트럼과 RMS는 최근 4프레임의 선형 파워로 평활화하고 Peak는 그 창의 최댓값을 사용합니다.
+- v0.0.08은 포함된 `resources/tonematch_dsp.dll`의 ABI 1 호환성을 확인해 C++ DSP를 우선 사용합니다. DLL이 없거나 호환되지 않으면 NumPy로 폴백하고 실제 백엔드를 표시합니다. 일반 EXE 사용자는 컴파일러를 설치할 필요가 없습니다.
+- C++의 고정 크기 PCM 버퍼는 입력 블록이 FFT 길이보다 짧아도 남은 샘플을 다음 입력과 이어 처리합니다. 완성된 2,048-frame 단위만 표시하며 중지·초기화 때 미완성 부분은 버립니다.
 - 작업 스레드와 UI 사이에는 최신 프레임 하나만 보관하는 bounded 큐를 사용하므로, 화면이 잠시 늦어져도 오래된 프레임이나 메모리가 계속 쌓이지 않습니다.
 - 장치 충돌을 막기 위해 스펙트럼 모니터링 중에는 녹음·파일 분석·하드웨어 재검사·언어 전환을 함께 실행하지 않습니다.
 
-이 탭은 **선택 장치의 원시 입력을 보는 시각 분석기**입니다. 표시 신호에 Demucs 기타 분리를 적용하지 않고, 톤 특징·템플릿 매칭이나 레시피 추천에도 전달하지 않습니다. Python·NumPy와 WASAPI 공유 모드 경로이며 C++ 오디오 엔진, ASIO, WASAPI Exclusive 또는 하드 실시간 처리가 아닙니다.
+이 탭은 **선택 장치의 원시 입력을 보는 시각 분석기**입니다. 표시 신호에 Demucs 기타 분리를 적용하지 않고, 톤 특징·템플릿 매칭이나 레시피 추천에도 전달하지 않습니다. C++로 바뀐 부분은 PCM·FFT·평활화 DSP이며 장치 입출력은 여전히 Python/SoundCard의 WASAPI 공유 모드입니다. C++ 장치 콜백, ASIO, WASAPI Exclusive 또는 하드 실시간 처리를 구현한 것은 아닙니다. Python 복사·잠금·캡처 비용이 남으며 전체 곡 Demucs 분석 속도가 빨라졌다고 해석하면 안 됩니다.
 
 ## Reference Compare
 
@@ -149,20 +159,20 @@ v0.0.06은 콘솔 없는 EXE에서 출력 스트림이 없어 발생하던 `'Non
 ### EXE만 사용할 때
 
 1. 포터블 ZIP 전체를 쓰기 가능한 새 폴더에 압축 해제합니다.
-2. SHA-256을 확인하고 `ToneMatchTMP-v0.0.07.exe`를 실행합니다.
+2. SHA-256을 확인하고 `ToneMatchTMP-v0.0.08.exe`를 실행합니다.
 3. 새 PC에는 이전 PC의 사용자 캐시가 없으므로 첫 AI 기타 분리 때 모델을 다시 다운로드합니다.
 4. 다운로드를 반복하고 싶지 않다면 모델의 배포 조건을 확인한 뒤 이전 PC의 `models--adefossez--HTDemucs-6s` 폴더 전체를 새 PC의 동일한 캐시 경로로 복사하거나, 두 PC에서 같은 구조의 `HF_HOME`을 지정하세요.
 
 ### 소스 개발을 이어갈 때
 
 1. 개발 ZIP을 `C:\ToneMatchTMP-dev` 같은 쓰기 가능한 경로에 압축 해제합니다.
-2. 압축 안의 `ToneMatchTMP-v0.0.07\source`가 자체 완결된 프로젝트 폴더입니다.
+2. 압축 안의 `ToneMatchTMP-v0.0.08\source`가 자체 완결된 프로젝트 폴더입니다.
 3. 64-bit Python 3.12를 설치하고 패키지 루트에 `.venv`를 새로 만듭니다. 기존 PC의 가상환경은 절대 경로와 네이티브 패키지를 포함하므로 복사해 재사용하지 마세요.
-4. `source\requirements.txt`로 의존성을 설치하고 테스트를 실행합니다.
+4. `source\requirements.txt`로 의존성을 설치합니다. ZIP의 네이티브 DLL로 소스 실행이 가능하며, C++ 수정·재빌드에는 아래 고정 버전 컴파일러가 필요합니다. 테스트에서 C++ 검증이 실제 실행됐는지도 확인하세요.
 5. `DEVELOPER_HANDOFF_KO_EN.md`와 `BUILD_HISTORY.md`를 먼저 읽은 뒤 작업을 이어갑니다.
 
 ```powershell
-Set-Location C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.07
+Set-Location C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.08
 py -3.12 -m venv .venv
 & .\.venv\Scripts\python.exe -m pip install --upgrade pip
 & .\.venv\Scripts\python.exe -m pip install -r .\source\requirements.txt
@@ -184,6 +194,18 @@ CUDA 지원 NVIDIA PC에서 소스 빌드를 가속하려면 위 기본 환경�
 
 공개 소스는 `git clone https://github.com/JH-Prime/ToneMatchTMP.git`으로 받을 수도 있습니다. Git 저장소는 용량이 큰 `resources\ffmpeg.exe`를 제외하므로, 소스 실행·빌드 전 포터블 ZIP의 `source\resources\ffmpeg.exe`를 같은 위치에 복사하세요. `build.ps1`은 프로젝트의 형제 폴더에 있는 `..\.venv`를 사용합니다. 자세한 인수인계·빌드·검증 절차는 `DEVELOPER_HANDOFF_KO_EN.md`를 참고하세요. Codex나 다른 개발 도구에서 재개할 때는 `source` 또는 Git clone 폴더를 작업 폴더로 열고 두 인수인계 문서를 먼저 읽도록 지시하세요. 대화 기록이나 이전 PC의 임시 파일은 ZIP에 자동 포함되지 않습니다.
 
+#### C++ 엔진을 수정·빌드할 때
+
+[공식 Zig 0.15.2 Windows x64 ZIP](https://ziglang.org/download/0.15.2/zig-x86_64-windows-0.15.2.zip)의 SHA-256이 `3a0ed1e8799a2f8ce2a6e6290a9ff22e6906f8227865911fb7ddedc3cc14cb0c`인지 확인하고 프로젝트 바깥에 압축 해제합니다. 컴파일러는 배포 ZIP에 넣지 않으며 일반 EXE 실행에는 필요하지 않습니다.
+
+```powershell
+& ..\.venv\Scripts\python.exe tools\build_native.py --zig C:\Tools\zig-0.15.2\zig.exe
+& ..\.venv\Scripts\python.exe -m unittest discover -s tests -v
+.\build.ps1 -ZigPath C:\Tools\zig-0.15.2\zig.exe
+```
+
+또는 `TONEMATCH_ZIG` 환경 변수로 `zig.exe` 경로를 지정합니다. Git에는 `native\tonematch_dsp.cpp`·헤더, `native_dsp.py`, 테스트와 빌드 스크립트를 추적하고 생성된 DLL은 제외합니다. 포터블 개발 ZIP에는 이 소스와 DLL을 함께 포함합니다. DLL 누락으로 NumPy에 폴백한 테스트를 C++ 릴리스 검증으로 기록하지 마세요.
+
 ## 개발자 옵션
 
 오른쪽 위 `개발자 옵션`을 켜면 처리 시퀀스, 실시간 로그, 클릭형 배포 소스와 변경 기록을 확인할 수 있습니다. v0.0.06에서는 `reference_compare.py`의 기준 프로필·밴드 집계·공통 그리드 비교도 배포 소스에서 확인할 수 있습니다. v0.0.05의 `spectrum.py` 채널별 FFT·평활화, 장치 모니터·bounded 큐와 v0.0.04의 연산 장치·성능 진단도 유지됩니다.
@@ -198,7 +220,7 @@ CUDA 지원 NVIDIA PC에서 소스 빌드를 가속하려면 위 기본 환경�
 - 취소되거나 중단된 AI 분석을 중간 조각부터 재개하는 체크포인트는 없습니다. 완전히 내려받은 모델 캐시만 재사용되며 분석은 처음부터 다시 실행합니다.
 - 추천값은 완성 프리셋이 아니라 시작점입니다. Gain → Cab/Mic → EQ → Delay/Reverb 순으로 조정하세요.
 - Reference Compare는 레벨 정규화된 주파수 차이이며 통계적 정확도·매칭 확률이나 완성된 실시간 톤 매칭이 아닙니다. Brightness·Body·Gain·Compression·Ambience·Match % 미터와 자동 EQ/TMP 추천은 후속 범위입니다.
-- C++ 실시간 오디오·링 버퍼·FFT·ASIO 엔진은 후속 로드맵입니다. v0.0.07의 코드·비교 경로도 Python 기반이며 C++/ASIO 오디오 엔진이 아닙니다.
+- v0.0.08 C++ 전환은 실시간 PCM 누적·FFT·평활화만 포함합니다. 장치 입출력·UI·AI·오프라인 분석·Reference 비교 계산은 Python 기반이며 ASIO·독점 모드·하드 실시간·자동 기기 쓰기는 포함하지 않습니다. NumPy도 이미 네이티브 FFT를 사용하므로 성능 차이는 QA의 실제 측정 범위로만 해석하세요.
 - Tone Master Pro/Pro Control은 임의 블록과 모든 값을 쓰는 공개 API를 제공하지 않습니다. 기기 연결, 프리셋 자동 생성·전송, 노브 자동 조작을 하지 않습니다.
 - JSON은 분석 데이터이며 Tone Master Pro가 가져오는 `.preset` 파일이 아닙니다.
 - Tone Master Pro 외 장치 프로필은 현재 선택 자리만 있으며 분석은 지원하지 않습니다.
@@ -213,7 +235,9 @@ Fender, Tone Master, Tone Master Pro와 Pro Control은 각 권리자의 상표�
 
 ## 버전 및 개발 기록
 
-정식 출시 전 패치는 한 단계씩 올립니다. 앱 버전, Windows 파일 정보, EXE·ZIP 이름, README, 변경 기록과 SHA-256은 같은 버전이어야 합니다. 현재는 `0.0.07`, 다음 패치는 `0.0.08`입니다. 아래는 기능 귀속이며 최종 릴리스 검증 통과 여부는 QA와 빌드 이력을 확인하세요.
+정식 출시 전 패치는 한 단계씩 올립니다. 앱 버전, Windows 파일 정보, EXE·ZIP 이름, README, 변경 기록과 SHA-256은 같은 버전이어야 합니다. 현재는 `0.0.08`, 다음 패치는 `0.0.09`입니다. 아래는 기능 귀속이며 최종 릴리스 검증 통과 여부는 QA와 빌드 이력을 확인하세요.
+
+- `0.0.08` (2026-09-10 KST): 실시간 PCM 누적·채널별 FFT·4프레임 평활화의 C++17 분리, C ABI 1·ctypes 브리지, 실제 백엔드 표시와 NumPy 폴백, 네이티브 소스·빌드 경로 추가. 장치 캡처·AI·오프라인 분석은 유지
 
 - `0.0.07` (2026-09-08 KST): 반복 근거와 잡음·배음·역상을 고려한 코드 후보 보완, 약한 기타 stem의 원본 믹스 화성 참고와 출처·미확정·진단 표시, 원본 시각 보존, 작은 작업 영역과 완료 상태 문구의 UI 보완
 - `0.0.06` (2026-09-07 KST): 분석한 로컬/분리 guitar 신호의 레벨 정규화 Reference 저장, 기존 실시간 모니터를 Current로 재사용, 6밴드와 주파수별 `Δ(Current−Reference)` 표시, 수치 진행률·경과 시간·실제 다운로드/내부 분리 블록 진행 표시, 콘솔 없는 EXE 출력 오류와 모델 준비 오류 안내 수정
@@ -225,7 +249,7 @@ Fender, Tone Master, Tone Master Pro와 Pro Control은 각 권리자의 상표�
 
 - 개발 인수인계: `DEVELOPER_HANDOFF_KO_EN.md`
 - 빌드 이력과 검증 기록: `BUILD_HISTORY.md`
-- 현행 QA 기록: `QA_REPORT_v0.0.07.json`
+- 현행 QA 기록: `QA_REPORT_v0.0.08.json`
 - 개발자 구조 설명: `DEVELOPMENT_KO.md`
 - 전체 함수·한국어 docstring 색인: `FUNCTION_REFERENCE_KO.md`
 

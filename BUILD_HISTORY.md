@@ -8,6 +8,7 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 | 버전 | 상태 | 범위 |
 |---|---|---|
+| `0.0.08` | 포터블 개발 프리뷰 빌드·검증 완료 | C++17 실시간 PCM·FFT·평활화 엔진, ABI 브리지와 NumPy 폴백 |
 | `0.0.07` | 포터블 개발 프리뷰 빌드·검증 완료 | 코드 근거·원본 화성 참고·반응형 분석 UI |
 | `0.0.06` | 포터블 개발 프리뷰 빌드·검증 완료 | Reference Compare, 실시간 분석 진행률, 콘솔 없는 EXE 모델 오류 수정 |
 | `0.0.05` | 포터블 개발 프리뷰 빌드·검증 완료 | Windows 입력/loopback 실시간 파형·FFT 스펙트럼, bounded 최신 프레임 처리 |
@@ -15,6 +16,58 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 | `0.0.03` | 포터블 개발 프리뷰 빌드 완료 | 포터블 개발 ZIP, 한·영 handoff, 로그·빌드 이력, NumPy 코드/보이싱 분석(실험) |
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
+
+## 0.0.08 — C++ live DSP engine migration
+
+- 작업일 / Work dates: `2026-09-08–11 KST`; build date: `2026-09-10 KST`; final validation: `2026-09-11 KST`
+- 상태 / Status: `BUILT AND VERIFIED — unsigned CPU portable developer preview`
+- 기반 / Based on: v0.0.07 chord evidence and responsive analysis layout
+
+### 이 버전에 속하는 변경 / Changes owned by this version
+
+- 실시간 PCM 고정 누적 버퍼, 채널별 Hann FFT, 최근 4프레임 선형 파워 평활화를 C++17로 분리
+- C ABI 1 및 ctypes로 DLL 호환성·타입·컨텍스트 수명·동시 종료를 관리
+- 임의 길이 입력의 완성 FFT 창을 모두 처리하고 미완성 입력은 다음 블록까지 보존; 중지·reset에서는 폐기
+- 역상 스테레오, NaN/Inf, 표시 하한, Nyquist와 출력 소유권에 대한 NumPy 기준 경로 비교
+- 실제 C++/NumPy 선택과 폴백 사유를 기존 파형 제목 행에 한·영으로 표시
+- 단일 SoundCard 캡처와 최신 프레임 1개 큐 유지; Python UI·AI·오프라인 분석·레시피·코드 분석은 그대로 유지
+- 명시적으로 지정한 Zig 0.15.2 C++ 도구의 재빌드 경로, DLL/원본 C++/헤더/브리지/테스트/런타임 고지 배포
+- 릴리스 빌드와 EXE 자체 진단은 실제 C++ 수치 검증을 요구하며 NumPy 폴백 통과로 대체하지 않음
+
+### 검증 경계 / Verification boundary
+
+이번 전환은 실시간 DSP 연산 구간입니다. C++ 장치 입출력, ASIO, WASAPI Exclusive,
+하드 실시간 보장, 새로운 실시간 톤 특징/Match % 미터나 기기 프리셋 쓰기는 포함하지 않습니다.
+Python 복사·잠금과 공유 모드 캡처가 남아 있으므로 DSP 처리 시간은 오디오 왕복 지연이 아닙니다.
+파일·AI 분리는 그대로이며 DSP 벤치마크를 Demucs 또는 전체 곡 분석의 가속으로 표현하지 않습니다.
+
+The native benchmark compares identical float32 PCM pushes, including the Python bridge,
+FFT and smoothing, but excludes capture, GUI, AI and offline analysis. It is a local
+measurement, not a latency guarantee. Native parity uses the existing NumPy reference.
+User audio, stems and private analysis logs stay local and are excluded from public artifacts.
+
+### 릴리스 게이트 결과 / Release gate result
+
+- [x] Python 3.12 전체 자동 테스트 `162 tests`, warnings-as-errors, compileall 통과; native 건너뜀 0개
+- [x] 실제 DLL C ABI·수치·수명·출력 버퍼 검증 24개, 앱 통합·한영 표시·최소 창 회귀 17개
+- [x] 독립 읽기 검토에서 릴리스 차단 문제 없음; 추가 9개 설정·18개 출력의 NumPy 수치 비교 통과
+- [x] 소스·패키지·새 압축 해제 EXE 자체 진단: 실제 C++ ABI 1·parity, 추천 3개, Reference 6밴드, 개발자 블록 11개
+- [x] 사용자 제공 252.61초 MP3의 완성 FFT 창 `5,439개` 비교 통과; 최대 스펙트럼 오차 `1.2513e-10 dB`
+- [x] 동일 44.1 kHz·2채널·2,048-frame float32 DSP push 벤치마크: C++ 중앙값 `0.1494 ms`, NumPy `0.6513 ms`, 약 `4.36배`; 각 2,560회, 교차 순서·warmup 포함
+- [x] 실제 EXE의 Room 335 전체 AI 분석 완료 `01:45` / 재실행 `01:47`, 모델 캐시 재사용, 수치 진행·JSON 저장 성공
+- [x] 실제 EXE 960×600 클라이언트 / 962×632 캡처 창에서 완료 footer·입력 스크롤·긴 저장 경로 상태 유지
+- [x] 저장한 코드 JSON이 v0.0.07 EXE 결과와 정확히 일치; 원본 믹스 화성 참고 73개 타임라인, 정확도 주장은 없음
+- [x] 새 ZIP의 manifest `4,476개`, 소스 입력 `41개`, DLL·C++/헤더·런타임 고지·SHA-256 일치; 음원·모델 가중치·공개 로그 개인 경로 없음
+- [ ] 실제 마이크/loopback 캡처·왕복 지연, CUDA 장치, 네트워크 차단 실행, 코드 서명 — `NOT TESTED`
+
+최종 문서 반영 뒤에도 새 압축 해제와 자체 진단을 반복합니다. 위 DSP 벤치마크는
+AI/전체 곡 분석 또는 오디오 지연의 가속 결과가 아닙니다. 상세 결과는 `QA_REPORT_v0.0.08.json`에 기록합니다.
+
+### 최종 산출물 기록 / Final artifact record
+
+최종 해시는 ZIP 옆 `ToneMatchTMP-v0.0.08-SHA256SUMS.txt`가 기준이며 개별 파일은
+`MANIFEST.json`으로 확인합니다. `diagnostics/native-build.json`에는 컴파일러 버전·옵션·
+C++ 소스 해시·DLL 해시를, `native-verification.json`에는 수치 비교와 벤치마크를 기록합니다.
 
 ## 0.0.07 — Chord evidence and responsive analysis layout
 

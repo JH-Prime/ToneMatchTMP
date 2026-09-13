@@ -1,11 +1,12 @@
 param(
     [switch]$SkipTests,
     [switch]$SkipZip,
-    [string]$OutputDir = "release"
+    [string]$OutputDir = "release",
+    [string]$ZigPath = $env:TONEMATCH_ZIG
 )
 
 $ErrorActionPreference = "Stop"
-$Version = "0.0.07"
+$Version = "0.0.08"
 $AppBaseName = "ToneMatchTMP-v$Version"
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $PythonExe = [System.IO.Path]::GetFullPath((Join-Path $ProjectDir "..\.venv\Scripts\python.exe"))
@@ -66,12 +67,18 @@ try {
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $BuildLog) | Out-Null
     Set-Content -LiteralPath $BuildLog -Encoding utf8 -Value "ToneMatch TMP $Version build log"
 
+    if (-not $ZigPath) { throw "-ZigPath 또는 TONEMATCH_ZIG로 Zig 0.15.2 실행 파일을 지정하세요." }
+    Invoke-LoggedNative "Build C++ live DSP" { & $PythonExe tools\build_native.py --zig $ZigPath }
+    Invoke-LoggedNative "Require actual C++ DSP parity" {
+        & $PythonExe -W error tools\verify_native.py --benchmark --output build\native\native-verification.json
+    }
+
     if (-not $SkipTests) {
         # 이전 build/dist의 수천 개 런타임 파일을 다시 컴파일하지 않고 배포 소스만 검사한다.
         Invoke-LoggedNative "Python compileall" {
-            & $PythonExe -m compileall -q app.py catalog.py debug_info.py devices.py engine.py i18n.py recorder.py reference_compare.py report.py separator.py spectrum.py voicing.py tests tools
+            & $PythonExe -m compileall -q app.py catalog.py debug_info.py devices.py engine.py i18n.py native_dsp.py recorder.py reference_compare.py report.py separator.py spectrum.py voicing.py tests tools
         }
-        Invoke-LoggedNative "Unit tests" { & $PythonExe -m unittest discover -s tests -v }
+        Invoke-LoggedNative "Unit tests" { & $PythonExe -W error -m unittest discover -s tests -v }
     }
 
     Invoke-LoggedNative "Collect license notices" {
@@ -108,12 +115,13 @@ try {
 
     foreach ($Name in @(
         "app.py", "catalog.py", "debug_info.py", "devices.py", "engine.py",
-        "i18n.py", "recorder.py", "reference_compare.py", "report.py", "separator.py", "spectrum.py", "voicing.py"
+        "i18n.py", "native_dsp.py", "recorder.py", "reference_compare.py", "report.py", "separator.py", "spectrum.py", "voicing.py"
     )) {
         Copy-Item -LiteralPath (Join-Path $ProjectDir $Name) -Destination $SourceRoot -Force
     }
     Copy-Item -LiteralPath (Join-Path $ProjectDir "tests") -Destination $SourceRoot -Recurse -Force
     Copy-Item -LiteralPath (Join-Path $ProjectDir "tools") -Destination $SourceRoot -Recurse -Force
+    Copy-Item -LiteralPath (Join-Path $ProjectDir "native") -Destination $SourceRoot -Recurse -Force
     Copy-Item -LiteralPath (Join-Path $ProjectDir "resources") -Destination $SourceRoot -Recurse -Force
     Copy-Item -LiteralPath (Join-Path $ProjectDir ".gitignore") -Destination $SourceRoot -Force
     Copy-Item -LiteralPath (Join-Path $ProjectDir ".gitattributes") -Destination $SourceRoot -Force
@@ -181,7 +189,7 @@ try {
         throw "Packaged EXE self-test 실패 (exit $($SelfTestProcess.ExitCode))"
     }
     $SelfTest = Get-Content -Raw -LiteralPath $SelfTestPath | ConvertFrom-Json
-    if (-not $SelfTest.ok -or $SelfTest.app_version -ne $Version) {
+    if (-not $SelfTest.ok -or $SelfTest.app_version -ne $Version -or -not $SelfTest.native_dsp.available -or -not $SelfTest.native_dsp.parity_ok) {
         throw "패키지 자체 진단 결과가 올바르지 않습니다."
     }
     # 자체 진단 결과를 공유해도 로컬 사용자 폴더가 노출되지 않도록 캐시 경로를 일반화한다.
@@ -202,6 +210,8 @@ try {
     if (Test-Path -LiteralPath (Join-Path $ProjectDir "QA_REPORT_v$Version.json")) {
         Copy-Item -LiteralPath (Join-Path $ProjectDir "QA_REPORT_v$Version.json") -Destination $DiagnosticsRoot -Force
     }
+    Copy-Item -LiteralPath (Join-Path $ProjectDir "build\native\native-build.json") -Destination $DiagnosticsRoot -Force
+    Copy-Item -LiteralPath (Join-Path $ProjectDir "build\native\native-verification.json") -Destination $DiagnosticsRoot -Force
 
     & $PythonExe tools\write_manifest.py --root $StageRoot --output (Join-Path $StageRoot "MANIFEST.json") --version $Version
     if ($LASTEXITCODE -ne 0) { throw "배포 manifest 생성에 실패했습니다." }

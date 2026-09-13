@@ -1,18 +1,28 @@
-# ToneMatch TMP 0.0.07
+# ToneMatch TMP 0.0.08
 
 ToneMatch TMP is an unofficial, pre-release Windows desktop tool that analyzes a
 local audio/video file or Windows playback capture, isolates the guitar stem,
 and recommends three starting-point tone chains for Fender Tone Master Pro.
-It also provides an experimental chord/voicing timeline. Version 0.0.07 improves
-repeated chord evidence, noise/harmonic handling and antiphase stereo, adds clearly
-labeled original-mix harmony assistance when the isolated guitar is weak, and
-adjusts the UI for smaller Windows work areas. The release/build reference date is
-2026-09-08 KST. Version 0.0.06 introduced normalized Reference Compare and detailed
-analysis progress; version 0.0.05 introduced the live visual spectrum. Verified
-test and package outcomes are recorded in `QA_REPORT_v0.0.07.json` and
+It also provides an experimental chord/voicing timeline. Version 0.0.08 prioritizes
+a C++17 live-DSP engine: a preallocated PCM accumulator, per-channel FFT, and
+four-frame smoothing behind a versioned C ABI and Python `ctypes` bridge. The
+monitor displays the actual C++ or NumPy backend. Python/Tk UI, SoundCard capture,
+AI isolation, offline tone/Reference analysis and chord/voicing behavior remain
+unchanged. The release/build reference date is 2026-09-10 KST. Version 0.0.07's
+chord evidence and small-window fixes are retained. Verified
+test and package outcomes are recorded in `QA_REPORT_v0.0.08.json` and
 `BUILD_HISTORY.md`; this feature summary is not proof that a release gate passed.
 
 한국어 설치·사용 안내는 [README_KO.md](README_KO.md)를 먼저 읽어 주세요.
+
+## Verified v0.0.08 summary
+
+162 automated tests passed, including actual C++ execution. On this PC, live DSP
+push median was 0.1494 ms with C++ versus 0.6513 ms with NumPy (about 4.36×;
+2,560 calls each). This excludes capture, GUI, AI and offline analysis. All 5,439
+complete FFT windows from the supplied 252.61-second MP3 matched within tolerance.
+The portable EXE also completed full AI analysis and retained its footer at
+960×600. Built 2026-09-10, final validation 2026-09-11 KST; see the QA report for limits.
 
 ## Current scope
 
@@ -26,6 +36,8 @@ test and package outcomes are recorded in `QA_REPORT_v0.0.07.json` and
 - Windows WASAPI loopback/audio-input recording when no local file is available
 - Live raw-input waveform and logarithmic 20 Hz-20 kHz spectrum for the selected
   WASAPI input or playback loopback, with RMS/peak dBFS and spectral centroid
+- C++ live-DSP by default when the bundled ABI-1 DLL is available and compatible;
+  explicit NumPy fallback reporting when it cannot be used
 - A level-normalized reference spectrum from the analyzed local source or isolated
   guitar stem, compared against Current live input as Reference, Current, and delta
   (Current minus Reference) across six stable frequency bands
@@ -87,10 +99,13 @@ still defeat the experimental estimator.
 The portable EXE ships with the CPU runtime for broad Windows compatibility.
 CUDA is available only after installing the separate source-development CUDA
 environment on a compatible NVIDIA PC. It was not hardware-validated on the
-CPU-only release machine. C++ is reserved for a later real-time audio/ASIO
-boundary; the current app and AI orchestration remain Python-based.
+CPU-only release machine. The C++ change is limited to the live PCM/FFT/smoothing
+boundary. It does not migrate device capture or accelerate whole-song Demucs
+analysis. Performance measurements, when available, are scoped to the tested
+workload in QA; NumPy already executes compiled FFT routines.
 
-The v0.0.06 Reference Compare view reuses the v0.0.05 Python/NumPy live monitor.
+The v0.0.06 Reference Compare view reuses the existing live monitor, whose Current
+DSP backend is now C++ with a NumPy fallback.
 File analysis creates the Reference from the exact analyzed signal: the Demucs
 guitar stem for a full mix, or the decoded source when isolation is skipped. The
 Current side is the selected raw live device. Their overall levels are normalized
@@ -108,7 +123,18 @@ This comparison is not a statistical accuracy score or a match probability. It
 does not yet provide live Brightness, Body, Gain, Compression, Ambience, or Match
 percent meters, automatically derive EQ/TMP settings, or write a preset. Reference
 URLs remain browser shortcuts and source records only. The monitor is WASAPI shared
-mode, not C++, ASIO, WASAPI Exclusive, or a hard-real-time audio path.
+mode through Python/SoundCard; it is not a C++ device-I/O callback, ASIO, WASAPI
+Exclusive, or a hard-real-time audio path.
+
+`native_dsp.py` loads only the bundled `resources/tonematch_dsp.dll`, checks ABI 1,
+and selects C++ automatically when compatible. Missing or incompatible native
+code falls back to the NumPy reference path and reports the actual backend;
+explicit developer `backend="cpp"` requests fail instead of silently falling back.
+The accumulator retains incomplete FFT windows for the next input block; stop or
+reset discards that partial window. Completed non-overlapping windows use the
+same channel-power and four-frame smoothing contract. Native processing buffers
+are allocated at creation, but Python copies, locks and shared-mode capture
+remain, so this is not a lock-free or hard-real-time claim.
 
 ## Develop and build
 
@@ -126,10 +152,22 @@ Set-Location .\ToneMatchTMP
 ```powershell
 py -3.12 -m venv ..\.venv
 & ..\.venv\Scripts\python.exe -m pip install -r requirements.txt
+& ..\.venv\Scripts\python.exe tools\build_native.py --zig C:\Tools\zig-0.15.2\zig.exe
 & ..\.venv\Scripts\python.exe -m unittest discover -s tests -v
-& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.07.json
+& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.08.json
 & ..\.venv\Scripts\python.exe app.py
 ```
+
+Portable EXE users do not need a compiler. For a source/native rebuild, use the
+pinned [official Zig 0.15.2 Windows x64 archive](https://ziglang.org/download/0.15.2/zig-x86_64-windows-0.15.2.zip)
+and verify SHA-256
+`3a0ed1e8799a2f8ce2a6e6290a9ff22e6906f8227865911fb7ddedc3cc14cb0c`
+before extracting it outside the project. Pass its `zig.exe` to `--zig`, set
+`TONEMATCH_ZIG`, or run `build.ps1 -ZigPath C:\Tools\zig-0.15.2\zig.exe`.
+The compiler is not redistributed in the portable ZIP. The developer archive
+includes `native/` source/header, `native_dsp.py`, native tests, the build script,
+and the DLL; Git tracks the sources, not the generated DLL. Do not substitute
+a skipped-native test run for native release validation.
 
 For an NVIDIA CUDA source build, run `enable_cuda.ps1` after the base environment
 is working. It installs the pinned CUDA runtime from `requirements-cuda126.txt`;

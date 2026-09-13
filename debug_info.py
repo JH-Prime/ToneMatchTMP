@@ -124,13 +124,18 @@ PIPELINE_BLOCKS: list[dict] = [
         "title_en": "DSP feature extraction",
         "short": "FFT · 레벨 · 공간 · 반복",
         "short_en": "FFT · level · space · repeats",
-        "description": "파일 분석은 톤 지문과 레벨 정규화 기준 스펙트럼을 만들고, 실시간 입력은 채널별 FFT와 롤링 파워 평균으로 파형·스펙트럼을 표시하면서 같은 격자의 현재−기준 dB 차이를 계산합니다.",
-        "description_en": "File analysis builds a tone fingerprint and level-normalized reference spectrum. Live input uses per-channel FFT and rolling power averages for the waveform and spectrum, then computes Current-minus-Reference dB on the same grid.",
+        "description": "파일 분석·AI는 Python 경로를 유지합니다. 실시간 입력의 PCM 누적·채널별 FFT·파워 평균은 C++ DLL에서 처리하며 초기화가 불가능하면 NumPy로 대체합니다. 기존 SoundCard 입력과 같은 격자의 현재−기준 dB 비교를 유지하며 ASIO 엔진은 아닙니다.",
+        "description_en": "File analysis and AI retain the Python path. A C++ DLL handles live PCM buffering, per-channel FFT and power smoothing, with a NumPy fallback when initialization is unavailable. Existing SoundCard capture and same-grid Current-minus-Reference comparison remain; this is not an ASIO engine.",
         "inputs": "스테레오 PCM",
         "inputs_en": "Stereo PCM",
         "outputs": "ToneFeatures 원본 측정값, 기준 프로필, 실시간 차이",
         "outputs_en": "Raw ToneFeatures measurements, reference profile, live difference",
         "symbols": [
+            ("native_dsp.py", "create_spectrum_engine"),
+            ("native_dsp.py", "NativeSpectrumEngine.push"),
+            ("native_dsp.py", "PythonSpectrumEngine.push"),
+            ("native/tonematch_dsp.h", "@module"),
+            ("native/tonematch_dsp.cpp", "@module"),
             ("spectrum.py", "analyze_spectrum_frame"),
             ("spectrum.py", "SpectrumSmoother.push"),
             ("reference_compare.py", "build_reference_profile"),
@@ -314,7 +319,9 @@ def _source_roots() -> list[Path]:
 
 def source_file_path(file_name: str) -> Path:
     """개발자 뷰어에 표시할 배포 소스 파일의 실제 경로를 찾는다."""
-    safe_name = Path(file_name).name
+    requested = Path(file_name)
+    native_sources = {"native/tonematch_dsp.cpp", "native/tonematch_dsp.h"}
+    safe_name = requested if requested.as_posix() in native_sources else Path(requested.name)
     for root in _source_roots():
         candidate = root / safe_name
         if candidate.is_file():
@@ -374,11 +381,11 @@ def code_for_block(block_id: str) -> str:
 def changelog_as_text(entries: list[dict], language: str = "ko") -> str:
     """구조화된 변경 기록을 앱 화면용 한국어 또는 영어 텍스트로 변환한다."""
     if language == "en":
-        lines = ["ToneMatch TMP · Changelog", "Patch rule: 0.0.01 → 0.0.02 → 0.0.03 → 0.0.04 → 0.0.05 → 0.0.07 …", ""]
+        lines = ["ToneMatch TMP · Changelog", "Patch rule: 0.0.01 → 0.0.02 → 0.0.03 → 0.0.04 → 0.0.05 → 0.0.06 → 0.0.07 → 0.0.08 …", ""]
         changes_heading = "Changes"
         limits_heading = "Known limitations"
     else:
-        lines = ["ToneMatch TMP · 변경 기록", "패치 규칙: 0.0.01 → 0.0.02 → 0.0.03 → 0.0.04 → 0.0.05 → 0.0.07 …", ""]
+        lines = ["ToneMatch TMP · 변경 기록", "패치 규칙: 0.0.01 → 0.0.02 → 0.0.03 → 0.0.04 → 0.0.05 → 0.0.06 → 0.0.07 → 0.0.08 …", ""]
         changes_heading = "변경사항"
         limits_heading = "알려진 제한"
     for entry in entries:

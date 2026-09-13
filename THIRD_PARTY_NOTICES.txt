@@ -1,9 +1,27 @@
-ToneMatch TMP 0.0.06 - Third-Party Notices
+ToneMatch TMP 0.0.08 - Third-Party Notices
 ===========================================
 
 ToneMatch TMP application source
 --------------------------------
 License: MIT (see LICENSE.txt)
+
+C++ live DSP build/runtime components
+-------------------------------------
+The project's native/tonematch_dsp.cpp and .h are original MIT-licensed source.
+The Windows x64 DLL is built with Zig 0.15.2's bundled C++ toolchain (Clang/LLVM,
+libc++, libc++abi, libunwind, compiler runtime and MinGW-w64 Windows support).
+The compiler itself is not shipped in the portable archive. Applicable bundled
+runtime license texts and notices are preserved in licenses/native/:
+Zig-MIT.txt, libcxx-LICENSE.txt, libcxxabi-LICENSE.txt,
+libunwind-LICENSE.txt and MinGW-w64-COPYING.txt.
+LLVM libraries: Apache License 2.0 with LLVM exceptions and included notices.
+Zig support: MIT. MinGW-w64: ZPL 2.1 and separately marked component licenses.
+Toolchain/source: https://ziglang.org/download/0.15.2/
+LLVM source: https://github.com/llvm/llvm-project
+MinGW-w64 source: https://www.mingw-w64.org/
+Pinned compiler archive hash and build flags: tools/build_native.py and the
+portable diagnostics/native-build.json. No separate C++ compiler installation
+is required to run the application.
 
 FFmpeg 9.0.1 essentials_build-www.gyan.dev
 -----------------------------------------

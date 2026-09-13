@@ -1,11 +1,11 @@
-# ToneMatch TMP v0.0.07 — 개발 인수인계 / Developer Handoff
+# ToneMatch TMP v0.0.08 — 개발 인수인계 / Developer Handoff
 
-이 문서는 v0.0.07 포터블 개발 ZIP을 다른 Windows PC나 새 개발 세션에서 이어서 작업하기 위한 기준 문서입니다. 대화 기록이 아니라 압축에 포함된 소스, `QA_REPORT_v0.0.07.json`과 `BUILD_HISTORY.md`가 작업 상태의 근거입니다. 릴리스·빌드 기준일은 2026-09-08 KST입니다. 구현 설명과 검증 완료 여부를 구분하고, 미실행 검증은 QA에서 확인하세요.
+이 문서는 v0.0.08 포터블 개발 ZIP을 다른 Windows PC나 새 개발 세션에서 이어서 작업하기 위한 기준 문서입니다. 대화 기록이 아니라 압축에 포함된 소스, `QA_REPORT_v0.0.08.json`과 `BUILD_HISTORY.md`가 작업 상태의 근거입니다. 릴리스·빌드 기준일은 2026-09-10 KST입니다. 구현 설명과 검증 완료 여부를 구분하고, 미실행 검증은 QA에서 확인하세요.
 
-This is the source-of-truth handoff for continuing the v0.0.07 portable development snapshot on another Windows PC or in a new development session. The archived source, `QA_REPORT_v0.0.07.json` and `BUILD_HISTORY.md`, not prior chat history, define the state being handed over. The release/build reference date is 2026-09-08 KST. Feature descriptions are not evidence of completed validation; consult QA for checks not yet performed.
+This is the source-of-truth handoff for continuing the v0.0.08 portable development snapshot on another Windows PC or in a new development session. The archived source, `QA_REPORT_v0.0.08.json` and `BUILD_HISTORY.md`, not prior chat history, define the state being handed over. The release/build reference date is 2026-09-10 KST. Feature descriptions are not evidence of completed validation; consult QA for checks not yet performed.
 
-> v0.0.07 산출물의 정확한 크기와 해시는 패키징 완료 뒤 `BUILD_HISTORY.md`와 ZIP 옆 `ToneMatchTMP-v0.0.07-SHA256SUMS.txt`를 기준으로 합니다. 문서의 자리표시자를 검증값으로 오인하지 마세요.
-> After packaging, use `BUILD_HISTORY.md` and the sibling `ToneMatchTMP-v0.0.07-SHA256SUMS.txt` as the authority for exact v0.0.07 artifact sizes and hashes. Never treat pending placeholders as verified values.
+> v0.0.08 산출물의 정확한 크기와 해시는 패키징 완료 뒤 `BUILD_HISTORY.md`와 ZIP 옆 `ToneMatchTMP-v0.0.08-SHA256SUMS.txt`를 기준으로 합니다. 문서의 자리표시자를 검증값으로 오인하지 마세요.
+> After packaging, use `BUILD_HISTORY.md` and the sibling `ToneMatchTMP-v0.0.08-SHA256SUMS.txt` as the authority for exact v0.0.08 artifact sizes and hashes. Never treat pending placeholders as verified values.
 
 ---
 
@@ -13,7 +13,7 @@ This is the source-of-truth handoff for continuing the v0.0.07 portable developm
 
 ### 1. 제품 범위와 변하지 않아야 할 계약
 
-- 앱 버전: `0.0.07`
+- 앱 버전: `0.0.08`
 - 대상 장치: Fender Tone Master Pro
 - 대상 펌웨어/모델 가이드: `1.8.58` / `Rev. J (2026-07)`
 - 플랫폼: 64-bit Windows, Python 3.12 계열
@@ -114,9 +114,9 @@ Current용 두 번째 장치 스트림을 만들지 않습니다. Δ 부호는 �
 | `ToneMatchTMP.spec` | PyInstaller 데이터·바이너리·숨은 import·버전 리소스 |
 | `build.ps1` | 테스트 후 깨끗한 PyInstaller 빌드 |
 
-`DEVELOPMENT_KO.md`는 v0.0.07 구현 구조 요약이고, `FUNCTION_REFERENCE_KO.md`는 배포 소스의 모든 함수와 한국어 docstring을 자동 색인합니다. 새 PC 재구성과 릴리스 판정은 이 문서를 우선합니다.
+`DEVELOPMENT_KO.md`는 v0.0.08 구현 구조 요약이고, `FUNCTION_REFERENCE_KO.md`는 배포 소스의 모든 함수와 한국어 docstring을 자동 색인합니다. 새 PC 재구성과 릴리스 판정은 이 문서를 우선합니다.
 
-#### v0.0.03 도입 코드/보이싱 API와 v0.0.07 현행 계약
+#### v0.0.03 도입 코드/보이싱 API와 v0.0.07 도입 계약(현행 유지)
 
 - 공개 API: `analyze_voicings(samples, sample_rate, ...)`와 `voicing_analysis_dict(analysis)`; 튜닝 기준과 이벤트 상한 인자는 소스 시그니처를 기준으로 확인
 - 입력: 기본은 엔진이 준비한 22.05 kHz 기타 분석 버퍼. 원본 화성 참고는 별도 동일 구간 PCM이며 출처를 반드시 보존
@@ -151,7 +151,7 @@ v0.0.07은 `analysis_source`를 `guitar_stem`/`provided_audio`/`original_mix`로
 - 작업 스레드와 UI 사이의 `Queue(maxsize=1)`는 이전 화면 프레임을 최신값으로 교체합니다. 세션 ID와 중지 이벤트로 종료 뒤 낡은 프레임을 무시하고, 화면에는 마지막 정상 프레임을 유지합니다.
 - 스펙트럼 실행은 녹음, 파일/AI 분석, 하드웨어 재검사와 언어 UI 재구성과 상호 배타적입니다.
 - 이것은 원시 입력 시각화이며 Demucs 기타 분리, `ToneFeatures`, 코드/보이싱, 템플릿 매칭이나 레시피 출력과 연결되지 않습니다.
-- 구현은 Python/NumPy + SoundCard/WASAPI 공유 모드입니다. C++ 오디오 콜백, ASIO, WASAPI Exclusive 또는 하드 실시간 엔진을 구현하거나 검증했다고 표현하지 않습니다.
+- v0.0.05의 DSP는 Python/NumPy 기준 구현이며 v0.0.08에서 PCM/FFT/평활화를 C++ 우선 경로로 분리합니다. SoundCard/WASAPI 공유 모드 캡처는 유지하므로 C++ 장치 콜백, ASIO, WASAPI Exclusive 또는 하드 실시간 엔진을 구현하거나 검증했다고 표현하지 않습니다.
 
 #### v0.0.06 Reference Compare 계약
 
@@ -167,14 +167,17 @@ v0.0.07은 `analysis_source`를 `guitar_stem`/`provided_audio`/`original_mix`로
 권장 폴더 구조:
 
 ```text
-C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.07\
+C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.08\
 ├─ .venv\                 새 PC에서 다시 생성
-├─ ToneMatchTMP-v0.0.07.exe
+├─ ToneMatchTMP-v0.0.08.exe
 └─ source\                자체 완결된 개발 프로젝트
    ├─ app.py
    ├─ requirements.txt
    ├─ build.ps1
-   ├─ resources\ffmpeg.exe
+   ├─ resources\             ffmpeg.exe + tonematch_dsp.dll
+   ├─ native\                C++ 소스·헤더
+   ├─ native_dsp.py
+   ├─ tools\build_native.py
    ├─ tests\
    └─ ...
 ```
@@ -182,7 +185,7 @@ C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.07\
 `build.ps1`는 프로젝트의 형제 위치인 `..\.venv`를 찾습니다. 압축에 `.venv`가 있더라도 사용하지 마세요. Python 가상환경에는 원래 PC의 절대 경로와 네이티브 바이너리가 들어가므로 새 PC에서 다시 만드는 것이 안전합니다.
 
 ```powershell
-Set-Location C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.07
+Set-Location C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.08
 py -3.12 -m venv .venv
 & .\.venv\Scripts\python.exe -m pip install --upgrade pip
 & .\.venv\Scripts\python.exe -m pip install -r .\source\requirements.txt
@@ -214,7 +217,7 @@ Set-Location .\source
 
 `_load_hf_separator_model`은 각 파일을 `local_files_only=True`로 먼저 확인하고 누락 파일만 공식 저장소에서 받습니다. Demucs의 범용 로더 대신 이 명시 로더를 사용하여 Hugging Face 오류를 숨긴 채 구형 모델 다운로드로 바뀌는 폴백을 제거했습니다. 다운로드용 `tqdm`은 콘솔 출력 없이 실제 바이트를 앱 콜백에 전달합니다. 총량 없는 수신은 바이트만 표시하며 캐시 확인·파일 수신·메모리 로딩을 구분합니다.
 
-`app.py`는 외부 라이브러리 import 전에 `sys.stdout`·`sys.stderr`가 `None`일 때만 안전한 스트림을 연결합니다. 콘솔 없는 EXE의 `'NoneType' object has no attribute 'write'`는 네트워크 상태와 무관한 출력 오류일 수 있으므로 인터넷 미연결로 단정하면 안 됩니다. 모델 준비 예외는 체인을 따라 서버·네트워크, 캐시 권한·디스크, 메모리 부족, 기타 모델·런타임 오류로 나눕니다. 릴리스 검증에서는 단순 자체 진단뿐 아니라 모델 준비를 실제로 실행하는 EXE 분석도 확인하고 그 결과를 `QA_REPORT_v0.0.07.json`과 `BUILD_HISTORY.md`에 남깁니다.
+`app.py`는 외부 라이브러리 import 전에 `sys.stdout`·`sys.stderr`가 `None`일 때만 안전한 스트림을 연결합니다. 콘솔 없는 EXE의 `'NoneType' object has no attribute 'write'`는 네트워크 상태와 무관한 출력 오류일 수 있으므로 인터넷 미연결로 단정하면 안 됩니다. 모델 준비 예외는 체인을 따라 서버·네트워크, 캐시 권한·디스크, 메모리 부족, 기타 모델·런타임 오류로 나눕니다. 릴리스 검증에서는 단순 자체 진단뿐 아니라 모델 준비를 실제로 실행하는 EXE 분석도 확인하고 그 결과를 `QA_REPORT_v0.0.08.json`과 `BUILD_HISTORY.md`에 남깁니다.
 
 기본 위치:
 
@@ -234,7 +237,7 @@ Set-Location .\source
 
 ```powershell
 $env:HF_HOME = "D:\ToneMatchTMP-model-cache"
-& .\ToneMatchTMP-v0.0.07.exe
+& .\ToneMatchTMP-v0.0.08.exe
 ```
 
 다른 PC에서 재다운로드하지 않으려면 모델의 배포 조건을 먼저 확인하고 `models--adefossez--HTDemucs-6s` 전체(`blobs`, `refs`, `snapshots` 포함)를 새 PC의 대응 경로로 복사합니다. 부분 다운로드나 실행 중이던 분석을 다른 PC에서 이어받는 기능은 보장하지 않습니다. 캐시 복사가 불완전하면 지우고 온라인 상태에서 다시 받는 편이 안전합니다.
@@ -262,13 +265,13 @@ $env:HF_HOME = "D:\ToneMatchTMP-model-cache"
 & ..\.venv\Scripts\python.exe -m unittest discover -s tests -v
 
 # 소스 자체 진단
-& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.07.json
+& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.08.json
 
 # 테스트 후 PyInstaller 빌드
-.\build.ps1
+.\build.ps1 -ZigPath C:\Tools\zig-0.15.2\zig.exe
 
 # 필요할 때만 테스트를 이미 통과한 동일 소스로 재빌드
-.\build.ps1 -SkipTests
+.\build.ps1 -ZigPath C:\Tools\zig-0.15.2\zig.exe -SkipTests
 ```
 
 최종 배포 전에 최소한 다음 수동 검증을 수행합니다.
@@ -299,7 +302,8 @@ $env:HF_HOME = "D:\ToneMatchTMP-model-cache"
 포함:
 
 - 전체 `*.py` 소스와 `tests`
-- `resources\ffmpeg.exe`
+- `resources\ffmpeg.exe`와 `resources\tonematch_dsp.dll`
+- `native\tonematch_dsp.cpp`·헤더, `native_dsp.py`, 네이티브 테스트와 `tools\build_native.py`
 - `ToneMatchTMP.spec`, `version_info.txt`, `build.ps1`, `requirements.txt`, `requirements-cuda126.txt`, `enable_cuda.ps1`
 - `README_KO.md`, 이 문서, `BUILD_HISTORY.md`와 필요한 개발 문서
 - `LICENSE.txt`, `THIRD_PARTY_NOTICES.txt`, `licenses`
@@ -308,19 +312,19 @@ $env:HF_HOME = "D:\ToneMatchTMP-model-cache"
 
 제외:
 
-- `.venv`, `build`, `dist`, `__pycache__`
+- `.venv`, `build`, `dist`, `__pycache__`, Zig 컴파일러·캐시
 - Hugging Face/Demucs 모델 캐시와 미완료 다운로드
 - 사용자 오디오·영상, 녹음 WAV, 분리 stem, JSON/HTML 개인 결과
 - `%TEMP%\ToneMatchTMP-error.log`
 - API 키, 토큰, 프록시·계정 정보와 개인 경로가 들어간 설정
 
-대상 파일명은 `ToneMatchTMP-v0.0.07-Windows-x64-Portable-Dev.zip`입니다. EXE·ZIP·자체 진단의 최종 SHA-256은 패키징이 모두 끝난 뒤 형제 파일 `ToneMatchTMP-v0.0.07-SHA256SUMS.txt`와 `BUILD_HISTORY.md`에 기록합니다.
+대상 파일명은 `ToneMatchTMP-v0.0.08-Windows-x64-Portable-Dev.zip`입니다. EXE·ZIP·자체 진단의 최종 SHA-256은 패키징이 모두 끝난 뒤 형제 파일 `ToneMatchTMP-v0.0.08-SHA256SUMS.txt`와 `BUILD_HISTORY.md`에 기록합니다.
 
 ### 9. 릴리스 게이트
 
-v0.0.07에서 다음 개발자가 재확인할 항목입니다. 실제 CUDA GPU, 물리 장치/loopback 실시간 스펙트럼·Reference Compare·녹음과 코드 서명은 이번 릴리스 PC에서 검증되지 않았다면 `BUILD_HISTORY.md`에 그대로 남깁니다.
+v0.0.08에서 다음 개발자가 재확인할 항목입니다. 실제 CUDA GPU, 물리 장치/loopback 실시간 스펙트럼·Reference Compare·녹음과 코드 서명은 이번 릴리스 PC에서 검증되지 않았다면 `BUILD_HISTORY.md`에 그대로 남깁니다.
 
-- `catalog.APP_VERSION`, 최신 `CHANGELOG`, `version_info.txt`, spec의 EXE 이름과 모든 현재 문서가 `0.0.07`인지
+- `catalog.APP_VERSION`, 최신 `CHANGELOG`, `version_info.txt`, spec의 EXE 이름과 모든 현재 문서가 `0.0.08`인지
 - spec에 `i18n.py`, `devices.py`, `separator.py`, `recorder.py`, `spectrum.py`, `reference_compare.py`와 필요한 Demucs/PyTorch/SoundCard 런타임이 포함되는지
 - `voicing.py`와 해당 테스트·표시 문자열이 포함되고, 실험 결과가 톤 추천 신뢰도와 혼동되지 않는지
 - `requirements.txt`가 새 의존성을 재현 가능하게 고정하는지
@@ -334,12 +338,12 @@ v0.0.07에서 다음 개발자가 재확인할 항목입니다. 실제 CUDA GPU,
 - 자동/CPU/CUDA 상태와 벤치마크가 사실대로 표시되고 GPU 미검증 사실이 릴리스 노트에 남는지
 - 세 출력 경로의 Amp/Cab 정책과 적용 단계 회귀 테스트가 통과하는지
 - 2,048-frame 캡처, 채널별 FFT power, 20 Hz~20 kHz 필터, 4프레임 평활화, 용량 1 최신 프레임 큐와 50 ms UI polling 회귀가 통과하는지
-- 원시 스펙트럼을 Demucs·보이싱·레시피 결과와 연결했다고 잘못 설명하지 않는지, C++/ASIO 구현으로 오인할 표현이 없는지
+- 원시 스펙트럼을 Demucs·보이싱·레시피 결과와 연결했다고 잘못 설명하지 않는지, C++ 장치 입출력/ASIO 구현으로 오인할 표현이 없는지
 - Reference가 최종 분석 PCM에서 생성되고 Current가 기존 모니터를 재사용하는지, 6밴드·주파수 Δ의 부호와 레벨 정규화가 회귀 테스트를 통과하는지
-- Reference Compare를 Match %·실시간 특징 미터·자동 EQ/TMP 추천 또는 C++/ASIO로 과장하지 않는지
+- Reference Compare를 Match %·실시간 특징 미터·자동 EQ/TMP 추천 또는 C++ 장치 입출력/ASIO로 과장하지 않는지
 - 코드의 반복 근거·잡음/배음·역상·미확정 처리와 원본 믹스의 기타 운지/역위 비표시를 확인하고, 원본 화성 참고가 톤·Reference·레시피를 바꾸지 않는지
 - 선택 구간의 원본 시각과 출처·진단 안내가 GUI/JSON/한국어·영어 HTML에 일치하고, 작은 작업 영역과 긴 완료 문구에서도 버튼·상태 영역을 사용할 수 있는지
-- 다음 패치는 현재 파일·산출물 이름을 `0.0.08`로 올리되 v0.0.07 이하 역사 섹션은 다시 쓰지 않는지
+- 다음 패치는 현재 파일·산출물 이름을 `0.0.09`로 올리되 v0.0.08 이하 역사 섹션은 다시 쓰지 않는지
 
 ---
 
@@ -347,7 +351,7 @@ v0.0.07에서 다음 개발자가 재확인할 항목입니다. 실제 CUDA GPU,
 
 ### 1. Product contract
 
-- App version: `0.0.07`
+- App version: `0.0.08`
 - Active target: Fender Tone Master Pro
 - Target firmware/model guide: `1.8.58` / `Rev. J (2026-07)`
 - Platform: 64-bit Windows with the Python 3.12 line
@@ -437,11 +441,11 @@ The v0.0.07 UI sizes its initial window within the Windows work area. The input 
 
 The v0.0.04 compute contract uses stable `auto`, `cpu`, and `cuda` codes. Auto mode chooses CUDA when available and otherwise falls back to CPU; an explicit unsupported CUDA request must report the reason instead of silently relabeling a CPU run. Runtime diagnostics include the CUDA build, GPU model/capability, total/free VRAM, resolved device, total/per-chunk inference time, real-time factor, and peak GPU memory. The portable EXE remains CPU-based. `requirements-cuda126.txt` and `enable_cuda.ps1` define a separate source-development path for compatible NVIDIA PCs. No CUDA GPU was available on the release machine, so mock coverage and CPU fallback must not be described as real GPU validation.
 
-Output routes are also contractual: FRFR/headphones/USB/PA use Amp Only plus Cabinet; a power amp feeding a real guitar cabinet uses Amp Only and retains the reference cabinet as comparison metadata; a guitar amp's front input omits both Amp and Cab. Do not duplicate Cabinet low/high cuts as another EQ block. The current Python app remains the reference implementation; C++ is future work limited to the real-time audio callback, ring buffer, FFT, and ASIO boundary.
+Output routes are also contractual: FRFR/headphones/USB/PA use Amp Only plus Cabinet; a power amp feeding a real guitar cabinet uses Amp Only and retains the reference cabinet as comparison metadata; a guitar amp's front input omits both Amp and Cab. Do not duplicate Cabinet low/high cuts as another EQ block. Python remains the UI, AI and offline-analysis reference implementation. v0.0.08 migrates live PCM/FFT/smoothing to C++; device I/O, ASIO and exclusive-mode callbacks remain future work.
 
 The v0.0.05 live-spectrum contract is also explicit. SoundCard opens the selected WASAPI shared-mode input or playback loopback at 44.1 kHz, two channels, and 2,048-frame blocks, yielding about 21.5 capture frames/s. The Tk main thread independently polls a capacity-one latest-frame queue every 50 ms for a visual refresh near 20 Hz. It plots the latest waveform and a logarithmic 20 Hz-20 kHz spectrum, plus RMS/peak dBFS and spectral centroid. FFT power is calculated per channel before channel averaging so antiphase stereo remains visible. Spectrum and RMS use a four-frame linear-power average, peak uses the window maximum, and centroid uses the smoothed power. Session IDs and cancellation events reject stale post-stop frames; the last rendered frame remains visible. Live monitoring is mutually exclusive with recording, file/AI analysis, hardware probing, and language rebuilds.
 
-Do not couple or describe this raw-input visualizer as Demucs isolation, `ToneFeatures`, chord/voicing analysis, template matching, or recipe output. It is Python/NumPy with SoundCard/WASAPI shared mode, not a C++ audio callback, ASIO, WASAPI Exclusive, or hard-real-time engine.
+Do not couple or describe this raw-input visualizer as Demucs isolation, `ToneFeatures`, chord/voicing analysis, template matching, or recipe output. v0.0.08 uses C++ live DSP with a NumPy fallback while retaining Python/SoundCard WASAPI shared-mode capture; it is not a C++ device-I/O callback, ASIO, WASAPI Exclusive, or hard-real-time engine.
 
 The v0.0.06 Reference Compare contract is separate. `engine.analyze_file` builds
 Reference from the signal actually analyzed: the Demucs guitar stem for a full mix,
@@ -462,14 +466,14 @@ C++, ASIO, and WASAPI Exclusive are outside v0.0.06.
 Use this layout because `build.ps1` expects a sibling `..\.venv`:
 
 ```text
-C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.07\
+C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.08\
 ├─ .venv\                 recreate on the new PC
-├─ ToneMatchTMP-v0.0.07.exe
+├─ ToneMatchTMP-v0.0.08.exe
 └─ source\                self-contained development project
 ```
 
 ```powershell
-Set-Location C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.07
+Set-Location C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.08
 py -3.12 -m venv .venv
 & .\.venv\Scripts\python.exe -m pip install --upgrade pip
 & .\.venv\Scripts\python.exe -m pip install -r .\source\requirements.txt
@@ -487,7 +491,7 @@ That is the portable CPU baseline. On a compatible NVIDIA PC, first verify the b
 
 `separator.py` explicitly loads the official `adefossez/HTDemucs-6s` YAML and safetensors. `_load_hf_separator_model` first checks each file with `local_files_only=True`, downloading missing files only. This replaces the generic loader's silent legacy-model fallback after a Hugging Face failure. A console-free `tqdm` adapter forwards actual received bytes to the UI, reports file percentage only with a known total, and distinguishes cache lookup, download, and memory loading.
 
-Before importing external libraries, `app.py` supplies safe output streams only when `sys.stdout` or `sys.stderr` is `None`. The windowed EXE's `'NoneType' object has no attribute 'write'` failure can be an output-stream issue, not an internet outage. Model setup exceptions are categorized through their cause chain as server/network, cache permissions/disk, memory, or other model/runtime failures. Release verification must include packaged analysis that actually initializes the model, not only the standard self-test. Use `QA_REPORT_v0.0.07.json` and `BUILD_HISTORY.md` for verified outcomes.
+Before importing external libraries, `app.py` supplies safe output streams only when `sys.stdout` or `sys.stderr` is `None`. The windowed EXE's `'NoneType' object has no attribute 'write'` failure can be an output-stream issue, not an internet outage. Model setup exceptions are categorized through their cause chain as server/network, cache permissions/disk, memory, or other model/runtime failures. Release verification must include packaged analysis that actually initializes the model, not only the standard self-test. Use `QA_REPORT_v0.0.08.json` and `BUILD_HISTORY.md` for verified outcomes.
 
 The default model cache is:
 
@@ -509,31 +513,31 @@ To avoid downloading again on another PC, first check the model distribution ter
 
 ```powershell
 & ..\.venv\Scripts\python.exe -m unittest discover -s tests -v
-& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.07.json
-.\build.ps1
+& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.08.json
+.\build.ps1 -ZigPath C:\Tools\zig-0.15.2\zig.exe
 ```
 
 Before release, manually exercise guitar-only bypass, first-download full-mix isolation, cached offline isolation, WASAPI loopback recording, 20-minute/end-zero handling, cancellation, both languages, unsupported-device behavior, JSON/HTML export, experimental chord/voicing confidence behavior, Auto/CPU selection and unavailable-CUDA behavior, three-route Amp/Cab policies, and the packaged EXE self-test. Also test the live spectrum against an actual input and playback loopback: start/stop, waveform, logarithmic 20 Hz-20 kHz spectrum, RMS/peak/centroid, long-session latest-frame behavior, task mutual exclusion, and retention of the last display. Confirm Reference generation for both guitar-only and Demucs-guitar analysis, then verify that the same live frame drives Current, six-band/frequency deltas use Current minus Reference, level normalization resists simple gain changes, and missing/silent input does not produce an invented score or EQ recommendation. A CUDA build additionally requires an actual NVIDIA-GPU separation run, CPU comparison, VRAM cleanup, and cancellation check.
 
 For the v0.0.06 progress/output fix, run an actual full-mix analysis in the final windowed portable EXE, exercising model initialization through cache lookup or download and continuing through internal separation blocks to three completed recommendations. The standard `--self-test-output` result alone does not validate that path. With developer mode off, verify that overall percentage and elapsed `mm:ss` stay visible, elapsed time refreshes while callbacks are pending without inventing progress, and the last values remain after completion, errors, or cancellation. Record first-download, cache-reuse, and offline checks separately. Distinguish mocked regression coverage for missing `stdout`/`stderr`, unknown download totals, cancellation, and categorized model failures from paths actually exercised in the EXE.
 
-The target archive name is `ToneMatchTMP-v0.0.07-Windows-x64-Portable-Dev.zip`. Its `source` folder must be self-contained and include source, tests, FFmpeg, build metadata, base/CUDA setup files, documentation, and licenses alongside the EXE built from the same code. Record final artifact hashes only after packaging in the sibling checksum file and `BUILD_HISTORY.md`. Exclude virtual environments, build caches, model weights, personal media/results, raw logs, credentials, and machine-specific settings.
+The target archive name is `ToneMatchTMP-v0.0.08-Windows-x64-Portable-Dev.zip`. Its `source` folder must be self-contained and include source, tests, FFmpeg, the native DLL, C++ source/header, bridge and native build script, build metadata, base/CUDA setup files, documentation, and licenses alongside the EXE built from the same code. Record final artifact hashes only after packaging in the sibling checksum file and `BUILD_HISTORY.md`. Exclude virtual environments, compiler/toolchain archives, build caches, model weights, personal media/results, raw logs, credentials, and machine-specific settings.
 
 ### 6. Resume checklist for the next developer or agent
 
 1. Verify the archive hash and extract it to a writable local folder.
 2. Read `README_KO.md`, this file, and `BUILD_HISTORY.md` before editing.
 3. Recreate the sibling virtual environment and run the full test suite.
-4. Confirm every current version-bearing file says `0.0.07` and that `BUILD_HISTORY.md` keeps all prior version sections unchanged.
-5. Confirm the PyInstaller spec includes `reference_compare.py` and `spectrum.py` plus the existing modules and lazy AI/recording dependencies.
-6. Confirm third-party notices and license files cover the added AI/recording stack and model terms.
+4. Confirm every current version-bearing file says `0.0.08` and that `BUILD_HISTORY.md` keeps all prior version sections unchanged.
+5. Confirm the PyInstaller spec includes `native_dsp.py`, the ABI-1 DLL, `reference_compare.py` and `spectrum.py` plus the existing modules and lazy AI/recording dependencies. The developer archive must also carry native source/header, native tests and the build script.
+6. Confirm third-party notices and license files cover the AI/recording stack, model terms and the native binary's linked runtimes.
 7. Keep AI weights and user data out of the archive.
 8. Verify CPU/CUDA diagnostics and all three Amp/Cab routes; do not claim real GPU validation without compatible hardware.
-9. Verify 2,048-frame capture, per-channel FFT power, four-frame smoothing, the capacity-one latest-frame queue, 50 ms UI polling, task mutual exclusion, and real-device start/stop without representing the feature as C++/ASIO or a Demucs/recipe path.
+9. Verify 2,048-frame capture, per-channel FFT power, four-frame smoothing, the capacity-one latest-frame queue, 50 ms UI polling, task mutual exclusion, and real-device start/stop without representing the C++ DSP migration as C++ device I/O/ASIO or a Demucs/recipe path.
 10. Verify Reference generation from the final analyzed PCM, Current reuse of the live frame, six-band ordering, common-grid interpolation, level normalization, and Current-minus-Reference delta signs without calling the result Match percent or automatic EQ.
 11. Verify actual model initialization and full-mix analysis in the windowed EXE in addition to its standard self-test. Check stage-weighted percentage, elapsed time, transfer bytes, and completed internal-block updates without interpreting the percentage as ETA or inventing progress from time alone.
 12. Record first-download, cache-reuse, and offline checks separately, and do not substitute mocked regressions or a standard self-test for an unperformed runtime check.
 13. Replace pending placeholders with test, self-test, artifact-size, and SHA-256 results in `BUILD_HISTORY.md`.
 14. If using a new Codex/task session, explicitly provide the extracted `source` folder (or clone `https://github.com/JH-Prime/ToneMatchTMP`) and ask it to treat these handoff documents as context. Chat history and interrupted analysis state are not embedded in the ZIP.
 15. Verify repeated chord evidence, noise/harmonic/antiphase rejection, original-mix source labeling without guitar-shape/inversion claims, original-file times and unknown intervals in both languages. Confirm that the fallback does not change tone features, Reference or recipes, and that small work areas and long completed-status text remain usable. Record actual MP3/EXE checks separately from synthetic or mocked coverage.
-16. For the next patch, increment version-bearing files and artifact names from `0.0.07` to `0.0.08`; do not rewrite historical release sections.
+16. For the next patch, increment version-bearing files and artifact names from `0.0.08` to `0.0.09`; do not rewrite historical release sections.

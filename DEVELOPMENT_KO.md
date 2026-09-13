@@ -1,14 +1,14 @@
-# ToneMatch TMP 개발자 안내서 · 0.0.07
+# ToneMatch TMP 개발자 안내서 · 0.0.08
 
 이 문서는 구현 구조를 빠르게 이해하기 위한 한국어 요약입니다. 모든 함수의
 이름·원본 줄·docstring은 `FUNCTION_REFERENCE_KO.md`, 새 PC 재구성과 릴리스
 절차는 `DEVELOPER_HANDOFF_KO_EN.md`를 함께 보세요.
 
-현재 릴리스·빌드 기준일은 2026-09-08 KST입니다. v0.0.07은 실험 코드 추정의
-반복 근거·잡음·배음·역상 처리를 보완하고, 약한 분리 기타의 원본 믹스 화성 참고와
-작은 작업 영역의 UI를 추가 보완합니다. v0.0.06의 Reference Compare와 진행률,
-v0.0.05의 실시간 모니터는 유지합니다. 실제 검증 완료 여부는
-`QA_REPORT_v0.0.07.json`과 `BUILD_HISTORY.md`에 기록하며 이 문서로 대신하지 않습니다.
+현재 릴리스·빌드 기준일은 2026-09-10 KST입니다. v0.0.08은 실시간 PCM 누적·
+채널별 FFT·4프레임 평활화를 C++17 엔진으로 분리하며, 실제 백엔드와 NumPy 폴백을
+표시합니다. SoundCard 캡처·Python/Tk·AI·오프라인 톤/Reference/보이싱은 유지합니다.
+v0.0.07의 코드 근거·원본 화성 참고·작은 화면 보완도 유지합니다. 실제 검증 완료 여부는
+`QA_REPORT_v0.0.08.json`과 `BUILD_HISTORY.md`에 기록하며 이 문서로 대신하지 않습니다.
 
 ## 파일 분석·레시피 처리 시퀀스
 
@@ -81,7 +81,7 @@ v0.0.05의 실시간 모니터는 유지합니다. 실제 검증 완료 여부�
   블록이나 네트워크 대기를 즉시 강제 종료하지 않으므로 반영이 지연될 수 있습니다.
 - 모델 준비 예외 체인을 서버·네트워크, 캐시 권한·디스크, 메모리 부족, 기타
   모델·런타임으로 분류합니다. 모든 예외를 인터넷 미연결로 설명하지 않습니다.
-  현행 오디오·EXE 검증 결과는 `QA_REPORT_v0.0.07.json`과 `BUILD_HISTORY.md`를
+  현행 오디오·EXE 검증 결과는 `QA_REPORT_v0.0.08.json`과 `BUILD_HISTORY.md`를
   기준으로 하며 이 구현 설명 자체는 해당 검증의 성공 증거가 아닙니다.
 
 ## 실시간 스펙트럼 처리 시퀀스
@@ -91,7 +91,9 @@ v0.0.05의 실시간 모니터는 유지합니다. 실제 검증 완료 여부�
 ```text
 [선택한 WASAPI 오디오 입력 또는 PC 재생음 loopback]
        ↓ 44.1 kHz · 2채널 · 2,048-frame 블록(초당 약 21.5개)
-[채널별 Hann-window FFT power → 채널 power 평균]
+[Python/SoundCard 캡처 → native_dsp.py: C ABI 1 호환 확인]
+       ↓ C++ 우선, 누락·비호환이면 NumPy 폴백 및 실제 백엔드 표시
+[고정 PCM 누적 → 완성된 FFT 단위 → 채널별 Hann FFT power 평균]
        ↓
 [20 Hz~20 kHz bin · RMS/Peak dBFS · 스펙트럼 중심 주파수]
        ↓
@@ -138,6 +140,9 @@ Reference 생성은 파일 분석 경로에, Current 갱신은 기존 실시간 
 | `separator.py` | Demucs `htdemucs_6s` 캐시 우선 명시 로더, 실제 다운로드·내부 블록 진행, 원인별 모델 오류, 자동/CPU/CUDA 선택·폴백, VRAM/추론 벤치마크, 30초 외부 조각, guitar stem WAV |
 | `recorder.py` | SoundCard 기반 Windows WASAPI loopback/오디오 입력 열거, PCM16 녹음, 실시간 2,048-frame float32 블록 전달 |
 | `spectrum.py` | 입력 정규화, 채널별 FFT power, 20 Hz~20 kHz 스펙트럼·dBFS·중심 주파수 계산과 4프레임 평활화 |
+| `native_dsp.py` | 신뢰된 번들 DLL·ABI 확인, ctypes 타입·수명/잠금 관리, C++/NumPy 스트리밍 엔진 선택과 폴백 진단 |
+| `native/tonematch_dsp.cpp`, `.h` | C++17 C ABI 1 엔진, 사전 할당 PCM·Hann/FFT 작업 버퍼·평활화 이력, 채널별 파워·dBFS·중심 주파수 |
+| `tools/build_native.py` | 명시적인 Zig 0.15.2 경로로 Windows x64 DSP DLL 빌드 |
 | `reference_compare.py` | 분석 PCM의 레벨 정규화 Reference 프로필, 6밴드 집계, 실시간 Current 보간과 `Δ(Current−Reference)` 계산 |
 | `voicing.py` | 채널별 스펙트럼, 독립 피치·잡음/배음 억제, 반복 근거·미확정 이벤트·진단, 제한된 코드 템플릿과 기타 소스의 보이싱 후보(실험) |
 | `catalog.py` | 앱/펌웨어/가이드 버전, 패치 기록, 18개 Tone Master Pro 톤 템플릿 |
@@ -178,8 +183,9 @@ Reference 생성은 파일 분석 경로에, Current 갱신은 기존 실시간 
 - 원시 입력 시각화만 제공하며 Demucs 분리, `ToneFeatures`, 템플릿 매칭,
   레시피 결과와 연결하지 않습니다. 녹음·분석·하드웨어 검사·언어 재구성과도
   동시에 실행하지 않아 하나의 캡처 장치를 두 작업이 경쟁하지 않게 합니다.
-- 이 경로는 Python/NumPy + SoundCard/WASAPI 공유 모드입니다. C++ 오디오 콜백,
-  ASIO, WASAPI Exclusive 또는 하드 실시간 엔진으로 표현하지 않습니다.
+- v0.0.05의 기준 DSP는 Python/NumPy이며 v0.0.08은 이 PCM/FFT/평활화 부분을
+  C++ 우선 경로로 교체합니다. 장치 캡처는 SoundCard/WASAPI 공유 모드를 유지하므로
+  C++ 장치 콜백, ASIO, WASAPI Exclusive 또는 하드 실시간 엔진으로 표현하지 않습니다.
 
 ### v0.0.06 Reference Compare 경계
 
@@ -202,8 +208,10 @@ Reference 생성은 파일 분석 경로에, Current 갱신은 기존 실시간 
   `Current−Reference`입니다. 양수는 Current가, 음수는 Reference가 더 강함을 뜻합니다.
 - 이 비교는 통계적 정확도, 기존 레시피 순위의 유사도 또는 Match %가 아닙니다.
   Brightness·Body·Gain·Compression·Ambience 실시간 미터도 이 버전에 포함하지 않습니다.
-- 자동 EQ/TMP 파라미터 추천·적용, 프리셋 쓰기, C++/ASIO/WASAPI Exclusive는
-  구현하지 않습니다. 무음·비유한 값과 공통 나이퀴스트 범위 밖은 안전하게 처리합니다.
+- 자동 EQ/TMP 파라미터 추천·적용, 프리셋 쓰기, ASIO/WASAPI Exclusive는
+  구현하지 않습니다. v0.0.08에서도 비교 계산과 Reference 생성은 Python을 유지하고
+  Current의 실시간 DSP만 C++로 분리합니다. 무음·비유한 값과 공통 나이퀴스트
+  범위 밖은 안전하게 처리합니다.
 
 ## 연산 장치와 출력 경로 경계
 
@@ -227,9 +235,27 @@ v0.0.04는 전체 앱을 C++로 재작성하지 않고 NumPy와 PyTorch가 이�
 v0.0.05~v0.0.07도 Python을 UI, 파일 처리, Demucs 실행, 레시피·리포트 조립,
 실시간 스펙트럼과 Reference Compare의 기준 구현으로 유지합니다.
 
-후속 실시간 톤 매칭에서 지연 시간이 엄격한 오디오 콜백, lock-free 링 버퍼, FFT와
-ASIO 입출력이 필요해질 때 그 경계를 C++ 모듈로 분리하고 Python에는 안정적인 API만
-노출합니다. 이 계획은 v0.0.04~v0.0.07에 구현된 항목이 아닙니다.
+v0.0.08은 그중 실시간 PCM 누적·FFT·평활화를 C++17로 옮깁니다. C ABI 1은
+Python 버전별 확장 ABI에 의존하지 않는 `ctypes` 경계입니다. `native_dsp.py`는
+모듈 옆 번들 `resources/tonematch_dsp.dll`만 절대 경로로 로드하고 ABI를 확인합니다.
+`create_spectrum_engine(..., backend="auto")`는 C++ 우선이며 누락·비호환·지원하지
+않는 구성에는 NumPy로 폴백하고 이유를 제공합니다. 명시적 `backend="cpp"` 요청은
+실패를 숨기지 않습니다. 실제 백엔드 표시는 UI 스레드 이벤트로 전달합니다.
+
+네이티브 기본값은 FFT 2,048, 이력 4이며 생성 범위는 FFT 128~32,768의 2의 거듭제곱,
+샘플레이트 8~192 kHz, 채널 1~32, 이력 1~64입니다. 유한한 주파수 범위는
+나이퀴스트와 유효 bin을 고려합니다. PCM·Hann·FFT 작업 버퍼·이력은 생성 시 할당하고
+`push` 중 완성된 비중첩 FFT 단위만 처리합니다. 미완성 샘플은 다음 입력까지 유지하며
+중지·초기화 때 버립니다. Python 폴백도 같은 스트리밍 단위를 사용합니다.
+
+채널별 DC 제거·Hann FFT·채널 파워 평균과 최근 4프레임 평활화, RMS 파워 평균,
+Peak 창 최댓값, 최신 파형 계약을 기존 기준 구현과 수치 비교합니다. 엔진은 단일
+소유자가 사용하고 브리지는 push/reset/close를 잠금으로 보호합니다. Python 입력·출력
+복사와 잠금, SoundCard WASAPI 공유 모드 캡처가 남아 있어 lock-free 또는 하드 실시간
+엔진이 아닙니다. C++ 장치 I/O·ASIO·WASAPI Exclusive는 후속 범위입니다. UI·AI·
+오프라인 톤/Reference/코드·레시피는 이번 전환 대상이 아니며, NumPy도 네이티브 FFT를
+쓰므로 속도 향상과 전체 곡 Demucs 가속을 가정하지 않습니다. 수치·성능 증거는 QA에
+실행한 조건과 함께 기록하고 미실행 항목을 구분합니다.
 
 ## 코드 보이싱 결과의 의미
 
@@ -247,9 +273,10 @@ ASIO 입출력이 필요해질 때 그 경계를 C++ 모듈로 분리하고 Pyth
 
 ```powershell
 # 프로젝트 폴더의 형제 위치에 Python 3.12 가상환경을 만든 경우
+& ..\.venv\Scripts\python.exe tools\build_native.py --zig C:\Tools\zig-0.15.2\zig.exe
 & ..\.venv\Scripts\python.exe -m compileall -q .
 & ..\.venv\Scripts\python.exe -m unittest discover -s tests -v
-& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.07.json
+& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.08.json
 & ..\.venv\Scripts\python.exe app.py
 ```
 
@@ -262,9 +289,16 @@ ASIO 입출력이 필요해질 때 그 경계를 C++ 모듈로 분리하고 Pyth
 Git 저장소는 대용량 `resources\ffmpeg.exe`를 추적하지 않습니다. 포터블 개발
 ZIP에서 해당 파일을 복사한 뒤 실행하세요.
 
+C++ 재빌드에는 [공식 Zig 0.15.2 Windows x64 ZIP](https://ziglang.org/download/0.15.2/zig-x86_64-windows-0.15.2.zip)을
+프로젝트 바깥에 압축 해제합니다. SHA-256은
+`3a0ed1e8799a2f8ce2a6e6290a9ff22e6906f8227865911fb7ddedc3cc14cb0c`입니다.
+`TONEMATCH_ZIG` 또는 `-ZigPath`로 `zig.exe`를 명시하며, 컴파일러는 배포하지 않습니다.
+일반 포터블 실행에는 컴파일러가 필요하지 않습니다. Git은 생성 DLL을 제외하지만
+개발 ZIP은 네이티브 소스·헤더·브리지·테스트·빌드 스크립트와 DLL을 포함합니다.
+
 ```powershell
 & ..\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\build.ps1 -OutputDir C:\원하는\출력폴더
+.\build.ps1 -ZigPath C:\Tools\zig-0.15.2\zig.exe -OutputDir C:\원하는\출력폴더
 ```
 
 호환 NVIDIA PC에서 CUDA 소스 빌드를 만들 때만 기본 환경 검증 후 실행합니다.
@@ -272,7 +306,7 @@ ZIP에서 해당 파일을 복사한 뒤 실행하세요.
 ```powershell
 .\enable_cuda.ps1
 & ..\.venv\Scripts\python.exe -m unittest discover -s tests -v
-.\build.ps1 -OutputDir C:\원하는\출력폴더
+.\build.ps1 -ZigPath C:\Tools\zig-0.15.2\zig.exe -OutputDir C:\원하는\출력폴더
 ```
 
 빌드는 PyInstaller onedir 런타임, 소스, 테스트, 문서, 라이선스, 빌드 재료,
@@ -284,11 +318,12 @@ ZIP에서 해당 파일을 복사한 뒤 실행하세요.
 1. 재현 테스트를 추가하고 코드를 수정합니다.
 2. 모든 함수의 한국어 docstring과 사용자용 한·영 문자열을 유지합니다.
 3. `catalog.APP_VERSION`, 최신 `CHANGELOG`, `version_info.txt`, spec, 문서와
-   파일명을 다음 패치인 `0.0.08`로 정확히 한 단계 올립니다. 현행 `0.0.07`의
-   검증을 먼저 마치고 v0.0.06 이하의 역사 기록은 변경하지 않습니다.
+   파일명을 다음 패치인 `0.0.09`로 정확히 한 단계 올립니다. 현행 `0.0.08`의
+   검증을 먼저 마치고 v0.0.07 이하의 역사 기록은 변경하지 않습니다.
 4. 함수 색인과 제3자 라이선스 목록을 다시 생성합니다.
 5. 단위 테스트, 소스 자체 진단, 실제 짧은 Demucs 분리, 패키지 자체 진단을
-   통과시킵니다.
+   통과시킵니다. C++ DLL이 실제 로드된 수치 비교·분할 입력·초기화/수명·오류 회귀와
+   NumPy 폴백을 구분하고, 네이티브 테스트가 skip된 실행을 릴리스 통과로 기록하지 않습니다.
 6. 포터블 ZIP과 SHA-256을 만들고 `BUILD_HISTORY.md`에 검증 결과를 기록합니다.
 7. 개인 오디오·URL·로그·모델 캐시·EXE·ZIP을 제외한 소스와 문서를 GitHub에
    커밋합니다.
