@@ -156,6 +156,38 @@ class _FakeSeparator:
         return mixture, {"guitar": _FakeTensor(mixture.values)}
 
 
+class _FakeSixStemSeparator(_FakeSeparator):
+    """일반 스트리밍 API에 6개 소스를 모두 반환하는 가상 분리기다."""
+
+    def __init__(self, *, device: str, callback: object = None, **_options: object) -> None:
+        """고정 6-stem 모델 정보와 진행 콜백을 준비한다."""
+        _FakeSeparator.last_device = device
+        self.callback = callback
+        self.model = types.SimpleNamespace(
+            sources=separator.SEPARATOR_STEMS,
+            segment=0.04,
+            samplerate=separator.SEPARATOR_SAMPLE_RATE,
+        )
+
+    def separate_tensor(self, mixture: _FakeTensor, *, sr: int) -> tuple[_FakeTensor, dict[str, _FakeTensor]]:
+        """각 stem을 구별할 수 있도록 입력에 서로 다른 배율을 적용한다."""
+        if sr != separator.SEPARATOR_SAMPLE_RATE:
+            raise ValueError("unexpected sample rate")
+        return mixture, {
+            name: _FakeTensor(mixture.values * (index + 1))
+            for index, name in enumerate(separator.SEPARATOR_STEMS)
+        }
+
+
+class _FakeFiveStemSeparator(_FakeSixStemSeparator):
+    """필수 piano 소스가 빠진 잘못된 6-stem 모델을 흉내 낸다."""
+
+    def __init__(self, **options: object) -> None:
+        """6-stem 초기화 뒤 모델 소스 목록에서 piano를 제거한다."""
+        super().__init__(**options)
+        self.model.sources = tuple(name for name in separator.SEPARATOR_STEMS if name != "piano")
+
+
 def _write_test_wav(path: Path, frames: int = 4_410) -> None:
     """분리 진행률·취소 검증용으로 짧은 비무음 스테레오 PCM 파일을 만든다."""
     samples = np.full((frames, 2), 0.2, dtype=np.float32)
@@ -287,6 +319,93 @@ class SeparatorDeviceTests(unittest.TestCase):
         self.assertEqual(fake_torch.cuda.reset_calls, 1)
         self.assertGreaterEqual(fake_torch.cuda.synchronize_calls, 2)
         self.assertEqual(fake_torch.cuda.empty_cache_calls, 1)
+
+
+class SeparatorMultiStemTests(unittest.TestCase):
+    """한 번의 Demucs 실행이 선택 stem 조각만 파일 없이 전달하는지 검증한다."""
+
+    def test_selected_stems_are_streamed_as_independent_stereo_arrays(self) -> None:
+        """요청한 guitar·piano 배열과 6-stem 진단을 한 조각 콜백으로 반환해야 한다."""
+        received: list[dict[str, np.ndarray]] = []
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "source.wav"
+            _write_test_wav(source)
+            with (patch.dict(sys.modules, _fake_separation_modules(_FakeSixStemSeparator)),
+                  patch.object(separator, "separator_model_is_cached", return_value=True)):
+                info = separator.separate_stem_chunks(
+                    source,
+                    ["piano", "guitar", "guitar"],
+                    lambda stems: received.append(stems),
+                    compute_preference="cpu",
+                )
+        self.assertEqual(len(received), 1)
+        self.assertEqual(tuple(received[0]), ("guitar", "piano"))
+        self.assertEqual(received[0]["guitar"].shape, (2, 4_410))
+        self.assertTrue(received[0]["guitar"].flags.c_contiguous)
+        self.assertTrue(np.allclose(received[0]["piano"], received[0]["guitar"] * 1.25))
+        self.assertEqual(info.available_stems, separator.SEPARATOR_STEMS)
+        self.assertEqual(info.requested_stems, ("guitar", "piano"))
+        self.assertEqual(info.channels, 2)
+        self.assertEqual(info.processed_chunks, 1)
+
+    def test_model_missing_any_of_six_sources_is_rejected_before_inference(self) -> None:
+        """htdemucs_6s라고 해도 필수 소스가 빠졌으면 부분 결과를 사용하지 않아야 한다."""
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "source.wav"
+            _write_test_wav(source)
+            with (patch.dict(sys.modules, _fake_separation_modules(_FakeFiveStemSeparator)),
+                  patch.object(separator, "separator_model_is_cached", return_value=True)):
+                with self.assertRaises(separator.SeparationError) as context:
+                    separator.separate_stem_chunks(source, ["guitar"], lambda _stems: None)
+        self.assertIn("piano", str(context.exception))
+
+    def test_unknown_or_empty_stem_requests_are_rejected_without_model_loading(self) -> None:
+        """잘못된 요청은 모델 다운로드·초기화 전에 명확히 실패해야 한다."""
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "source.wav"
+            _write_test_wav(source)
+            with patch.object(separator, "separator_model_is_cached") as cache_check:
+                for requested in ([], ["sax"]):
+                    with self.subTest(requested=requested), self.assertRaises(separator.SeparationError):
+                        separator.separate_stem_chunks(source, requested, lambda _stems: None)
+            cache_check.assert_not_called()
+
+    def test_converted_stem_owns_its_samples_and_rejects_nonfinite_values(self) -> None:
+        """콜백이 보관한 배열은 원래 텐서 변경과 독립적이며 유효한 샘플만 포함한다."""
+        tensor = _FakeTensor(np.ones((2, 10), dtype=np.float32))
+        converted = separator._tensor_to_stereo_array(tensor)
+        tensor.values.fill(0)
+        self.assertTrue(np.all(converted == 1))
+        for value in (float("nan"), float("inf")):
+            with self.subTest(value=value), self.assertRaises(separator.SeparationError):
+                separator._tensor_to_stereo_array(_FakeTensor(np.full((2, 10), value)))
+
+    def test_truncated_wav_is_rejected_instead_of_reporting_full_duration(self) -> None:
+        """WAV 헤더가 실제 데이터보다 길면 일부 조각만 처리한 결과를 성공으로 보고하지 않는다."""
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "truncated.wav"
+            _write_test_wav(source)
+            source.write_bytes(source.read_bytes()[:-400])
+            with (patch.dict(sys.modules, _fake_separation_modules(_FakeSixStemSeparator)),
+                  patch.object(separator, "separator_model_is_cached", return_value=True)):
+                with self.assertRaises(separator.SeparationError) as context:
+                    separator.separate_stem_chunks(source, ["guitar"], lambda _stems: None)
+            self.assertIn("header", str(context.exception))
+
+    def test_multichunk_tail_keeps_every_input_frame(self) -> None:
+        """마지막 짧은 조각도 버리거나 늘리지 않고 입력과 같은 길이로 전달해야 한다."""
+        received: list[int] = []
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "source.wav"
+            _write_test_wav(source, frames=5_000)
+            with (patch.dict(sys.modules, _fake_separation_modules(_FakeSixStemSeparator)),
+                  patch.object(separator, "separator_model_is_cached", return_value=True),
+                  patch.object(separator, "SEPARATION_CHUNK_SECONDS", 0.05)):
+                info = separator.separate_stem_chunks(
+                    source, ["guitar"], lambda stems: received.append(stems["guitar"].shape[1]))
+            self.assertEqual(received, [2_205, 2_205, 590])
+            self.assertEqual(info.processed_chunks, 3)
+            self.assertAlmostEqual(info.source_duration_seconds, 5_000 / 44_100)
 
 
 class SeparatorProgressTests(unittest.TestCase):

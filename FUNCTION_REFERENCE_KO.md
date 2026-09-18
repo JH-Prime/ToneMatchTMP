@@ -1,4 +1,4 @@
-# ToneMatch TMP 0.0.08 함수 설명서
+# ToneMatch TMP 0.0.09 함수 설명서
 
 이 문서는 배포 소스의 모든 함수와 한국어 docstring을 자동으로 모은 색인입니다.
 앱의 `개발자 옵션`에서는 처리 순서 블록을 클릭해 같은 함수의 실제 소스와 원본 줄 번호를 볼 수 있습니다.
@@ -7,112 +7,141 @@
 
 | 줄 | 함수 | 설명 |
 |---:|---|---|
-| 32 | `_ensure_standard_streams` | 콘솔 없는 EXE에서도 외부 라이브러리가 표준 출력에 안전하게 쓰도록 한다. |
-| 108 | `_window_work_area` | 작업 표시줄을 제외한 Windows 주 모니터 영역을 얻고 다른 환경에서는 화면으로 대체한다. |
-| 124 | `_center_window` | 작업 영역과 창 테두리 여유 안에서 초기 크기와 최소 크기를 함께 정한다. |
-| 139 | `_portable_root` | 소스 실행 또는 PyInstaller onedir 실행의 포터블 루트를 반환한다. |
-| 146 | `_runtime_data_root` | 우선 EXE 옆 data를 쓰고 권한이 없으면 LocalAppData로 안전하게 폴백한다. |
-| 161 | `_input_method_label` | 입력 방법의 안정적인 코드에 대응하는 언어별 화면 라벨을 만든다. |
-| 166 | `_input_method_code` | 한국어 또는 영어 입력 방법 라벨을 안정적인 코드로 되돌린다. |
-| 177 | `ToneMatchApp.__init__` | 영구 상태를 준비하고 전체 Tkinter 화면과 이벤트 루프를 구성한다. |
-| 250 | `ToneMatchApp.ui_font` | 현재 언어에 맞춰 사용자가 지정한 기본 UI 글꼴을 반환한다. |
-| 254 | `ToneMatchApp._load_settings` | 이전 실행의 언어·장치·연산 백엔드 선택을 읽되 손상된 파일은 무시한다. |
-| 269 | `ToneMatchApp._save_settings` | 다음 실행에서도 유지할 언어·장치·연산 백엔드 선택을 작은 JSON으로 저장한다. |
-| 281 | `ToneMatchApp._configure_style` | 현재 언어 글꼴과 어두운 색상표를 모든 공통 위젯 스타일에 적용한다. |
-| 319 | `ToneMatchApp._panel` | 공통 배경과 여백을 가진 카드형 패널을 만들어 즉시 배치한다. |
-| 326 | `ToneMatchApp._field_label` | 입력 필드 위의 작은 설명 라벨을 지정한 그리드 위치에 배치한다. |
-| 330 | `ToneMatchApp._sync_left_scroll_region` | 입력 내용이 짧아져도 빈 영역을 스크롤하지 않도록 범위와 현재 위치를 제한한다. |
-| 342 | `ToneMatchApp._resize_left_scroll_content` | 창 너비가 바뀌어도 입력 카드 내부 프레임이 캔버스 폭을 정확히 채우게 한다. |
-| 348 | `ToneMatchApp._refresh_status_text` | 긴 상태 메시지를 고정 높이의 읽기 전용 스크롤 영역에 표시한다. |
-| 356 | `ToneMatchApp._resize_result_labels` | 긴 결과 제목과 요약을 실제 결과 패널 너비에 맞춰 줄바꿈한다. |
-| 362 | `ToneMatchApp._enable_left_mousewheel` | 포인터가 입력 카드 위에 있을 때 휠을 해당 세로 스크롤에 연결한다. |
-| 366 | `ToneMatchApp._disable_left_mousewheel` | 포인터가 입력 카드를 벗어나면 다른 화면의 휠 동작을 방해하지 않게 연결을 푼다. |
-| 370 | `ToneMatchApp._scroll_left_panel` | Windows 마우스 휠 회전량을 입력 카드의 세로 이동 단위로 변환한다. |
-| 375 | `ToneMatchApp._build_ui` | 입력·결과·개발자·변경 기록과 하단 상태를 현재 언어로 구성한다. |
-| 636 | `ToneMatchApp._build_debug_tab` | 처리 순서도, 클릭형 실제 소스, 런타임 로그와 디버그 번들 버튼을 만든다. |
-| 679 | `ToneMatchApp._build_changelog_tab` | 패치 버전·변경사항·알려진 제한을 현재 언어로 읽는 탭을 만든다. |
-| 690 | `ToneMatchApp._build_spectrum_tab` | 선택한 입력 장치의 파형·주파수·레벨을 보여주는 실시간 탭을 만든다. |
-| 788 | `ToneMatchApp._build_reference_compare_tab` | 분석한 기준 스펙트럼과 실시간 입력의 레벨 정규화 차이 탭을 만든다. |
-| 902 | `ToneMatchApp._spectrum_is_running` | 실시간 스펙트럼 세션이 종료 이벤트 처리 전까지 활성인지 반환한다. |
-| 907 | `ToneMatchApp._spectrum_plot_x` | 20 Hz~20 kHz 로그 축의 주파수를 캔버스 가로 좌표로 바꾼다. |
-| 916 | `ToneMatchApp._spectrum_plot_y` | -120~0 dBFS 레벨을 스펙트럼 캔버스 세로 좌표로 바꾼다. |
-| 923 | `ToneMatchApp._spectrum_canvas_resized` | 스펙트럼 탭 크기가 바뀌면 축과 마지막 측정 프레임을 다시 그린다. |
-| 933 | `ToneMatchApp._draw_waveform_grid` | 파형 캔버스에 기준 레벨과 시간 방향 보조선을 그린다. |
-| 953 | `ToneMatchApp._draw_spectrum_grid` | 주파수 캔버스에 로그 주파수축과 dBFS 기준선을 그린다. |
-| 987 | `ToneMatchApp._draw_waveform` | 최신 PCM 파형을 현재 캔버스 폭에 맞춰 줄여 그린다. |
-| 1010 | `ToneMatchApp._draw_spectrum` | 평활화된 FFT 레벨과 스펙트럼 중심을 로그 주파수축에 그린다. |
-| 1053 | `ToneMatchApp._reference_plot_y` | ±18 dB 비교 차이를 캔버스 세로 좌표로 제한해 변환한다. |
-| 1060 | `ToneMatchApp._reference_canvas_resized` | 비교 탭 크기가 바뀌면 차이 축과 마지막 유효 곡선을 다시 그린다. |
-| 1068 | `ToneMatchApp._draw_reference_grid` | 레퍼런스 차이 캔버스에 로그 주파수축과 ±18 dB 기준선을 그린다. |
-| 1092 | `ToneMatchApp._draw_reference_difference` | 현재−기준의 주파수별 정규화 dB 차이를 로그 축에 그린다. |
-| 1123 | `ToneMatchApp._format_frequency_range` | 대역 경계를 Hz 또는 kHz가 섞인 짧은 화면 문자열로 바꾼다. |
-| 1125 | `ToneMatchApp._format_frequency_range.<local>.compact` | 한 주파수 값을 읽기 쉬운 Hz/kHz 숫자로 축약한다. |
-| 1135 | `ToneMatchApp._reference_band_level` | 프로필 밴드의 버전 호환 레벨 키를 유한 실수로 읽는다. |
-| 1141 | `ToneMatchApp._populate_reference_rows` | 기준 프로필 또는 최신 비교를 Reference·Current·Δ 여섯 행으로 표시한다. |
-| 1177 | `ToneMatchApp._refresh_reference_profile` | 현재 분석 결과의 기준 파일·밴드·상태를 비교 탭에 반영한다. |
-| 1209 | `ToneMatchApp._apply_spectrum_frame` | 최신 스펙트럼 프레임의 수치와 두 캔버스를 Tk 메인 스레드에서 갱신한다. |
-| 1238 | `ToneMatchApp._clear_spectrum_frame_queue` | 새 세션 전에 남아 있는 이전 스펙트럼 화면 프레임을 버린다. |
-| 1246 | `ToneMatchApp._offer_latest_spectrum` | 작업 스레드에서 가장 최신 프레임 하나만 bounded 큐에 남긴다. |
-| 1262 | `ToneMatchApp._drain_spectrum_frames` | bounded 큐의 최신 측정치만 꺼내 메인 스레드에서 화면에 반영한다. |
-| 1283 | `ToneMatchApp._toggle_spectrum_monitor` | 선택한 장치의 공용 실시간 스펙트럼 또는 레퍼런스 비교를 토글한다. |
-| 1334 | `ToneMatchApp._spectrum_monitor_worker` | 단일 장치의 PCM을 스트리밍 DSP로 처리하고 최신 결과와 상태만 큐에 넣는다. |
-| 1346 | `ToneMatchApp._spectrum_monitor_worker.<local>.handle_block` | 첫 PCM에서 엔진을 만들고 임의 길이 블록을 고정 FFT 구간으로 누적한다. |
-| 1385 | `ToneMatchApp._spectrum_backend_text` | 실제 선택된 DSP와 대체 사유를 개인 경로 없는 짧은 한 줄로 만든다. |
-| 1399 | `ToneMatchApp._apply_spectrum_backend` | 현재 활성 세션의 DSP 선택 이벤트만 Tk 스레드에서 화면과 진단에 반영한다. |
-| 1413 | `ToneMatchApp._finish_spectrum_monitor` | 현재 세션의 종료·오류를 반영하고 잠근 컨트롤을 안전하게 복구한다. |
-| 1440 | `ToneMatchApp._update_spectrum_availability` | 다른 작업과 장치 상태를 보고 실시간 스펙트럼 컨트롤을 잠그거나 푼다. |
-| 1487 | `ToneMatchApp._change_language` | 선택값과 결과 수치를 보존한 채 전체 화면을 새 언어와 글꼴로 다시 만든다. |
-| 1519 | `ToneMatchApp._change_device` | 멀티이펙터 선택을 갱신하고 미구현 장치에서는 분석을 비활성화한다. |
-| 1530 | `ToneMatchApp._start_hardware_probe` | PyTorch·CUDA 확인을 UI 밖의 스레드에서 시작해 창 멈춤을 방지한다. |
-| 1546 | `ToneMatchApp._hardware_probe_worker` | Demucs와 GPU 런타임을 검사하고 메인 UI 큐로 결과를 전달한다. |
-| 1554 | `ToneMatchApp._apply_hardware_status` | 하드웨어 검사 결과를 저장하고 가능한 선택값·진단표·로그를 갱신한다. |
-| 1574 | `ToneMatchApp._change_compute_backend` | 표시된 AI 가속 선택을 안정적인 auto·cuda·cpu 코드로 저장한다. |
-| 1582 | `ToneMatchApp._set_compute_controls_enabled` | 하드웨어 검사·분석 상태에 맞춰 가속 선택과 재검사 버튼을 함께 잠그거나 푼다. |
-| 1596 | `ToneMatchApp._format_bytes` | 바이트 값을 진단표에서 읽기 쉬운 MiB 또는 GiB 문자열로 바꾼다. |
-| 1608 | `ToneMatchApp._populate_diagnostics` | 하드웨어·AI 분리 벤치마크·DSP 특징을 한 진단표에 순서대로 표시한다. |
-| 1615 | `ToneMatchApp._populate_diagnostics.<local>.add` | 번역된 항목명과 문자열 값을 진단표 끝에 추가한다. |
-| 1659 | `ToneMatchApp._change_input_method` | 로컬 파일과 PC 재생음 녹음 모드에 맞춰 관련 컨트롤 상태를 바꾼다. |
-| 1685 | `ToneMatchApp._refresh_capture_devices` | Windows 오디오 장치를 다시 열거하고 기존 선택이 가능하면 유지한다. |
-| 1712 | `ToneMatchApp._capture_device_changed` | 녹음 콤보박스의 표시 라벨을 실제 장치 식별자로 저장한다. |
-| 1718 | `ToneMatchApp._toggle_recording` | 현재 상태에 따라 PC 재생음 녹음을 시작하거나 중지 요청을 보낸다. |
-| 1759 | `ToneMatchApp._recording_worker` | 오디오 녹음을 백그라운드에서 실행하고 UI 큐에 상태를 전달한다. |
-| 1761 | `ToneMatchApp._recording_worker.<local>.progress` | 녹음 경과 시간을 메인 UI가 읽는 이벤트로 바꾼다. |
-| 1771 | `ToneMatchApp._toggle_developer_mode` | 개발자 순서도와 변경 기록 탭을 표시하거나 숨긴다. |
-| 1785 | `ToneMatchApp._draw_debug_diagram` | 실제 실행 순서대로 클릭 가능한 세로 블록과 연결 화살표를 그린다. |
-| 1816 | `ToneMatchApp._select_debug_block` | 선택한 처리 블록의 언어별 설명과 연결된 실제 함수 원문을 표시한다. |
-| 1844 | `ToneMatchApp._append_debug_log` | 시각 포함 이벤트를 화면과 EXE 옆 일별 UTF-8 로그 파일에 함께 남긴다. |
-| 1862 | `ToneMatchApp._set_debug_progress` | 진행률로 활성·완료 블록을 계산하고 순서도와 로그를 갱신한다. |
-| 1872 | `ToneMatchApp._refresh_analysis_progress` | 실제 콜백의 전체 단계 진행률과 독립적인 경과 시간을 표시한다. |
-| 1880 | `ToneMatchApp._tick_analysis_progress` | 다운로드나 추론 콜백을 기다리는 동안에도 경과 시간을 계속 갱신한다. |
-| 1890 | `ToneMatchApp._finish_analysis_progress` | 완료·오류·취소 시 마지막 진행률과 소요 시간을 화면에 보존한다. |
-| 1895 | `ToneMatchApp._choose_audio` | 파일 선택 창에서 오디오 또는 영상 경로를 받아 입력 상태를 갱신한다. |
-| 1903 | `ToneMatchApp._open_reference` | 참고 URL을 기본 브라우저에서 열되 앱이 YouTube 음원을 추출하지 않는다. |
-| 1913 | `ToneMatchApp._parse_inputs` | 화면 문자열을 분석 요청으로 바꾸고 파일·시간·장치 조건을 검증한다. |
-| 1935 | `ToneMatchApp._start_analysis` | 검증된 요청을 별도 스레드에서 시작하고 취소·내보내기 상태를 설정한다. |
-| 1990 | `ToneMatchApp._cancel_analysis` | 다운로드 또는 Demucs 내부 처리 구간 경계에서 멈추도록 취소 신호를 보낸다. |
-| 1998 | `ToneMatchApp._analysis_worker` | 전체 기타 분석을 실행하고 결과 또는 오류를 메인 UI 큐에 전달한다. |
-| 2000 | `ToneMatchApp._analysis_worker.<local>.progress` | 엔진 콜백을 Tk 메인 스레드용 진행 이벤트로 변환한다. |
-| 2010 | `ToneMatchApp._drain_events` | 백그라운드 분석·녹음·스펙트럼 제어 이벤트를 Tk 메인 스레드에서 처리한다. |
-| 2051 | `ToneMatchApp._recording_completed` | 완료된 임시 녹음을 현재 분석 파일로 연결하고 버튼 상태를 복구한다. |
-| 2064 | `ToneMatchApp._recording_failed` | 녹음 실패 메시지와 상세 로그를 남기고 UI를 다시 사용할 수 있게 한다. |
-| 2074 | `ToneMatchApp._show_error` | 분석 실패 상태를 복구하고 사용자 메시지와 영구 개발 로그를 남긴다. |
-| 2088 | `ToneMatchApp._show_result` | 추천 체인 세 개, 기타 stem 진단과 상태를 현재 언어 화면에 표시한다. |
-| 2124 | `ToneMatchApp._render_recipe` | 한 추천 체인의 모델·순서·파라미터·이유를 읽기 쉬운 서식으로 그린다. |
-| 2150 | `ToneMatchApp._render_voicing` | 실험 보이싱 타임라인과 연주 후보를 별도 결과 탭에 표시한다. |
-| 2196 | `ToneMatchApp._format_time` | 초 단위 위치를 긴 곡에서도 읽기 쉬운 분:초 문자열로 바꾼다. |
-| 2202 | `ToneMatchApp._update_analysis_availability` | 장치 지원과 분석·녹음·스펙트럼 상태를 보고 공통 컨트롤을 갱신한다. |
-| 2217 | `ToneMatchApp._update_copy_availability` | 현재 탭에 복사할 표시 내용이 있고 작업 중이 아닐 때만 복사 버튼을 켠다. |
-| 2230 | `ToneMatchApp._default_export_name` | 입력 파일명을 안전한 기본 내보내기 파일명으로 바꾼다. |
-| 2236 | `ToneMatchApp._export_json` | 현재 전체 분석 데이터와 분리 진단을 UTF-8 JSON으로 저장한다. |
-| 2248 | `ToneMatchApp._export_html` | 현재 결과를 외부 자원이 없는 한·영 HTML 리포트로 저장하고 선택 시 연다. |
-| 2262 | `ToneMatchApp._mark_export` | 내보내기 단계를 순서도에 표시하고 상태와 영구 로그를 갱신한다. |
-| 2271 | `ToneMatchApp._copy_recipe` | 현재 선택한 결과·진단·개발자 탭의 표시 내용을 클립보드에 복사한다. |
-| 2331 | `ToneMatchApp._export_debug_bundle` | 다른 PC에서 진단·개발을 이어갈 소스, 로그, 이력, 환경 정보를 ZIP으로 묶는다. |
-| 2367 | `ToneMatchApp._on_close` | 모든 작업에 중지 신호를 보내고 임시 녹음을 정리한 뒤 창을 닫는다. |
-| 2391 | `_write_self_test_audio` | 패키지 자체 진단에 사용할 재현 가능한 기타 유사 스테레오 WAV를 만든다. |
-| 2421 | `_self_test_native_dsp` | 실제 DLL 또는 명시적 대체 경로에서 합성 PCM 누적·위상·평활화·초기화를 검증한다. |
-| 2475 | `run_self_test` | 합성 기타로 오프라인 분석·한영 변환·개발자 소스와 런타임을 검사한다. |
-| 2519 | `main` | 자체 진단 인수를 처리하거나 한·영 데스크톱 GUI 이벤트 루프를 시작한다. |
+| 33 | `_ensure_standard_streams` | 콘솔 없는 EXE에서도 외부 라이브러리가 표준 출력에 안전하게 쓰도록 한다. |
+| 111 | `_window_work_area` | 작업 표시줄을 제외한 Windows 주 모니터 영역을 얻고 다른 환경에서는 화면으로 대체한다. |
+| 127 | `_center_window` | 작업 영역과 창 테두리 여유 안에서 초기 크기와 최소 크기를 함께 정한다. |
+| 142 | `_portable_root` | 소스 실행 또는 PyInstaller onedir 실행의 포터블 루트를 반환한다. |
+| 149 | `_runtime_data_root` | 우선 EXE 옆 data를 쓰고 권한이 없으면 LocalAppData로 안전하게 폴백한다. |
+| 164 | `_input_method_label` | 입력 방법의 안정적인 코드에 대응하는 언어별 화면 라벨을 만든다. |
+| 169 | `_input_method_code` | 한국어 또는 영어 입력 방법 라벨을 안정적인 코드로 되돌린다. |
+| 180 | `ToneMatchApp.__init__` | 영구 상태를 준비하고 전체 Tkinter 화면과 이벤트 루프를 구성한다. |
+| 273 | `ToneMatchApp.ui_font` | 현재 언어에 맞춰 사용자가 지정한 기본 UI 글꼴을 반환한다. |
+| 277 | `ToneMatchApp._load_settings` | 이전 실행의 언어·장치·연산 백엔드 선택을 읽되 손상된 파일은 무시한다. |
+| 292 | `ToneMatchApp._save_settings` | 다음 실행에서도 유지할 언어·장치·연산 백엔드 선택을 작은 JSON으로 저장한다. |
+| 304 | `ToneMatchApp._configure_style` | 현재 언어 글꼴과 어두운 색상표를 모든 공통 위젯 스타일에 적용한다. |
+| 344 | `ToneMatchApp._panel` | 공통 배경과 여백을 가진 카드형 패널을 만들어 즉시 배치한다. |
+| 351 | `ToneMatchApp._field_label` | 입력 필드 위의 작은 설명 라벨을 지정한 그리드 위치에 배치한다. |
+| 355 | `ToneMatchApp._sync_left_scroll_region` | 입력 내용이 짧아져도 빈 영역을 스크롤하지 않도록 범위와 현재 위치를 제한한다. |
+| 367 | `ToneMatchApp._resize_left_scroll_content` | 창 너비가 바뀌어도 입력 카드 내부 프레임이 캔버스 폭을 정확히 채우게 한다. |
+| 373 | `ToneMatchApp._refresh_status_text` | 긴 상태 메시지를 고정 높이의 읽기 전용 스크롤 영역에 표시한다. |
+| 381 | `ToneMatchApp._resize_result_labels` | 긴 결과 제목과 요약을 실제 결과 패널 너비에 맞춰 줄바꿈한다. |
+| 387 | `ToneMatchApp._enable_left_mousewheel` | 포인터가 입력 카드 위에 있을 때 휠을 해당 세로 스크롤에 연결한다. |
+| 391 | `ToneMatchApp._disable_left_mousewheel` | 포인터가 입력 카드를 벗어나면 다른 화면의 휠 동작을 방해하지 않게 연결을 푼다. |
+| 395 | `ToneMatchApp._scroll_left_panel` | Windows 마우스 휠 회전량을 입력 카드의 세로 이동 단위로 변환한다. |
+| 400 | `ToneMatchApp._build_ui` | 입력·결과·개발자·변경 기록과 하단 상태를 현재 언어로 구성한다. |
+| 670 | `ToneMatchApp._build_stem_removal_tab` | 원본과 분리된 악기 선택을 받는 독립적인 스크롤 탭을 만든다. |
+| 817 | `ToneMatchApp._sync_stem_scroll_region` | 내용 전체와 현재 뷰포트 중 큰 높이를 악기 제거 탭 스크롤 범위로 사용한다. |
+| 825 | `ToneMatchApp._resize_stem_scroll_content` | 창 폭이 달라져도 악기 제거 폼이 탭의 가로 공간을 채우게 한다. |
+| 835 | `ToneMatchApp._bind_stem_mousewheel` | 캔버스 안의 자식 위젯 위에서도 폼을 스크롤할 수 있게 연결한다. |
+| 841 | `ToneMatchApp._refresh_stem_status_text` | 긴 단계 안내가 고정 하단 영역의 높이를 늘리지 않게 표시한다. |
+| 851 | `ToneMatchApp._scroll_stem_tab` | 악기 제거 탭 위의 Windows 마우스 휠을 해당 캔버스에만 적용한다. |
+| 857 | `ToneMatchApp._build_debug_tab` | 처리 순서도, 클릭형 실제 소스, 런타임 로그와 디버그 번들 버튼을 만든다. |
+| 900 | `ToneMatchApp._build_changelog_tab` | 패치 버전·변경사항·알려진 제한을 현재 언어로 읽는 탭을 만든다. |
+| 911 | `ToneMatchApp._build_spectrum_tab` | 선택한 입력 장치의 파형·주파수·레벨을 보여주는 실시간 탭을 만든다. |
+| 1022 | `ToneMatchApp._build_reference_compare_tab` | 분석한 기준 스펙트럼과 실시간 입력의 레벨 정규화 차이 탭을 만든다. |
+| 1136 | `ToneMatchApp._spectrum_is_running` | 실시간 스펙트럼 세션이 종료 이벤트 처리 전까지 활성인지 반환한다. |
+| 1141 | `ToneMatchApp._spectrum_plot_x` | 20 Hz~20 kHz 로그 축의 주파수를 캔버스 가로 좌표로 바꾼다. |
+| 1150 | `ToneMatchApp._spectrum_plot_y` | -120~0 dBFS 레벨을 스펙트럼 캔버스 세로 좌표로 바꾼다. |
+| 1157 | `ToneMatchApp._spectrum_canvas_resized` | 스펙트럼 탭 크기가 바뀌면 축과 마지막 측정 프레임을 다시 그린다. |
+| 1167 | `ToneMatchApp._draw_waveform_grid` | 파형 캔버스에 기준 레벨과 시간 방향 보조선을 그린다. |
+| 1187 | `ToneMatchApp._draw_spectrum_grid` | 주파수 캔버스에 로그 주파수축과 dBFS 기준선을 그린다. |
+| 1221 | `ToneMatchApp._draw_waveform` | 최신 PCM 파형을 현재 캔버스 폭에 맞춰 줄여 그린다. |
+| 1244 | `ToneMatchApp._draw_spectrum` | 평활화된 FFT 레벨과 스펙트럼 중심을 로그 주파수축에 그린다. |
+| 1287 | `ToneMatchApp._reference_plot_y` | ±18 dB 비교 차이를 캔버스 세로 좌표로 제한해 변환한다. |
+| 1294 | `ToneMatchApp._reference_canvas_resized` | 비교 탭 크기가 바뀌면 차이 축과 마지막 유효 곡선을 다시 그린다. |
+| 1302 | `ToneMatchApp._draw_reference_grid` | 레퍼런스 차이 캔버스에 로그 주파수축과 ±18 dB 기준선을 그린다. |
+| 1326 | `ToneMatchApp._draw_reference_difference` | 현재−기준의 주파수별 정규화 dB 차이를 로그 축에 그린다. |
+| 1357 | `ToneMatchApp._format_frequency_range` | 대역 경계를 Hz 또는 kHz가 섞인 짧은 화면 문자열로 바꾼다. |
+| 1359 | `ToneMatchApp._format_frequency_range.<local>.compact` | 한 주파수 값을 읽기 쉬운 Hz/kHz 숫자로 축약한다. |
+| 1369 | `ToneMatchApp._reference_band_level` | 프로필 밴드의 버전 호환 레벨 키를 유한 실수로 읽는다. |
+| 1375 | `ToneMatchApp._populate_reference_rows` | 기준 프로필 또는 최신 비교를 Reference·Current·Δ 여섯 행으로 표시한다. |
+| 1411 | `ToneMatchApp._refresh_reference_profile` | 현재 분석 결과의 기준 파일·밴드·상태를 비교 탭에 반영한다. |
+| 1443 | `ToneMatchApp._apply_spectrum_frame` | 최신 스펙트럼 프레임의 수치와 두 캔버스를 Tk 메인 스레드에서 갱신한다. |
+| 1472 | `ToneMatchApp._clear_spectrum_frame_queue` | 새 세션 전에 남아 있는 이전 스펙트럼 화면 프레임을 버린다. |
+| 1480 | `ToneMatchApp._offer_latest_spectrum` | 최신 프레임과 같은 입력 시점의 숫자 진단을 원자적으로 bounded 큐 하나에 남긴다. |
+| 1497 | `ToneMatchApp._drain_spectrum_frames` | bounded 큐의 최신 측정치만 꺼내 메인 스레드에서 화면에 반영한다. |
+| 1523 | `ToneMatchApp._toggle_spectrum_monitor` | 선택한 장치의 공용 실시간 스펙트럼 또는 레퍼런스 비교를 토글한다. |
+| 1577 | `ToneMatchApp._spectrum_monitor_worker` | 단일 장치의 PCM을 스트리밍 DSP로 처리하고 최신 결과와 상태만 큐에 넣는다. |
+| 1590 | `ToneMatchApp._spectrum_monitor_worker.<local>.handle_block` | 첫 PCM에서 엔진을 만들고 임의 길이 블록을 고정 FFT 구간으로 누적한다. |
+| 1646 | `ToneMatchApp._spectrum_backend_text` | 실제 선택된 DSP와 대체 사유를 개인 경로 없는 짧은 한 줄로 만든다. |
+| 1660 | `ToneMatchApp._spectrum_diagnostics_text` | 마지막 push 시간과 엔진 내부 창·대기 프레임 수를 높이 고정 한 줄로 표시한다. |
+| 1681 | `ToneMatchApp._apply_spectrum_backend` | 현재 활성 세션의 DSP 선택 이벤트만 Tk 스레드에서 화면과 진단에 반영한다. |
+| 1695 | `ToneMatchApp._finish_spectrum_monitor` | 현재 세션의 종료·오류를 반영하고 잠근 컨트롤을 안전하게 복구한다. |
+| 1722 | `ToneMatchApp._update_spectrum_availability` | 다른 작업과 장치 상태를 보고 실시간 스펙트럼 컨트롤을 잠그거나 푼다. |
+| 1770 | `ToneMatchApp._change_language` | 선택값과 결과 수치를 보존한 채 전체 화면을 새 언어와 글꼴로 다시 만든다. |
+| 1811 | `ToneMatchApp._change_device` | 멀티이펙터 선택을 갱신하고 미구현 장치에서는 분석을 비활성화한다. |
+| 1822 | `ToneMatchApp._start_hardware_probe` | PyTorch·CUDA 확인을 UI 밖의 스레드에서 시작해 창 멈춤을 방지한다. |
+| 1839 | `ToneMatchApp._hardware_probe_worker` | Demucs와 GPU 런타임을 검사하고 메인 UI 큐로 결과를 전달한다. |
+| 1847 | `ToneMatchApp._apply_hardware_status` | 하드웨어 검사 결과를 저장하고 가능한 선택값·진단표·로그를 갱신한다. |
+| 1871 | `ToneMatchApp._change_compute_backend` | 표시된 AI 가속 선택을 안정적인 auto·cuda·cpu 코드로 저장한다. |
+| 1879 | `ToneMatchApp._set_compute_controls_enabled` | 하드웨어 검사·분석 상태에 맞춰 가속 선택과 재검사 버튼을 함께 잠그거나 푼다. |
+| 1894 | `ToneMatchApp._format_bytes` | 바이트 값을 진단표에서 읽기 쉬운 MiB 또는 GiB 문자열로 바꾼다. |
+| 1906 | `ToneMatchApp._populate_diagnostics` | 하드웨어·AI 분리 벤치마크·DSP 특징을 한 진단표에 순서대로 표시한다. |
+| 1913 | `ToneMatchApp._populate_diagnostics.<local>.add` | 번역된 항목명과 문자열 값을 진단표 끝에 추가한다. |
+| 1957 | `ToneMatchApp._change_input_method` | 로컬 파일과 PC 재생음 녹음 모드에 맞춰 관련 컨트롤 상태를 바꾼다. |
+| 1983 | `ToneMatchApp._refresh_capture_devices` | Windows 오디오 장치를 다시 열거하고 기존 선택이 가능하면 유지한다. |
+| 2010 | `ToneMatchApp._capture_device_changed` | 녹음 콤보박스의 표시 라벨을 실제 장치 식별자로 저장한다. |
+| 2016 | `ToneMatchApp._toggle_recording` | 현재 상태에 따라 PC 재생음 녹음을 시작하거나 중지 요청을 보낸다. |
+| 2058 | `ToneMatchApp._recording_worker` | 오디오 녹음을 백그라운드에서 실행하고 UI 큐에 상태를 전달한다. |
+| 2060 | `ToneMatchApp._recording_worker.<local>.progress` | 녹음 경과 시간을 메인 UI가 읽는 이벤트로 바꾼다. |
+| 2070 | `ToneMatchApp._toggle_developer_mode` | 개발자 순서도와 변경 기록 탭을 표시하거나 숨긴다. |
+| 2084 | `ToneMatchApp._draw_debug_diagram` | 실제 실행 순서대로 클릭 가능한 세로 블록과 연결 화살표를 그린다. |
+| 2115 | `ToneMatchApp._select_debug_block` | 선택한 처리 블록의 언어별 설명과 연결된 실제 함수 원문을 표시한다. |
+| 2143 | `ToneMatchApp._append_debug_log` | 시각 포함 이벤트를 화면과 EXE 옆 일별 UTF-8 로그 파일에 함께 남긴다. |
+| 2161 | `ToneMatchApp._set_debug_progress` | 진행률로 활성·완료 블록을 계산하고 순서도와 로그를 갱신한다. |
+| 2171 | `ToneMatchApp._refresh_analysis_progress` | 실제 콜백의 전체 단계 진행률과 독립적인 경과 시간을 표시한다. |
+| 2179 | `ToneMatchApp._tick_analysis_progress` | 분석·악기 제거 콜백을 기다리는 동안에도 각 경과 시간을 계속 갱신한다. |
+| 2190 | `ToneMatchApp._finish_analysis_progress` | 완료·오류·취소 시 마지막 진행률과 소요 시간을 화면에 보존한다. |
+| 2195 | `ToneMatchApp._stem_is_running` | 작업자의 종료 이벤트를 UI가 반영할 때까지 새 작업 시작을 막는다. |
+| 2199 | `ToneMatchApp._set_stem_status` | 언어 전환 뒤에도 다시 만들 수 있도록 악기 제거 상태 키와 값을 보존한다. |
+| 2205 | `ToneMatchApp._localized_stem_names` | 코어가 반환한 안정적인 stem 코드를 현재 언어의 쉼표 목록으로 바꾼다. |
+| 2211 | `ToneMatchApp._render_stem_summary` | 마지막 출력 파일과 제거·유지 항목, 처리 장치를 한영 요약으로 표시한다. |
+| 2231 | `ToneMatchApp._refresh_stem_localization` | 재구성된 탭의 상태·결과·가속 라벨을 현재 언어에 맞춰 복원한다. |
+| 2238 | `ToneMatchApp._refresh_stem_progress` | AI 콜백 진행률과 별개로 악기 제거 작업의 실제 경과 시간을 표시한다. |
+| 2248 | `ToneMatchApp._finish_stem_progress` | 완료·실패·취소 시 마지막 악기 제거 경과 시간을 고정한다. |
+| 2253 | `ToneMatchApp._change_stem_compute_backend` | 악기 제거 전용 가속 선택을 auto·cuda·cpu 코드로 보존한다. |
+| 2259 | `ToneMatchApp._default_stem_destination` | 원본 옆에서 기존 파일과 충돌하지 않는 새 WAV 기본 이름을 찾는다. |
+| 2270 | `ToneMatchApp._set_stem_source` | 명시적으로 선택한 입력과 충돌하지 않는 출력 기본값을 함께 채운다. |
+| 2276 | `ToneMatchApp._choose_stem_source` | 악기 제거 전용 로컬 오디오·영상 입력을 파일 선택기로 받는다. |
+| 2283 | `ToneMatchApp._use_analysis_source_for_stem` | 현재 톤 분석 입력이 실제 로컬 파일일 때 악기 제거 입력으로 복사한다. |
+| 2291 | `ToneMatchApp._choose_stem_destination` | 개별 stem이 아닌 최종 혼합 WAV의 새 저장 경로를 선택한다. |
+| 2305 | `ToneMatchApp._parse_stem_removal_inputs` | 악기 제거 입력·출력·시간·선택을 검증하고 코어 호출 인자로 바꾼다. |
+| 2355 | `ToneMatchApp._start_stem_removal` | 검증된 악기 제거 요청을 UI 밖의 작업 스레드에서 시작한다. |
+| 2391 | `ToneMatchApp._cancel_stem_removal` | 현재 AI 조각 경계에서 악기 제거를 멈추도록 취소 신호를 보낸다. |
+| 2399 | `ToneMatchApp._stem_removal_worker` | 코어 분리를 실행하고 Tk에서 처리할 진행·결과 이벤트만 큐에 넣는다. |
+| 2401 | `ToneMatchApp._stem_removal_worker.<local>.progress` | 코어 진행 콜백을 Tk 메인 스레드용 불변 이벤트로 복사한다. |
+| 2415 | `ToneMatchApp._show_stem_result` | 완료된 출력과 처리 요약을 표시하고 모든 공통 컨트롤을 복구한다. |
+| 2432 | `ToneMatchApp._show_stem_error` | 악기 제거 실패·취소를 구분해 표시하고 작업 전 컨트롤 상태로 돌아간다. |
+| 2444 | `ToneMatchApp._update_stem_availability` | 다른 모든 장시간 작업과 악기 제거 컨트롤을 상호 배타적으로 잠근다. |
+| 2464 | `ToneMatchApp._choose_audio` | 파일 선택 창에서 오디오 또는 영상 경로를 받아 입력 상태를 갱신한다. |
+| 2472 | `ToneMatchApp._open_reference` | 참고 URL을 기본 브라우저에서 열되 앱이 YouTube 음원을 추출하지 않는다. |
+| 2482 | `ToneMatchApp._parse_inputs` | 화면 문자열을 분석 요청으로 바꾸고 파일·시간·장치 조건을 검증한다. |
+| 2504 | `ToneMatchApp._start_analysis` | 검증된 요청을 별도 스레드에서 시작하고 취소·내보내기 상태를 설정한다. |
+| 2559 | `ToneMatchApp._cancel_analysis` | 다운로드 또는 Demucs 내부 처리 구간 경계에서 멈추도록 취소 신호를 보낸다. |
+| 2567 | `ToneMatchApp._analysis_worker` | 전체 기타 분석을 실행하고 결과 또는 오류를 메인 UI 큐에 전달한다. |
+| 2569 | `ToneMatchApp._analysis_worker.<local>.progress` | 엔진 콜백을 Tk 메인 스레드용 진행 이벤트로 변환한다. |
+| 2579 | `ToneMatchApp._drain_events` | 백그라운드 분석·녹음·스펙트럼 제어 이벤트를 Tk 메인 스레드에서 처리한다. |
+| 2637 | `ToneMatchApp._recording_completed` | 완료된 임시 녹음을 현재 분석 파일로 연결하고 버튼 상태를 복구한다. |
+| 2650 | `ToneMatchApp._recording_failed` | 녹음 실패 메시지와 상세 로그를 남기고 UI를 다시 사용할 수 있게 한다. |
+| 2660 | `ToneMatchApp._show_error` | 분석 실패 상태를 복구하고 사용자 메시지와 영구 개발 로그를 남긴다. |
+| 2674 | `ToneMatchApp._show_result` | 추천 체인 세 개, 기타 stem 진단과 상태를 현재 언어 화면에 표시한다. |
+| 2711 | `ToneMatchApp._render_recipe` | 한 추천 체인의 모델·순서·파라미터·이유를 읽기 쉬운 서식으로 그린다. |
+| 2737 | `ToneMatchApp._render_voicing` | 실험 보이싱 타임라인과 연주 후보를 별도 결과 탭에 표시한다. |
+| 2783 | `ToneMatchApp._format_time` | 초 단위 위치를 긴 곡에서도 읽기 쉬운 분:초 문자열로 바꾼다. |
+| 2789 | `ToneMatchApp._update_analysis_availability` | 장치 지원과 분석·녹음·스펙트럼 상태를 보고 공통 컨트롤을 갱신한다. |
+| 2806 | `ToneMatchApp._update_copy_availability` | 현재 탭에 복사할 표시 내용이 있고 작업 중이 아닐 때만 복사 버튼을 켠다. |
+| 2823 | `ToneMatchApp._default_export_name` | 입력 파일명을 안전한 기본 내보내기 파일명으로 바꾼다. |
+| 2829 | `ToneMatchApp._export_json` | 현재 전체 분석 데이터와 분리 진단을 UTF-8 JSON으로 저장한다. |
+| 2841 | `ToneMatchApp._export_html` | 현재 결과를 외부 자원이 없는 한·영 HTML 리포트로 저장하고 선택 시 연다. |
+| 2855 | `ToneMatchApp._mark_export` | 내보내기 단계를 순서도에 표시하고 상태와 영구 로그를 갱신한다. |
+| 2864 | `ToneMatchApp._copy_recipe` | 현재 선택한 결과·진단·개발자 탭의 표시 내용을 클립보드에 복사한다. |
+| 2924 | `ToneMatchApp._export_debug_bundle` | 다른 PC에서 진단·개발을 이어갈 소스, 로그, 이력, 환경 정보를 ZIP으로 묶는다. |
+| 2961 | `ToneMatchApp._on_close` | 모든 작업에 중지 신호를 보내고 임시 녹음을 정리한 뒤 창을 닫는다. |
+| 2974 | `ToneMatchApp._finish_close_after_stem_cleanup` | 악기 제거 작업이 임시 음원을 정리할 때까지 숨은 메인 루프를 유지한다. |
+| 2995 | `_write_self_test_audio` | 패키지 자체 진단에 사용할 재현 가능한 기타 유사 스테레오 WAV를 만든다. |
+| 3025 | `_self_test_native_dsp` | 실제 DLL 또는 명시적 대체 경로에서 합성 PCM 누적·위상·평활화·초기화를 검증한다. |
+| 3120 | `run_self_test` | 합성 기타로 오프라인 분석·한영 변환·개발자 소스와 런타임을 검사한다. |
+| 3166 | `main` | 자체 진단 인수를 처리하거나 한·영 데스크톱 GUI 이벤트 루프를 시작한다. |
 
 ## `catalog.py`
 
@@ -184,37 +213,39 @@
 
 | 줄 | 함수 | 설명 |
 |---:|---|---|
-| 356 | `tr` | 문자열 키를 선택 언어로 번역하고 선택적인 자리표시자를 채운다. |
-| 367 | `voicing_context_lines` | GUI와 HTML에서 코드의 분석 출처·근거·보조 분석·실패 안내를 일관되게 만든다. |
-| 396 | `choice_label` | 안정적인 선택 코드에 대응하는 현재 언어의 콤보박스 라벨을 만든다. |
-| 401 | `choice_values` | 한 선택 그룹에 속한 모든 현재 언어 라벨을 정의 순서대로 반환한다. |
-| 406 | `choice_code` | 한국어 또는 영어 라벨을 언어 독립적인 선택 코드로 되돌린다. |
-| 420 | `language_code` | 언어 콤보박스 라벨을 ``ko`` 또는 ``en`` 코드로 변환한다. |
+| 398 | `tr` | 문자열 키를 선택 언어로 번역하고 선택적인 자리표시자를 채운다. |
+| 409 | `voicing_context_lines` | GUI와 HTML에서 코드의 분석 출처·근거·보조 분석·실패 안내를 일관되게 만든다. |
+| 438 | `choice_label` | 안정적인 선택 코드에 대응하는 현재 언어의 콤보박스 라벨을 만든다. |
+| 443 | `choice_values` | 한 선택 그룹에 속한 모든 현재 언어 라벨을 정의 순서대로 반환한다. |
+| 448 | `choice_code` | 한국어 또는 영어 라벨을 언어 독립적인 선택 코드로 되돌린다. |
+| 462 | `language_code` | 언어 콤보박스 라벨을 ``ko`` 또는 ``en`` 코드로 변환한다. |
 
 ## `native_dsp.py`
 
 | 줄 | 함수 | 설명 |
 |---:|---|---|
-| 39 | `_integer` | 불리언이 아닌 정수 설정과 공통 최소 범위를 검증한다. |
-| 50 | `_frequency` | 주파수 설정을 유한한 실수로 변환하고 불리언을 거부한다. |
-| 64 | `_configuration` | 공통 설정을 검증하고 실제 선택 가능한 FFT bin이 있는지 확인한다. |
-| 83 | `_prepare_block` | 호출자 PCM을 검증하고 C ABI용 연속 float64 채널 배열로 준비한다. |
-| 105 | `_library_candidates` | 현재 모듈 및 동결 번들의 절대 리소스 경로만 DLL 후보로 반환한다. |
-| 117 | `_load_library` | 신뢰할 수 있는 절대 경로에서 DLL을 열고 ABI와 모든 함수 서명을 확인한다. |
-| 157 | `_double_pointer` | 연속 float64 배열을 C ABI에서 읽고 쓸 수 있는 double 포인터로 바꾼다. |
-| 168 | `PythonSpectrumEngine.__init__` | 설정과 bounded 부분 블록 및 평활화 이력을 준비한다. |
-| 182 | `PythonSpectrumEngine._require_open` | 닫힌 스트림을 다시 사용하는 호출을 명확한 오류로 거부한다. |
-| 188 | `PythonSpectrumEngine.push` | 완전한 FFT 구간을 모두 처리하고 최신 결과 또는 대기 상태를 반환한다. |
-| 207 | `PythonSpectrumEngine.reset` | 부분 PCM과 모든 평활화 이력을 함께 비운다. |
-| 215 | `PythonSpectrumEngine.close` | 여러 번 호출해도 안전하게 버퍼를 비우고 엔진을 닫는다. |
-| 231 | `NativeSpectrumEngine.__init__` | C++ 지원 범위와 ABI를 검증한 뒤 컨텍스트 및 출력 버퍼를 만든다. |
-| 271 | `NativeSpectrumEngine._require_open` | 해제된 C++ 컨텍스트로 진입하는 호출을 거부한다. |
-| 277 | `NativeSpectrumEngine.push` | PCM을 C++에 전달하고 독립 배열을 가진 최신 완성 프레임을 반환한다. |
-| 303 | `NativeSpectrumEngine.reset` | C++의 부분 PCM과 평활화 이력을 하나의 잠금 안에서 초기화한다. |
-| 311 | `NativeSpectrumEngine.close` | 진행 중인 push와 경합하지 않도록 C++ 컨텍스트를 한 번만 해제한다. |
-| 319 | `NativeSpectrumEngine.__del__` | 초기화 실패나 사용자 미해제 경우에도 가능한 컨텍스트를 정리한다. |
-| 328 | `create_spectrum_engine` | 요청한 DSP를 선택하고 자동 모드의 초기화 실패에만 NumPy로 대체한다. |
-| 348 | `native_runtime_info` | 개인 경로 없이 네이티브 DLL 사용 가능 여부와 ABI 정보를 보고한다. |
+| 42 | `_integer` | 불리언이 아닌 정수 설정과 공통 최소 범위를 검증한다. |
+| 53 | `_frequency` | 주파수 설정을 유한한 실수로 변환하고 불리언을 거부한다. |
+| 67 | `_configuration` | 공통 설정을 검증하고 실제 선택 가능한 FFT bin이 있는지 확인한다. |
+| 86 | `_prepare_block` | PCM을 검증하고 정렬된 연속 배열을 준비하되 native float32는 변환 없이 보존한다. |
+| 109 | `_library_candidates` | 현재 모듈 및 동결 번들의 절대 리소스 경로만 DLL 후보로 반환한다. |
+| 121 | `_load_library` | 신뢰할 수 있는 절대 경로에서 DLL을 열고 ABI와 모든 함수 서명을 확인한다. |
+| 166 | `_double_pointer` | 연속 float64 배열을 C ABI에서 읽고 쓸 수 있는 double 포인터로 바꾼다. |
+| 177 | `PythonSpectrumEngine.__init__` | 설정과 bounded 부분 블록 및 평활화 이력을 준비한다. |
+| 193 | `PythonSpectrumEngine._require_open` | 닫힌 스트림을 다시 사용하는 호출을 명확한 오류로 거부한다. |
+| 199 | `PythonSpectrumEngine.push` | 완전한 FFT 구간을 모두 처리하고 최신 결과 또는 대기 상태를 반환한다. |
+| 224 | `PythonSpectrumEngine.stream_stats` | 현재 스트림의 입력·완성 창·부분 창 개수를 독립 딕셔너리로 반환한다. |
+| 232 | `PythonSpectrumEngine.reset` | 부분 PCM과 모든 평활화 이력을 함께 비운다. |
+| 242 | `PythonSpectrumEngine.close` | 여러 번 호출해도 안전하게 버퍼를 비우고 엔진을 닫는다. |
+| 258 | `NativeSpectrumEngine.__init__` | C++ 지원 범위와 ABI를 검증한 뒤 컨텍스트 및 출력 버퍼를 만든다. |
+| 299 | `NativeSpectrumEngine._require_open` | 해제된 C++ 컨텍스트로 진입하는 호출을 거부한다. |
+| 305 | `NativeSpectrumEngine.push` | PCM을 C++에 전달하고 독립 배열을 가진 최신 완성 프레임을 반환한다. |
+| 334 | `NativeSpectrumEngine.stream_stats` | 같은 잠금 안에서 실제 C++ 입력·완성 창·부분 창 카운터를 조회한다. |
+| 346 | `NativeSpectrumEngine.reset` | C++의 부분 PCM과 평활화 이력을 하나의 잠금 안에서 초기화한다. |
+| 354 | `NativeSpectrumEngine.close` | 진행 중인 push와 경합하지 않도록 C++ 컨텍스트를 한 번만 해제한다. |
+| 362 | `NativeSpectrumEngine.__del__` | 초기화 실패나 사용자 미해제 경우에도 가능한 컨텍스트를 정리한다. |
+| 371 | `create_spectrum_engine` | 요청한 DSP를 선택하고 자동 모드의 초기화 실패에만 NumPy로 대체한다. |
+| 391 | `native_runtime_info` | 개인 경로 없이 네이티브 DLL 사용 가능 여부와 ABI 정보를 보고한다. |
 
 ## `recorder.py`
 
@@ -263,36 +294,40 @@
 
 | 줄 | 함수 | 설명 |
 |---:|---|---|
-| 58 | `_hf_model_cache_root` | Hugging Face가 사용하는 기본 Demucs 모델 캐시 경로를 계산한다. |
-| 71 | `separator_model_is_cached` | 공식 6-stem 모델 가중치가 사용자 캐시에 있는지 가볍게 확인한다. |
-| 77 | `_check_cancelled` | 다운로드·모델 준비·추론의 경계에서 사용자의 취소 요청을 확인한다. |
-| 83 | `_download_progress_class` | 터미널 없이 실제 Hugging Face 수신 바이트를 앱 콜백으로 전달하는 tqdm을 만든다. |
-| 98 | `_download_progress_class.<local>.DownloadProgress.__init__` | 출력 대상을 메모리로 지정하고 다운로드의 실제 초기 수신량을 기록한다. |
-| 107 | `_download_progress_class.<local>.DownloadProgress.display` | 콘솔 그리기를 생략해 진행률 때문에 GUI 실행이 실패하지 않도록 한다. |
-| 111 | `_download_progress_class.<local>.DownloadProgress.update` | Hugging Face가 보고한 증가량만 반영하고 취소와 UI 알림을 처리한다. |
-| 119 | `_download_progress_class.<local>.DownloadProgress._report` | 알려진 파일 크기로만 백분율을 계산하고 총량이 없으면 바이트만 알린다. |
-| 148 | `_load_hf_separator_model` | 공식 safetensors 모델을 캐시 우선으로 준비하고 다운로드·로딩 단계를 구분한다. |
-| 160 | `_load_hf_separator_model.<local>.download` | 캐시 파일을 먼저 찾고 없을 때만 공식 저장소에서 진행률과 함께 받는다. |
-| 200 | `_model_error_key` | 예외 체인을 확인해 모델 준비 실패를 네트워크·캐시·메모리 원인으로 분류한다. |
-| 222 | `_SeparationProgress.__init__` | 실행 콜백과 아직 시작하지 않은 조각의 상태를 저장한다. |
-| 236 | `_SeparationProgress.begin_chunk` | 현재 모델의 실제 segment와 overlap으로 조각별 추론 블록 수를 계산한다. |
-| 252 | `_SeparationProgress.__call__` | 실제로 끝난 추론 블록만 누적하고 블록 시작·종료 시 취소 요청을 처리한다. |
-| 268 | `_SeparationProgress._report` | 모델 블록 완료 비율을 오디오 처리 초와 전체 단계 백분율로 알린다. |
-| 279 | `_SeparationProgress.finish_chunk` | 콜백이 없는 호환 분리기에서도 실제 조각 완료 후 진행률을 확정한다. |
-| 284 | `_normalize_compute_preference` | 사용자가 선택한 연산 장치 값을 검사하고 소문자 표준값으로 바꾼다. |
-| 295 | `_torch_cuda_is_available` | PyTorch가 현재 시스템에서 CUDA 추론을 실제로 사용할 수 있는지 안전하게 확인한다. |
-| 303 | `resolve_compute_device` | auto·cpu·cuda 설정을 실제 Demucs 실행 장치인 cpu 또는 cuda로 결정한다. |
-| 332 | `_cuda_runtime_details` | 개발자 진단에 필요한 CUDA 빌드와 첫 번째 GPU의 메모리·연산 정보를 수집한다. |
-| 372 | `separator_runtime_status` | 개발자 진단에 표시할 Demucs·PyTorch·CUDA 런타임 상태를 반환한다. |
-| 416 | `_safe_cuda_synchronize` | CUDA 비동기 작업의 정확한 시간 측정을 위해 동기화하되 진단 실패는 무시한다. |
-| 426 | `_safe_cuda_reset_peak_memory` | 이번 추론에 사용된 GPU 최대 메모리를 측정할 수 있도록 누적 통계를 초기화한다. |
-| 436 | `_safe_cuda_peak_memory` | CUDA 추론 중 최대 할당 메모리를 바이트 단위로 반환하고 조회 실패 시 None을 돌려준다. |
-| 446 | `_safe_cuda_empty_cache` | CUDA 실행 뒤 재사용 가능한 캐시를 안전하게 비워 다른 작업의 GPU 메모리를 확보한다. |
-| 456 | `_pcm16_chunk` | 16-bit PCM 바이트를 Demucs가 받는 채널 우선 float32 배열로 바꾼다. |
-| 469 | `_tensor_to_pcm16` | 분리된 PyTorch 텐서를 클리핑한 PCM과 레벨 통계로 변환한다. |
-| 482 | `separate_guitar_wav` | 선택한 CPU·CUDA 장치로 44.1 kHz PCM에서 guitar stem WAV만 분리해 기록한다. |
-| 516 | `separate_guitar_wav.<local>.ProgressSeparator._load_model` | 검증된 safetensors 모델을 주입하고 Demucs API의 입력 형식을 초기화한다. |
-| 641 | `separation_info_dict` | 불변 진단 객체를 JSON 저장에 알맞은 일반 사전으로 바꾼다. |
+| 80 | `_hf_model_cache_root` | Hugging Face가 사용하는 기본 Demucs 모델 캐시 경로를 계산한다. |
+| 93 | `separator_model_is_cached` | 공식 6-stem 모델 가중치가 사용자 캐시에 있는지 가볍게 확인한다. |
+| 99 | `_check_cancelled` | 다운로드·모델 준비·추론의 경계에서 사용자의 취소 요청을 확인한다. |
+| 105 | `_download_progress_class` | 터미널 없이 실제 Hugging Face 수신 바이트를 앱 콜백으로 전달하는 tqdm을 만든다. |
+| 120 | `_download_progress_class.<local>.DownloadProgress.__init__` | 출력 대상을 메모리로 지정하고 다운로드의 실제 초기 수신량을 기록한다. |
+| 129 | `_download_progress_class.<local>.DownloadProgress.display` | 콘솔 그리기를 생략해 진행률 때문에 GUI 실행이 실패하지 않도록 한다. |
+| 133 | `_download_progress_class.<local>.DownloadProgress.update` | Hugging Face가 보고한 증가량만 반영하고 취소와 UI 알림을 처리한다. |
+| 141 | `_download_progress_class.<local>.DownloadProgress._report` | 알려진 파일 크기로만 백분율을 계산하고 총량이 없으면 바이트만 알린다. |
+| 170 | `_load_hf_separator_model` | 공식 safetensors 모델을 캐시 우선으로 준비하고 다운로드·로딩 단계를 구분한다. |
+| 182 | `_load_hf_separator_model.<local>.download` | 캐시 파일을 먼저 찾고 없을 때만 공식 저장소에서 진행률과 함께 받는다. |
+| 222 | `_model_error_key` | 예외 체인을 확인해 모델 준비 실패를 네트워크·캐시·메모리 원인으로 분류한다. |
+| 244 | `_SeparationProgress.__init__` | 실행 콜백과 아직 시작하지 않은 조각의 상태를 저장한다. |
+| 258 | `_SeparationProgress.begin_chunk` | 현재 모델의 실제 segment와 overlap으로 조각별 추론 블록 수를 계산한다. |
+| 274 | `_SeparationProgress.__call__` | 실제로 끝난 추론 블록만 누적하고 블록 시작·종료 시 취소 요청을 처리한다. |
+| 290 | `_SeparationProgress._report` | 모델 블록 완료 비율을 오디오 처리 초와 전체 단계 백분율로 알린다. |
+| 301 | `_SeparationProgress.finish_chunk` | 콜백이 없는 호환 분리기에서도 실제 조각 완료 후 진행률을 확정한다. |
+| 306 | `_normalize_compute_preference` | 사용자가 선택한 연산 장치 값을 검사하고 소문자 표준값으로 바꾼다. |
+| 317 | `_torch_cuda_is_available` | PyTorch가 현재 시스템에서 CUDA 추론을 실제로 사용할 수 있는지 안전하게 확인한다. |
+| 325 | `resolve_compute_device` | auto·cpu·cuda 설정을 실제 Demucs 실행 장치인 cpu 또는 cuda로 결정한다. |
+| 354 | `_cuda_runtime_details` | 개발자 진단에 필요한 CUDA 빌드와 첫 번째 GPU의 메모리·연산 정보를 수집한다. |
+| 394 | `separator_runtime_status` | 개발자 진단에 표시할 Demucs·PyTorch·CUDA 런타임 상태를 반환한다. |
+| 438 | `_safe_cuda_synchronize` | CUDA 비동기 작업의 정확한 시간 측정을 위해 동기화하되 진단 실패는 무시한다. |
+| 448 | `_safe_cuda_reset_peak_memory` | 이번 추론에 사용된 GPU 최대 메모리를 측정할 수 있도록 누적 통계를 초기화한다. |
+| 458 | `_safe_cuda_peak_memory` | CUDA 추론 중 최대 할당 메모리를 바이트 단위로 반환하고 조회 실패 시 None을 돌려준다. |
+| 468 | `_safe_cuda_empty_cache` | CUDA 실행 뒤 재사용 가능한 캐시를 안전하게 비워 다른 작업의 GPU 메모리를 확보한다. |
+| 478 | `_pcm16_chunk` | 16-bit PCM 바이트를 Demucs가 받는 채널 우선 float32 배열로 바꾼다. |
+| 491 | `_tensor_to_pcm16` | 분리된 PyTorch 텐서를 클리핑한 PCM과 레벨 통계로 변환한다. |
+| 504 | `_normalize_stem_names` | 요청 stem 목록을 모델의 고정 순서로 정규화하고 알 수 없는 이름을 거부한다. |
+| 525 | `_tensor_to_stereo_array` | Demucs 채널 우선 텐서를 수명이 독립적인 stereo float32 배열로 변환한다. |
+| 550 | `separate_stem_chunks` | 6-stem 모델을 한 번 실행하고 선택한 stem을 파일 없이 조각별 콜백에 전달한다. 콜백에 전달되는 배열은 ``(2, frames)`` 형태의 float32이며 다음 콜백 전에도 유효하다. 이 API는 stem 파일을 만들지 않으므로 호출자가 합성·통계 등 필요한 결과만 스트리밍으로 처리할 수 있다. |
+| 593 | `separate_stem_chunks.<local>.ProgressSeparator._load_model` | safetensors 모델을 주입하고 Demucs 입출력 형식을 초기화한다. |
+| 733 | `separate_guitar_wav` | 선택한 CPU·CUDA 장치로 44.1 kHz PCM에서 guitar stem WAV만 분리해 기록한다. |
+| 767 | `separate_guitar_wav.<local>.ProgressSeparator._load_model` | 검증된 safetensors 모델을 주입하고 Demucs API의 입력 형식을 초기화한다. |
+| 892 | `separation_info_dict` | 불변 진단 객체를 JSON 저장에 알맞은 일반 사전으로 바꾼다. |
 
 ## `spectrum.py`
 
@@ -310,6 +345,23 @@
 | 188 | `SpectrumSmoother._validate_frame` | 평활화할 프레임의 배열 크기와 모든 통계값이 유효한지 확인한다. |
 | 213 | `SpectrumSmoother._copy_frame` | 호출자가 나중에 배열을 바꿔도 이력이 흔들리지 않도록 프레임을 복사한다. |
 | 225 | `SpectrumSmoother.push` | 새 프레임을 이력에 넣고 최신 파형과 롤링 스펙트럼을 결합해 반환한다. |
+
+## `stem_removal.py`
+
+| 줄 | 함수 | 설명 |
+|---:|---|---|
+| 48 | `_message` | 선택 언어 문장을 우선하고 오류 로그를 위해 다른 언어도 함께 보존한다. |
+| 53 | `_report` | 진행 콜백에 유효한 0~100 범위 값만 전달한다. |
+| 59 | `_check_cancelled` | 단계 경계에서 취소 요청을 동일한 공개 예외로 변환한다. |
+| 65 | `_normalize_removed_stems` | 제거할 stem 이름을 고정 순서로 정규화하고 빈 값·전체 제거를 거부한다. |
+| 89 | `_normalized_paths` | 입출력 경로를 검증하고 기존 파일 또는 원본 덮어쓰기를 차단한다. |
+| 133 | `_segment_request` | 시작·끝 값을 유한한 초 단위로 검사하고 최대 20분 구간을 계산한다. |
+| 159 | `_ffmpeg_path` | 소스·PyInstaller 실행에서 앱에 포함된 FFmpeg만 찾아 반환한다. |
+| 173 | `_stop_process` | 취소·시간 초과 시 FFmpeg 자식 프로세스를 끝까지 회수한다. |
+| 189 | `_decode_input` | 로컬 FFmpeg를 폴링해 선택 구간을 취소 가능한 stereo PCM16으로 변환한다. |
+| 298 | `_write_pcm16_output` | 임시 float32 합산 결과를 취소 가능한 PCM16 stereo WAV로 변환한다. |
+| 344 | `_commit_new_output` | 같은 폴더의 완성 파일을 기존 이름을 덮어쓰지 않는 원자적 연산으로 확정한다. |
+| 371 | `remove_stems_from_file` | 입력의 선택 stem을 제외한 나머지를 새 PCM16 stereo WAV로 안전하게 저장한다. 출력 경로에 파일이 이미 있으면 덮어쓰지 않고 실패한다. 성공 직전까지는 같은 폴더의 ``.partial.wav``만 사용하며 취소·오류 시 이를 제거한다. |
 
 ## `voicing.py`
 
@@ -344,18 +396,18 @@
 | 32 | `DeveloperModeTests.test_version_and_latest_changelog_match` | 앱 버전은 두 자리 패치 규칙이며 최신 변경 기록과 같아야 한다. |
 | 38 | `DeveloperModeTests.test_pipeline_order_and_source_links_are_complete` | 블록 번호가 연속이고 각 클릭 대상에서 실제 코드가 추출되는지 검사한다. |
 | 49 | `DeveloperModeTests.test_every_function_has_korean_docstring` | 배포 소스의 모든 함수가 개발자에게 보이는 한글 설명을 갖는지 검사한다. |
-| 99 | `DeveloperModeTests.test_progress_maps_to_sequence_blocks` | 대표 진행률이 입력부터 결과까지 순서대로 해당 블록을 가리키는지 확인한다. |
-| 105 | `DeveloperModeTests.test_windowed_import_repairs_missing_standard_streams` | 콘솔 없는 실행 환경도 출력 가능한 스트림을 만들고 기존 스트림은 유지해야 한다. |
-| 131 | `DeveloperModeTests.test_analysis_progress_accepts_floats_without_regressing` | 실수 진행률은 표시되며 지연·잘못된 콜백에도 뒤로 가거나 범위를 벗어나지 않아야 한다. |
-| 164 | `DeveloperModeTests.test_analysis_timer_refreshes_and_stops_on_error_or_cancellation` | 콜백이 없어도 경과 시간만 갱신하고 오류·취소 이후에는 마지막 값이 유지돼야 한다. |
-| 204 | `DeveloperModeTests.test_analysis_completion_preserves_final_elapsed_time` | 완료 이벤트는 전체 진행률을 100%로 만들고 결과 화면에서도 소요 시간을 보존해야 한다. |
-| 241 | `DeveloperModeTests.test_analysis_progress_footer_stays_visible_when_options_scroll` | 최소 크기의 한·영 화면에서 긴 상태와 진행률이 입력 스크롤 밖에 고정돼야 한다. |
-| 311 | `DeveloperModeTests.test_initial_window_and_minimum_fit_the_usable_work_area` | 작업 표시줄과 제목 표시줄 여유를 뺀 화면보다 초기·최소 창이 커지면 안 된다. |
-| 330 | `DeveloperModeTests.test_small_scaled_layout_does_not_grow_after_result_or_long_status` | 작은 고배율 화면에서도 긴 결과·오류가 입력 영역과 고정 진행 영역을 밀어내지 않아야 한다. |
-| 394 | `DeveloperModeTests.test_input_scroll_clamps_after_content_becomes_shorter` | 입력 카드 내용이 줄면 예전 맨 아래 위치나 빈 스크롤 여백이 남지 않아야 한다. |
-| 422 | `DeveloperModeTests.test_debug_diagram_fits_and_displays_source` | 개발자 탭의 모든 블록이 화면 안에 들어오고 코드 내용이 표시되는지 확인한다. |
-| 440 | `DeveloperModeTests.test_live_spectrum_tab_renders_latest_frame_without_hardware` | 실제 장치 없이 합성 FFT 프레임이 탭 수치와 두 캔버스에 표시돼야 한다. |
-| 469 | `DeveloperModeTests.test_reference_compare_tab_renders_six_bands_without_hardware` | 숨긴 Tk 화면에서 기준 프로필과 합성 라이브 차이 여섯 대역을 표시해야 한다. |
+| 102 | `DeveloperModeTests.test_progress_maps_to_sequence_blocks` | 대표 진행률이 입력부터 결과까지 순서대로 해당 블록을 가리키는지 확인한다. |
+| 108 | `DeveloperModeTests.test_windowed_import_repairs_missing_standard_streams` | 콘솔 없는 실행 환경도 출력 가능한 스트림을 만들고 기존 스트림은 유지해야 한다. |
+| 134 | `DeveloperModeTests.test_analysis_progress_accepts_floats_without_regressing` | 실수 진행률은 표시되며 지연·잘못된 콜백에도 뒤로 가거나 범위를 벗어나지 않아야 한다. |
+| 167 | `DeveloperModeTests.test_analysis_timer_refreshes_and_stops_on_error_or_cancellation` | 콜백이 없어도 경과 시간만 갱신하고 오류·취소 이후에는 마지막 값이 유지돼야 한다. |
+| 207 | `DeveloperModeTests.test_analysis_completion_preserves_final_elapsed_time` | 완료 이벤트는 전체 진행률을 100%로 만들고 결과 화면에서도 소요 시간을 보존해야 한다. |
+| 244 | `DeveloperModeTests.test_analysis_progress_footer_stays_visible_when_options_scroll` | 최소 크기의 한·영 화면에서 긴 상태와 진행률이 입력 스크롤 밖에 고정돼야 한다. |
+| 314 | `DeveloperModeTests.test_initial_window_and_minimum_fit_the_usable_work_area` | 작업 표시줄과 제목 표시줄 여유를 뺀 화면보다 초기·최소 창이 커지면 안 된다. |
+| 333 | `DeveloperModeTests.test_small_scaled_layout_does_not_grow_after_result_or_long_status` | 작은 고배율 화면에서도 긴 결과·오류가 입력 영역과 고정 진행 영역을 밀어내지 않아야 한다. |
+| 397 | `DeveloperModeTests.test_input_scroll_clamps_after_content_becomes_shorter` | 입력 카드 내용이 줄면 예전 맨 아래 위치나 빈 스크롤 여백이 남지 않아야 한다. |
+| 425 | `DeveloperModeTests.test_debug_diagram_fits_and_displays_source` | 개발자 탭의 모든 블록이 화면 안에 들어오고 코드 내용이 표시되는지 확인한다. |
+| 443 | `DeveloperModeTests.test_live_spectrum_tab_renders_latest_frame_without_hardware` | 실제 장치 없이 합성 FFT 프레임이 탭 수치와 두 캔버스에 표시돼야 한다. |
+| 472 | `DeveloperModeTests.test_reference_compare_tab_renders_six_bands_without_hardware` | 숨긴 Tk 화면에서 기준 프로필과 합성 라이브 차이 여섯 대역을 표시해야 한다. |
 
 ## `tests/test_engine.py`
 
@@ -469,31 +521,40 @@
 | 129 | `_FakeTorch.inference_mode` | 추론 전용 실행 여부를 검증할 문맥 관리자를 반환한다. |
 | 139 | `_FakeSeparator.__init__` | 선택된 실행 장치를 기록하고 guitar 출력 모델을 준비한다. |
 | 146 | `_FakeSeparator.separate_tensor` | 입력 레벨을 유지한 guitar stem을 반환해 파일 경로 전체를 검증한다. |
-| 159 | `_write_test_wav` | 분리 진행률·취소 검증용으로 짧은 비무음 스테레오 PCM 파일을 만든다. |
-| 169 | `_fake_separation_modules` | 분리기 생성과 콜백 테스트에 쓸 가상 Demucs·PyTorch 모듈을 묶는다. |
-| 178 | `_fake_torch` | 장치 결정과 런타임 진단에 필요한 최소 PyTorch 모듈을 만든다. |
-| 186 | `SeparatorDeviceTests.test_cpu_preference_always_resolves_to_cpu` | CUDA가 있어도 명시적 CPU 설정은 CPU를 유지해야 한다. |
-| 190 | `SeparatorDeviceTests.test_auto_prefers_cuda_and_falls_back_to_cpu` | 자동 설정은 CUDA를 우선하고 사용할 수 없으면 CPU로 내려가야 한다. |
-| 195 | `SeparatorDeviceTests.test_explicit_unavailable_cuda_has_clear_error` | 사용할 수 없는 CUDA를 명시하면 한영 안내가 포함된 분리 오류를 내야 한다. |
-| 203 | `SeparatorDeviceTests.test_invalid_preference_is_rejected` | 지원 목록에 없는 장치 이름은 조용히 CPU로 바꾸지 않고 거부해야 한다. |
-| 208 | `SeparatorDeviceTests.test_runtime_status_reports_gpu_build_memory_and_resolution` | 개발자 진단이 CUDA 빌드·GPU·VRAM·연산 능력과 실제 장치를 모두 보여야 한다. |
-| 230 | `SeparatorDeviceTests.test_runtime_status_keeps_explicit_cuda_failure_visible` | 진단 화면에서는 명시적 CUDA 실패를 숨기지 않고 오류 설명으로 보존해야 한다. |
-| 245 | `SeparatorDeviceTests.test_cuda_separation_uses_inference_mode_and_reports_timings` | CUDA 분리가 추론 문맥·메모리 정리를 사용하고 결과 진단에 실행 시간을 남겨야 한다. |
-| 295 | `SeparatorProgressTests.test_windowless_download_progress_tracks_bytes_without_standard_streams` | stdout·stderr가 None인 GUI 환경에서도 실제 다운로드량이 표시되어야 한다. |
-| 307 | `SeparatorProgressTests.test_unknown_download_total_does_not_invent_percentage` | 총 파일 크기를 모를 때는 수신 바이트만 표시하고 단계값을 올리지 않아야 한다. |
-| 316 | `SeparatorProgressTests.test_download_cancellation_uses_supported_interrupt` | 다운로드 콜백 취소는 Hugging Face가 정리하는 KeyboardInterrupt로 전달되어야 한다. |
-| 323 | `SeparatorProgressTests.test_segment_events_update_inside_first_chunk` | 30초 조각 하나가 끝나기 전에도 내부 분할 완료마다 진행률이 증가해야 한다. |
-| 338 | `SeparatorProgressTests.test_cancel_between_internal_segments_removes_partial_file` | 내부 블록 완료 후 취소하면 다음 블록 전에 멈추고 미완성 stem을 제거해야 한다. |
-| 352 | `SeparatorProgressTests.test_cancel_before_model_import_leaves_output_absent` | 시작 전 취소 요청은 모델 다운로드나 출력 파일 생성 전에 처리되어야 한다. |
-| 363 | `SeparatorProgressTests.test_model_failure_preserves_type_and_does_not_claim_network_failure` | 일반 모델 초기화 오류의 원인을 그대로 남기고 인터넷 연결 문제로 단정하지 않아야 한다. |
-| 368 | `SeparatorProgressTests.test_model_failure_preserves_type_and_does_not_claim_network_failure.<local>.FailingSeparator.__init__` | 상속된 로딩 지점을 호출해 오류 변환 경로를 검증한다. |
-| 385 | `SeparatorProgressTests.test_model_error_classification_uses_exception_chain` | 상위 래퍼가 있어도 네트워크·캐시·메모리의 구체적인 예외 원인을 찾아야 한다. |
-| 395 | `SeparatorProgressTests.test_multimodel_progress_ignores_duplicates_and_waits_for_every_model` | 여러 모델의 겹침 블록은 중복 집계하지 않고 모든 모델 완료 후에만 끝나야 한다. |
-| 413 | `SeparatorProgressTests.test_hf_loader_uses_complete_cache_without_network_download` | 캐시가 완전하면 YAML·가중치를 네트워크 호출 없이 읽고 로딩 단계를 알려야 한다. |
-| 441 | `SeparatorProgressTests.test_hf_loader_downloads_missing_file_with_progress_class` | 가중치 캐시가 없을 때만 다운로드를 수행하고 공식 tqdm 확장 인자를 넘겨야 한다. |
-| 473 | `SeparatorProgressTests.test_hf_loader_preserves_network_failure_without_legacy_fallback` | HF 연결 실패가 legacy 다운로드의 stdout 예외로 덮이지 않고 그대로 전달되어야 한다. |
-| 490 | `SeparatorProgressTests.test_installed_demucs_api_accepts_progress_model_loader_override` | 설치된 실제 Demucs API에서 로더 주입·샘플레이트·콜백 인자가 호환되어야 한다. |
-| 499 | `SeparatorProgressTests.test_installed_demucs_api_accepts_progress_model_loader_override.<local>.mocked_inference` | 실제 API의 초기화 결과를 검증하고 모델 연산 없이 입력을 되돌린다. |
+| 162 | `_FakeSixStemSeparator.__init__` | 고정 6-stem 모델 정보와 진행 콜백을 준비한다. |
+| 172 | `_FakeSixStemSeparator.separate_tensor` | 각 stem을 구별할 수 있도록 입력에 서로 다른 배율을 적용한다. |
+| 185 | `_FakeFiveStemSeparator.__init__` | 6-stem 초기화 뒤 모델 소스 목록에서 piano를 제거한다. |
+| 191 | `_write_test_wav` | 분리 진행률·취소 검증용으로 짧은 비무음 스테레오 PCM 파일을 만든다. |
+| 201 | `_fake_separation_modules` | 분리기 생성과 콜백 테스트에 쓸 가상 Demucs·PyTorch 모듈을 묶는다. |
+| 210 | `_fake_torch` | 장치 결정과 런타임 진단에 필요한 최소 PyTorch 모듈을 만든다. |
+| 218 | `SeparatorDeviceTests.test_cpu_preference_always_resolves_to_cpu` | CUDA가 있어도 명시적 CPU 설정은 CPU를 유지해야 한다. |
+| 222 | `SeparatorDeviceTests.test_auto_prefers_cuda_and_falls_back_to_cpu` | 자동 설정은 CUDA를 우선하고 사용할 수 없으면 CPU로 내려가야 한다. |
+| 227 | `SeparatorDeviceTests.test_explicit_unavailable_cuda_has_clear_error` | 사용할 수 없는 CUDA를 명시하면 한영 안내가 포함된 분리 오류를 내야 한다. |
+| 235 | `SeparatorDeviceTests.test_invalid_preference_is_rejected` | 지원 목록에 없는 장치 이름은 조용히 CPU로 바꾸지 않고 거부해야 한다. |
+| 240 | `SeparatorDeviceTests.test_runtime_status_reports_gpu_build_memory_and_resolution` | 개발자 진단이 CUDA 빌드·GPU·VRAM·연산 능력과 실제 장치를 모두 보여야 한다. |
+| 262 | `SeparatorDeviceTests.test_runtime_status_keeps_explicit_cuda_failure_visible` | 진단 화면에서는 명시적 CUDA 실패를 숨기지 않고 오류 설명으로 보존해야 한다. |
+| 277 | `SeparatorDeviceTests.test_cuda_separation_uses_inference_mode_and_reports_timings` | CUDA 분리가 추론 문맥·메모리 정리를 사용하고 결과 진단에 실행 시간을 남겨야 한다. |
+| 327 | `SeparatorMultiStemTests.test_selected_stems_are_streamed_as_independent_stereo_arrays` | 요청한 guitar·piano 배열과 6-stem 진단을 한 조각 콜백으로 반환해야 한다. |
+| 351 | `SeparatorMultiStemTests.test_model_missing_any_of_six_sources_is_rejected_before_inference` | htdemucs_6s라고 해도 필수 소스가 빠졌으면 부분 결과를 사용하지 않아야 한다. |
+| 362 | `SeparatorMultiStemTests.test_unknown_or_empty_stem_requests_are_rejected_without_model_loading` | 잘못된 요청은 모델 다운로드·초기화 전에 명확히 실패해야 한다. |
+| 373 | `SeparatorMultiStemTests.test_converted_stem_owns_its_samples_and_rejects_nonfinite_values` | 콜백이 보관한 배열은 원래 텐서 변경과 독립적이며 유효한 샘플만 포함한다. |
+| 383 | `SeparatorMultiStemTests.test_truncated_wav_is_rejected_instead_of_reporting_full_duration` | WAV 헤더가 실제 데이터보다 길면 일부 조각만 처리한 결과를 성공으로 보고하지 않는다. |
+| 395 | `SeparatorMultiStemTests.test_multichunk_tail_keeps_every_input_frame` | 마지막 짧은 조각도 버리거나 늘리지 않고 입력과 같은 길이로 전달해야 한다. |
+| 414 | `SeparatorProgressTests.test_windowless_download_progress_tracks_bytes_without_standard_streams` | stdout·stderr가 None인 GUI 환경에서도 실제 다운로드량이 표시되어야 한다. |
+| 426 | `SeparatorProgressTests.test_unknown_download_total_does_not_invent_percentage` | 총 파일 크기를 모를 때는 수신 바이트만 표시하고 단계값을 올리지 않아야 한다. |
+| 435 | `SeparatorProgressTests.test_download_cancellation_uses_supported_interrupt` | 다운로드 콜백 취소는 Hugging Face가 정리하는 KeyboardInterrupt로 전달되어야 한다. |
+| 442 | `SeparatorProgressTests.test_segment_events_update_inside_first_chunk` | 30초 조각 하나가 끝나기 전에도 내부 분할 완료마다 진행률이 증가해야 한다. |
+| 457 | `SeparatorProgressTests.test_cancel_between_internal_segments_removes_partial_file` | 내부 블록 완료 후 취소하면 다음 블록 전에 멈추고 미완성 stem을 제거해야 한다. |
+| 471 | `SeparatorProgressTests.test_cancel_before_model_import_leaves_output_absent` | 시작 전 취소 요청은 모델 다운로드나 출력 파일 생성 전에 처리되어야 한다. |
+| 482 | `SeparatorProgressTests.test_model_failure_preserves_type_and_does_not_claim_network_failure` | 일반 모델 초기화 오류의 원인을 그대로 남기고 인터넷 연결 문제로 단정하지 않아야 한다. |
+| 487 | `SeparatorProgressTests.test_model_failure_preserves_type_and_does_not_claim_network_failure.<local>.FailingSeparator.__init__` | 상속된 로딩 지점을 호출해 오류 변환 경로를 검증한다. |
+| 504 | `SeparatorProgressTests.test_model_error_classification_uses_exception_chain` | 상위 래퍼가 있어도 네트워크·캐시·메모리의 구체적인 예외 원인을 찾아야 한다. |
+| 514 | `SeparatorProgressTests.test_multimodel_progress_ignores_duplicates_and_waits_for_every_model` | 여러 모델의 겹침 블록은 중복 집계하지 않고 모든 모델 완료 후에만 끝나야 한다. |
+| 532 | `SeparatorProgressTests.test_hf_loader_uses_complete_cache_without_network_download` | 캐시가 완전하면 YAML·가중치를 네트워크 호출 없이 읽고 로딩 단계를 알려야 한다. |
+| 560 | `SeparatorProgressTests.test_hf_loader_downloads_missing_file_with_progress_class` | 가중치 캐시가 없을 때만 다운로드를 수행하고 공식 tqdm 확장 인자를 넘겨야 한다. |
+| 592 | `SeparatorProgressTests.test_hf_loader_preserves_network_failure_without_legacy_fallback` | HF 연결 실패가 legacy 다운로드의 stdout 예외로 덮이지 않고 그대로 전달되어야 한다. |
+| 609 | `SeparatorProgressTests.test_installed_demucs_api_accepts_progress_model_loader_override` | 설치된 실제 Demucs API에서 로더 주입·샘플레이트·콜백 인자가 호환되어야 한다. |
+| 618 | `SeparatorProgressTests.test_installed_demucs_api_accepts_progress_model_loader_override.<local>.mocked_inference` | 실제 API의 초기화 결과를 검증하고 모델 연산 없이 입력을 되돌린다. |
 
 ## `tests/test_spectrum.py`
 
@@ -513,68 +574,139 @@
 | 218 | `SpectrumSmootherTests.test_reset_and_frequency_grid_change_clear_history` | 명시적 초기화와 서로 다른 주파수 격자는 이전 프레임을 섞지 않아야 한다. |
 | 238 | `SpectrumSmootherTests.test_history_copies_frames_and_rejects_invalid_values` | 호출자 배열 변경은 이력에 소급되지 않고 잘못된 프레임은 거부돼야 한다. |
 
+## `tests/test_stem_removal.py`
+
+| 줄 | 함수 | 설명 |
+|---:|---|---|
+| 25 | `_write_source` | 경로 검증에 사용할 작은 입력 파일을 만든다. |
+| 30 | `_fake_decode` | FFmpeg 없이 분리기에 전달할 최소 stereo PCM 파일을 만든다. |
+| 48 | `_separation_info` | 공개 결과 사전에 옮겨지는 가상 분리 진단 정보를 만든다. |
+| 70 | `_fake_chunk_separator` | 한 번의 모델 실행에서 결정론적인 6-stem 조각을 전달하는 가짜 함수를 만든다. |
+| 77 | `_fake_chunk_separator.<local>.run` | 선택된 stem의 결정론적인 조각을 콜백에 전달하고 가상 진단을 반환한다. |
+| 105 | `_read_pcm` | 결과 WAV의 float 환산 샘플과 기본 PCM 형식을 읽는다. |
+| 118 | `StemRemovalMixTests.test_selected_stems_are_removed_in_one_pass_and_result_is_json_safe` | 기타·피아노를 제외한 네 stem의 정확한 합을 새 PCM16 WAV로 기록해야 한다. |
+| 144 | `StemRemovalMixTests.test_clipping_mix_is_normalized_once_without_changing_balance` | 남은 stem 합이 0 dBFS를 넘을 때만 동일 게인으로 낮춰 클리핑을 막아야 한다. |
+| 161 | `StemRemovalMixTests.test_progress_is_monotonic_and_finishes_at_one_hundred` | 디코딩·분리·출력 진행률은 뒤로 가지 않고 성공 시 100으로 끝나야 한다. |
+| 166 | `StemRemovalMixTests.test_progress_is_monotonic_and_finishes_at_one_hundred.<local>.decode_with_progress` | 실제 디코더와 같은 3·12 진행 이벤트를 기록한다. |
+| 194 | `StemRemovalSafetyTests.test_dangling_destination_entry_is_not_followed` | 존재 여부는 링크 대상이 아니라 지정한 파일 이름 자체에서 검사해야 한다. |
+| 206 | `StemRemovalSafetyTests.test_invalid_stem_selections_are_rejected_before_processing` | 빈 목록·알 수 없는 이름·전체 제거는 유용한 출력이 없어 거부해야 한다. |
+| 217 | `StemRemovalSafetyTests.test_source_and_existing_destination_are_never_overwritten` | 원본과 기존 사용자 파일을 출력 대상으로 지정해도 바이트가 바뀌지 않아야 한다. |
+| 231 | `StemRemovalSafetyTests.test_non_wav_destination_and_short_or_invalid_ranges_are_rejected` | 출력 형식과 3초 미만·역방향·비정상 시간은 FFmpeg 실행 전에 실패해야 한다. |
+| 244 | `StemRemovalSafetyTests.test_request_is_capped_at_twenty_minutes_and_parent_is_created` | 긴 끝 시간은 20분으로 제한하고 명시한 새 출력 폴더를 안전하게 만들어야 한다. |
+| 249 | `StemRemovalSafetyTests.test_request_is_capped_at_twenty_minutes_and_parent_is_created.<local>.capture_decode` | 디코더로 전달된 제한 시간을 기록한다. |
+| 265 | `StemRemovalSafetyTests.test_cancellation_removes_partial_output_and_preserves_no_final_file` | 첫 합산 조각 뒤 취소되어도 최종·partial WAV가 남지 않아야 한다. |
+| 269 | `StemRemovalSafetyTests.test_cancellation_removes_partial_output_and_preserves_no_final_file.<local>.cancelling_separator` | 한 조각을 전달한 뒤 Demucs 취소 예외를 발생시킨다. |
+| 288 | `StemRemovalSafetyTests.test_output_failure_removes_the_adjacent_partial_file` | PCM 기록 실패 시 같은 폴더의 partial 파일을 지우고 최종 파일을 만들지 않아야 한다. |
+| 305 | `StemRemovalSafetyTests.test_destination_race_uses_atomic_create_and_preserves_the_new_file` | 처리 도중 같은 목적지가 생겨도 원자적 확정 연산이 이를 덮어쓰지 않아야 한다. |
+| 330 | `StemRemovalSafetyTests.test_windows_commit_needs_no_hard_links_and_refuses_existing_file` | Windows에서는 하드 링크를 지원하지 않는 저장소에도 기존 파일 보호를 유지한다. |
+| 346 | `StemRemovalSafetyTests.test_temporary_cleanup_finishes_before_final_output_is_committed` | 임시 오디오 정리에 실패하면 저장 성공을 실패로 뒤집거나 최종 파일을 남기지 않는다. |
+| 351 | `StemRemovalSafetyTests.test_temporary_cleanup_finishes_before_final_output_is_committed.<local>.cleanup_fails_after_removing_files` | 실제 임시 파일을 정리한 뒤 파일 시스템 오류를 흉내 낸다. |
+| 370 | `StemRemovalSafetyTests.test_final_progress_callback_failure_does_not_hide_saved_output` | 결과 확정 이후 UI 알림 오류가 나도 이미 저장한 파일과 성공 결과를 유지한다. |
+| 374 | `StemRemovalSafetyTests.test_final_progress_callback_failure_does_not_hide_saved_output.<local>.failing_completion` | 완료 이벤트 처리에서만 예외를 발생시킨다. |
+| 392 | `StemRemovalSafetyTests.test_cancellation_during_wav_write_removes_adjacent_partial` | 합산 완료 뒤 WAV 저장 중 취소도 미완성 출력과 최종 파일을 모두 남기지 않는다. |
+| 397 | `StemRemovalSafetyTests.test_cancellation_during_wav_write_removes_adjacent_partial.<local>.cancel_while_writing` | PCM 블록 기록이 시작되면 취소 상태로 바꾼다. |
+| 417 | `StemRemovalSafetyTests.test_finite_stem_sum_cannot_overflow_the_float32_temporary_mix` | 비정상적으로 큰 유한 모델 출력도 float32 무한대로 저장되기 전에 거부한다. |
+| 431 | `StemRemovalSafetyTests.test_parent_creation_error_respects_the_requested_language` | 출력 폴더 생성 오류는 영어 UI에서 영어 문장을 먼저 보여야 한다. |
+| 448 | `StemRemovalDecodeTests.test_bundled_ffmpeg_decodes_selected_segment_to_stereo_pcm16` | 모노 48kHz 입력의 선택 구간은 정확한 44.1kHz 스테레오 PCM16이 되어야 한다. |
+| 464 | `StemRemovalDecodeTests.test_invalid_input_leaves_no_decoded_output` | 디코딩할 수 없는 파일은 명확한 오류를 주고 임시 WAV를 남기지 않는다. |
+
+## `tests/test_stem_removal_ui.py`
+
+| 줄 | 함수 | 설명 |
+|---:|---|---|
+| 26 | `hidden_application` | 장치 검사·예약 콜백을 막은 숨은 최소 크기 앱을 테스트에 제공한다. |
+| 55 | `StemRemovalLayoutTests.test_every_stem_control_fits_canvas_width_in_both_languages` | 최소 창에서 파일 버튼·여섯 선택 항목·범위·가속 입력이 가로로 잘리지 않아야 한다. |
+| 107 | `StemRemovalLayoutTests.test_outer_workspace_keeps_existing_result_tabs_uncluttered_at_960x600` | 악기 제거는 상위 작업 탭에 두고 긴 폼은 내부 스크롤로 접근 가능해야 한다. |
+| 143 | `StemRemovalLayoutTests.test_language_rebuild_preserves_stem_form_result_and_selected_workspace` | 한영 전환이 경로·제거 선택·결과와 현재 악기 제거 탭을 잃지 않아야 한다. |
+| 190 | `StemRemovalValidationTests.test_validation_blocks_unsafe_paths_and_invalid_stem_counts` | 원본·기존 출력 덮어쓰기와 0개·6개 선택을 코어 호출 전에 거부해야 한다. |
+| 227 | `StemRemovalValidationTests.test_valid_request_clamps_explicit_range_to_twenty_minutes` | 유효한 새 WAV 요청은 안정적인 stem 코드와 최대 20분 범위로 전달돼야 한다. |
+| 252 | `StemRemovalWorkerTests.test_worker_only_queues_progress_and_main_thread_renders_result` | 모델 작업자는 Tk를 만지지 않고 메인 이벤트 처리 뒤에만 화면을 바꿔야 한다. |
+| 310 | `StemRemovalWorkerTests.test_start_cancel_and_every_other_long_task_are_mutually_exclusive` | 악기 제거와 분석·녹음·스펙트럼·하드웨어 검사가 동시에 시작되지 않아야 한다. |
+| 353 | `StemRemovalWorkerTests.test_cancel_event_is_silent_and_close_signals_stem_worker` | 사용자 취소는 오류 팝업을 띄우지 않고 창 닫기도 같은 취소 신호를 보내야 한다. |
+| 373 | `StemRemovalWorkerTests.test_finished_worker_stays_busy_until_ui_applies_terminal_event` | 완료 큐를 읽기 전 새 작업이 이전 결과에 덮이는 경쟁을 막아야 한다. |
+| 390 | `StemRemovalWorkerTests.test_close_waits_for_worker_cleanup_without_processing_late_ui_events` | 창을 숨긴 뒤 작업자의 임시 파일 정리가 끝나야 프로세스가 종료돼야 한다. |
+| 414 | `StemRemovalTranslationTests.test_core_stem_labels_and_safety_notices_are_bilingual` | 버튼·악기명·로컬 처리·실험 한계가 어느 언어에서도 키로 노출되면 안 된다. |
+
 ## `tests/test_native_dsp.py`
 
 | 줄 | 함수 | 설명 |
 |---:|---|---|
-| 28 | `_signal` | 사인과 약한 광대역 성분이 섞인 재현 가능한 PCM을 만든다. |
-| 37 | `_assert_frame` | 독립 FFT 구현의 반올림을 허용하며 모든 공개 프레임 값을 비교한다. |
-| 51 | `PythonStreamingTests.test_arbitrary_chunks_match_every_complete_fft_window` | 부분 블록을 잃지 않고 완성된 모든 구간을 순서대로 평활화해야 한다. |
-| 73 | `PythonStreamingTests.test_partial_buffer_copies_input_and_reset_clears_it` | 호출자 배열 수정이나 reset 이전 부분 데이터가 다음 구간에 섞이면 안 된다. |
-| 90 | `PythonStreamingTests.test_close_is_idempotent_and_rejects_future_work` | 중복 close는 안전하지만 닫힌 엔진의 push와 reset은 거부해야 한다. |
-| 101 | `PythonStreamingTests.test_invalid_shapes_and_types_do_not_consume_pending_pcm` | 잘못된 PCM을 거부한 뒤에도 이미 모은 유효 부분 블록을 보존해야 한다. |
-| 116 | `PythonStreamingTests.test_oversized_block_is_rejected_before_contiguous_allocation` | 큰 broadcast 배열은 C ABI 상한 검사로 즉시 거부하고 부분 PCM을 보존해야 한다. |
-| 136 | `NativeSelectionTests.test_auto_missing_library_falls_back_and_explicit_cpp_fails` | 자동 선택만 DLL 실패를 NumPy로 대체하고 명시적 C++ 요청은 오류를 알려야 한다. |
-| 147 | `NativeSelectionTests.test_unsupported_native_fft_retains_general_numpy_support` | 기존 NumPy가 허용하는 홀수 FFT 설정은 자동 대체 후에도 사용할 수 있어야 한다. |
-| 158 | `NativeSelectionTests.test_explicit_numpy_does_not_load_native_library` | 명시적 NumPy 선택은 DLL 검색과 로드를 전혀 수행하지 않아야 한다. |
-| 167 | `NativeSelectionTests.test_common_invalid_configurations_are_not_silently_repaired` | 불리언·빈 주파수 구간 등 공통 입력 오류는 자동 모드에서도 거부해야 한다. |
-| 182 | `NativeSelectionTests.test_dll_search_uses_only_absolute_trusted_resource_paths` | 검색 후보는 모듈 또는 동결 번들의 resources 안에만 있어야 한다. |
-| 194 | `NativeSelectionTests.test_load_errors_do_not_expose_private_paths` | 운영체제 로더의 개인 경로는 공개 런타임 진단에 복사하지 않아야 한다. |
-| 209 | `NativeSelectionTests.test_abi_mismatch_and_missing_symbols_are_rejected` | 다른 ABI 또는 불완전한 내보내기를 가진 DLL을 사용하지 않아야 한다. |
-| 226 | `NativeSelectionTests.test_failed_native_output_initialization_releases_context_once` | 컨텍스트 생성 후 잘못된 bin 수나 짧은 격자 복사는 핸들을 한 번만 해제해야 한다. |
-| 246 | `NativeParityTests.test_native_runtime_reports_verified_abi` | 빌드된 DLL은 fallback이 아닌 실제 C++ ABI로 보고되어야 한다. |
-| 254 | `NativeParityTests.test_multichannel_rates_history_and_multiple_windows_match_numpy` | 여러 설정과 임의 블록 경계에서도 native와 NumPy 결과가 일치해야 한다. |
-| 276 | `NativeParityTests.test_extreme_supported_configurations_and_history_rollover_match` | 최대 FFT·채널·평활 이력 경계와 순환 이력 교체 이후의 수치를 비교한다. |
-| 296 | `NativeParityTests.test_dc_nyquist_clipping_and_noncontiguous_pcm_match` | DC 제거·Nyquist 보정·클리핑·비연속 배열을 같은 의미로 처리해야 한다. |
-| 315 | `NativeParityTests.test_c_abi_invalid_creation_null_handles_and_frequency_capacity` | 직접 C ABI에서도 설정 상한·NULL 및 주파수 출력 용량을 안전하게 검사해야 한다. |
-| 357 | `NativeParityTests.test_c_abi_rejections_do_not_mutate_pending_history_or_outputs` | 부족한 용량·NULL·프레임 상한 오류는 누적 입력과 이력 및 출력 경계를 보존해야 한다. |
-| 409 | `NativeParityTests.test_antiphase_silence_floor_and_nonfinite_normalization_match` | 역상·무음·표시 하한 및 비유한 PCM 처리는 기존 DSP와 같아야 한다. |
-| 426 | `NativeParityTests.test_bin_sine_has_calibrated_levels_and_crest` | 정확한 FFT bin 사인파의 RMS·Peak 및 약 3.01 dB 크레스트를 보존해야 한다. |
-| 439 | `NativeParityTests.test_output_ownership_partial_copy_and_reset` | 반환 프레임과 부분 PCM은 후속 호출·입력 수정·reset에 소급 변경되지 않아야 한다. |
-| 461 | `NativeParityTests.test_invalid_input_does_not_change_state_and_close_is_safe` | 입력 검증 실패는 누적 상태를 보존하고 닫힌 컨텍스트는 다시 진입하지 않아야 한다. |
-| 478 | `NativeParityTests.test_concurrent_close_and_push_are_serialized` | ctypes가 GIL을 해제해도 close와 push가 같은 native handle에서 경합하면 안 된다. |
-| 483 | `NativeParityTests.test_concurrent_close_and_push_are_serialized.<local>.feed` | 종료 시점까지 짧은 PCM을 공급하고 명시적인 닫힘 오류만 허용한다. |
+| 29 | `_signal` | 사인과 약한 광대역 성분이 섞인 재현 가능한 PCM을 만든다. |
+| 38 | `_assert_frame` | 독립 FFT 구현의 반올림을 허용하며 모든 공개 프레임 값을 비교한다. |
+| 52 | `InputPreparationTests.test_aligned_contiguous_float32_does_not_allocate_input_sized_copy` | 캡처의 native float32 배열은 읽기 전용인 경우에도 같은 메모리로 전달한다. |
+| 66 | `InputPreparationTests.test_strided_and_unaligned_float32_are_copied_to_safe_layout` | stride와 정렬이 맞지 않는 float32는 정밀도를 유지하며 안전한 배열로 준비한다. |
+| 81 | `InputPreparationTests.test_other_dtypes_and_non_native_endian_keep_double_conversion` | 기존 float64 정밀도를 낮추지 않고 다른 dtype도 기존 double 경로로 보낸다. |
+| 99 | `PythonStreamingTests.test_arbitrary_chunks_match_every_complete_fft_window` | 부분 블록을 잃지 않고 완성된 모든 구간을 순서대로 평활화해야 한다. |
+| 121 | `PythonStreamingTests.test_partial_buffer_copies_input_and_reset_clears_it` | 호출자 배열 수정이나 reset 이전 부분 데이터가 다음 구간에 섞이면 안 된다. |
+| 138 | `PythonStreamingTests.test_close_is_idempotent_and_rejects_future_work` | 중복 close는 안전하지만 닫힌 엔진의 push와 reset은 거부해야 한다. |
+| 151 | `PythonStreamingTests.test_stream_counters_track_partial_multiple_windows_reset_and_ownership` | 입력 수와 실제 완성 창 수는 반환 프레임 수와 구분하고 reset에서 함께 비운다. |
+| 173 | `PythonStreamingTests.test_counter_overflow_preserves_pending_history_and_statistics` | 거대한 실행 없이 uint64 카운터 경계를 설정해 overflow 사전 거부를 검증한다. |
+| 197 | `PythonStreamingTests.test_invalid_shapes_and_types_do_not_consume_pending_pcm` | 잘못된 PCM을 거부한 뒤에도 이미 모은 유효 부분 블록을 보존해야 한다. |
+| 212 | `PythonStreamingTests.test_oversized_block_is_rejected_before_contiguous_allocation` | 큰 broadcast 배열은 C ABI 상한 검사로 즉시 거부하고 부분 PCM을 보존해야 한다. |
+| 232 | `NativeSelectionTests.test_auto_missing_library_falls_back_and_explicit_cpp_fails` | 자동 선택만 DLL 실패를 NumPy로 대체하고 명시적 C++ 요청은 오류를 알려야 한다. |
+| 243 | `NativeSelectionTests.test_unsupported_native_fft_retains_general_numpy_support` | 기존 NumPy가 허용하는 홀수 FFT 설정은 자동 대체 후에도 사용할 수 있어야 한다. |
+| 254 | `NativeSelectionTests.test_explicit_numpy_does_not_load_native_library` | 명시적 NumPy 선택은 DLL 검색과 로드를 전혀 수행하지 않아야 한다. |
+| 263 | `NativeSelectionTests.test_common_invalid_configurations_are_not_silently_repaired` | 불리언·빈 주파수 구간 등 공통 입력 오류는 자동 모드에서도 거부해야 한다. |
+| 278 | `NativeSelectionTests.test_dll_search_uses_only_absolute_trusted_resource_paths` | 검색 후보는 모듈 또는 동결 번들의 resources 안에만 있어야 한다. |
+| 290 | `NativeSelectionTests.test_load_errors_do_not_expose_private_paths` | 운영체제 로더의 개인 경로는 공개 런타임 진단에 복사하지 않아야 한다. |
+| 305 | `NativeSelectionTests.test_abi_mismatch_and_missing_symbols_are_rejected` | 다른 ABI 또는 불완전한 내보내기를 가진 DLL을 사용하지 않아야 한다. |
+| 322 | `NativeSelectionTests.test_failed_native_output_initialization_releases_context_once` | 컨텍스트 생성 후 잘못된 bin 수나 짧은 격자 복사는 핸들을 한 번만 해제해야 한다. |
+| 337 | `NativeSelectionTests.test_abi_one_library_is_explicitly_rejected_and_auto_uses_numpy` | ABI 1 DLL에 새 함수를 호출하지 않고 strict 오류와 자동 대체를 구분한다. |
+| 359 | `NativeSelectionTests.test_abi_two_library_requires_all_new_symbols` | ABI 번호만 올리고 float32·통계 함수를 누락한 DLL도 안전하게 거부한다. |
+| 381 | `NativeParityTests.test_native_runtime_reports_verified_abi` | 빌드된 DLL은 fallback이 아닌 실제 C++ ABI로 보고되어야 한다. |
+| 389 | `NativeParityTests.test_float32_direct_pointer_and_caller_pcm_are_preserved` | 정렬된 float32는 원본 포인터를 사용하고 C++ 정규화는 호출자 PCM을 바꾸지 않는다. |
+| 410 | `NativeParityTests.test_float32_layouts_and_mixed_precision_stream_match_numpy` | 부분 창 사이 dtype 전환과 endian·정렬·stride의 차이가 같은 수치를 내야 한다. |
+| 440 | `NativeParityTests.test_stream_counters_reset_query_ownership_and_close` | 실제 native 누적량은 완성 창 여러 개와 꼬리를 세고 조회 결과를 재사용하지 않는다. |
+| 463 | `NativeParityTests.test_float32_c_abi_rejections_stats_capacity_and_mixed_pushes` | 새 C 진입점도 모든 사전 거부에서 PCM·이력·카운터·출력 경계를 보존해야 한다. |
+| 524 | `NativeParityTests.test_multichannel_rates_history_and_multiple_windows_match_numpy` | 여러 설정과 임의 블록 경계에서도 native와 NumPy 결과가 일치해야 한다. |
+| 546 | `NativeParityTests.test_extreme_supported_configurations_and_history_rollover_match` | 최대 FFT·채널·평활 이력 경계와 순환 이력 교체 이후의 수치를 비교한다. |
+| 566 | `NativeParityTests.test_dc_nyquist_clipping_and_noncontiguous_pcm_match` | DC 제거·Nyquist 보정·클리핑·비연속 배열을 같은 의미로 처리해야 한다. |
+| 585 | `NativeParityTests.test_c_abi_invalid_creation_null_handles_and_frequency_capacity` | 직접 C ABI에서도 설정 상한·NULL 및 주파수 출력 용량을 안전하게 검사해야 한다. |
+| 627 | `NativeParityTests.test_c_abi_rejections_do_not_mutate_pending_history_or_outputs` | 부족한 용량·NULL·프레임 상한 오류는 누적 입력과 이력 및 출력 경계를 보존해야 한다. |
+| 679 | `NativeParityTests.test_antiphase_silence_floor_and_nonfinite_normalization_match` | 역상·무음·표시 하한 및 비유한 PCM 처리는 기존 DSP와 같아야 한다. |
+| 696 | `NativeParityTests.test_bin_sine_has_calibrated_levels_and_crest` | 정확한 FFT bin 사인파의 RMS·Peak 및 약 3.01 dB 크레스트를 보존해야 한다. |
+| 709 | `NativeParityTests.test_output_ownership_partial_copy_and_reset` | 반환 프레임과 부분 PCM은 후속 호출·입력 수정·reset에 소급 변경되지 않아야 한다. |
+| 731 | `NativeParityTests.test_invalid_input_does_not_change_state_and_close_is_safe` | 입력 검증 실패는 누적 상태를 보존하고 닫힌 컨텍스트는 다시 진입하지 않아야 한다. |
+| 748 | `NativeParityTests.test_concurrent_close_and_push_are_serialized` | ctypes가 GIL을 해제해도 close와 push가 같은 native handle에서 경합하면 안 된다. |
+| 753 | `NativeParityTests.test_concurrent_close_and_push_are_serialized.<local>.feed` | 종료 시점까지 짧은 PCM을 공급하고 명시적인 닫힘 오류만 허용한다. |
 
 ## `tests/test_native_integration.py`
 
 | 줄 | 함수 | 설명 |
 |---:|---|---|
 | 27 | `_application` | Tk 창이나 오디오 장치 없이 작업자와 이벤트에 필요한 최소 앱 상태를 만든다. |
-| 46 | `_events` | 작업자 이벤트를 순서대로 회수해 중복 종료와 잘못된 갱신을 검사한다. |
-| 57 | `NativeWorkerIntegrationTests.test_actual_cpp_auto_factory_receives_mock_capture_stream` | 실제 DLL과 자동 선택 경로를 통과한 합성 캡처 스트림이 NumPy 기준과 같아야 한다. |
-| 72 | `NativeWorkerIntegrationTests.test_actual_cpp_auto_factory_receives_mock_capture_stream.<local>.capture` | 실제 장치 접근 없이 역상 PCM을 불규칙한 마지막 블록과 함께 공급한다. |
-| 86 | `NativeWorkerIntegrationTests.test_irregular_blocks_use_one_engine_and_latest_frame_queue` | 작은 PCM 조각이 누적되고 여러 FFT 구간의 최신 결과 하나만 UI 큐에 남아야 한다. |
-| 103 | `NativeWorkerIntegrationTests.test_irregular_blocks_use_one_engine_and_latest_frame_queue.<local>.capture` | 장치 대신 결정론적인 불규칙 PCM 조각을 기존 콜백으로 전달한다. |
-| 124 | `NativeWorkerIntegrationTests.test_configuration_change_closes_old_engine_and_discards_partial_pcm` | 입력 채널과 표본율이 바뀌면 이전 부분 PCM을 섞지 않고 새 컨텍스트를 만들어야 한다. |
-| 130 | `NativeWorkerIntegrationTests.test_configuration_change_closes_old_engine_and_discards_partial_pcm.<local>.capture` | 서로 다른 스트림 설정의 합성 블록을 순차적으로 입력한다. |
-| 143 | `NativeWorkerIntegrationTests.test_capture_failure_closes_engine_before_terminal_event` | 캡처 예외에서도 컨텍스트를 해제하고 종료 대신 오류 이벤트 하나만 보내야 한다. |
-| 149 | `NativeWorkerIntegrationTests.test_capture_failure_closes_engine_before_terminal_event.<local>.capture` | 첫 블록 뒤 장치 연결 해제를 흉내 낸다. |
-| 161 | `NativeWorkerIntegrationTests.test_engine_failure_and_close_failure_emit_only_one_error` | DSP 처리와 정리가 모두 실패해도 최초 오류를 보존하고 종료 이벤트를 중복하지 않는다. |
-| 168 | `NativeWorkerIntegrationTests.test_engine_failure_and_close_failure_emit_only_one_error.<local>.capture` | 처리 오류를 유발하는 합성 입력을 캡처 콜백에 보낸다. |
-| 179 | `NativeWorkerIntegrationTests.test_stop_during_push_prevents_late_output_and_frees_engine` | 진행 중인 DSP에서 중지 요청을 받으면 완료 프레임을 UI에 넣지 않고 정리한다. |
-| 184 | `NativeWorkerIntegrationTests.test_stop_during_push_prevents_late_output_and_frees_engine.<local>.push` | DSP 작업 도중 중지 요청이 들어온 상황을 재현한다. |
-| 189 | `NativeWorkerIntegrationTests.test_stop_during_push_prevents_late_output_and_frees_engine.<local>.capture` | 중지 직후 도착한 콜백이 추가 DSP에 진입하지 않는지 검사한다. |
-| 201 | `NativeWorkerIntegrationTests.test_no_pcm_does_not_initialize_dsp` | 첫 PCM 없이 종료된 세션에는 불필요한 네이티브 컨텍스트를 만들지 않는다. |
-| 213 | `NativeBackendDisplayTests.test_backend_event_is_applied_only_on_ui_drain` | 큐에 넣는 동작은 Tk 변수를 건드리지 않고 UI 이벤트 처리에서만 선택을 표시한다. |
-| 222 | `NativeBackendDisplayTests.test_stale_stopping_closed_and_invalid_backend_events_are_ignored` | 이전 세션·중지 이후·창 종료·잘못된 엔진 명칭이 현재 화면을 덮지 않아야 한다. |
-| 235 | `NativeBackendDisplayTests.test_fallback_labels_are_localized_and_do_not_expose_raw_errors` | 대체 경로는 한영의 짧은 범주만 보여 주며 예외 속 개인 경로를 노출하지 않는다. |
-| 249 | `NativeBackendDisplayTests.test_restart_clears_previous_backend_before_first_pcm` | 재시작 후 첫 입력을 받기 전에는 지난 세션의 C++ 사용 표시를 남기지 않는다. |
-| 275 | `NativeSelfTestIntegrationTests.test_self_test_reports_explicit_fallback_without_claiming_native_parity` | DLL 없는 소스 실행은 대체 smoke를 검사하되 네이티브 동등성 통과라고 쓰지 않는다. |
-| 287 | `NativeSelfTestIntegrationTests.test_actual_native_self_test_checks_cpp_when_library_is_present` | 실제 DLL이 제공된 환경에서는 자체 진단이 C++ 경로와 NumPy의 수치를 비교한다. |
-| 299 | `NativeSelfTestIntegrationTests.test_developer_block_includes_native_cpp_and_header` | 개발자 DSP 블록에 Python 연결부와 실제 C++ 원문 및 공개 ABI가 포함돼야 한다. |
-| 312 | `NativeBackendLayoutTests.test_backend_labels_fit_minimum_window_without_clipping_heading_or_footer` | 960×600 한영 화면에서 C++와 긴 대체 문구 전체가 제목 및 고정 진행 영역과 함께 보여야 한다. |
-| 361 | `NativeBackendLayoutTests.test_language_rebuild_preserves_last_backend_and_localizes_reason` | 캡처 종료 뒤 언어 전환으로 UI를 다시 만들어도 마지막 엔진과 대체 이유가 보존돼야 한다. |
-| 396 | `NativeBackendLayoutTests.test_failure_status_does_not_only_blame_input_connection` | DSP 오류도 같은 실패 이벤트를 쓰므로 안내가 장치 연결만 원인으로 단정하지 않아야 한다. |
+| 49 | `_events` | 작업자 이벤트를 순서대로 회수해 중복 종료와 잘못된 갱신을 검사한다. |
+| 60 | `NativeWorkerIntegrationTests.test_actual_cpp_auto_factory_receives_mock_capture_stream` | 실제 DLL과 자동 선택 경로를 통과한 합성 캡처 스트림이 NumPy 기준과 같아야 한다. |
+| 75 | `NativeWorkerIntegrationTests.test_actual_cpp_auto_factory_receives_mock_capture_stream.<local>.capture` | 실제 장치 접근 없이 역상 PCM을 불규칙한 마지막 블록과 함께 공급한다. |
+| 92 | `NativeWorkerIntegrationTests.test_irregular_blocks_use_one_engine_and_latest_frame_queue` | 작은 PCM 조각이 누적되고 여러 FFT 구간의 최신 결과 하나만 UI 큐에 남아야 한다. |
+| 109 | `NativeWorkerIntegrationTests.test_irregular_blocks_use_one_engine_and_latest_frame_queue.<local>.capture` | 장치 대신 결정론적인 불규칙 PCM 조각을 기존 콜백으로 전달한다. |
+| 134 | `NativeWorkerIntegrationTests.test_configuration_change_closes_old_engine_and_discards_partial_pcm` | 입력 채널과 표본율이 바뀌면 이전 부분 PCM을 섞지 않고 새 컨텍스트를 만들어야 한다. |
+| 140 | `NativeWorkerIntegrationTests.test_configuration_change_closes_old_engine_and_discards_partial_pcm.<local>.capture` | 서로 다른 스트림 설정의 합성 블록을 순차적으로 입력한다. |
+| 153 | `NativeWorkerIntegrationTests.test_capture_failure_closes_engine_before_terminal_event` | 캡처 예외에서도 컨텍스트를 해제하고 종료 대신 오류 이벤트 하나만 보내야 한다. |
+| 160 | `NativeWorkerIntegrationTests.test_capture_failure_closes_engine_before_terminal_event.<local>.capture` | 첫 블록 뒤 장치 연결 해제를 흉내 낸다. |
+| 172 | `NativeWorkerIntegrationTests.test_engine_failure_and_close_failure_emit_only_one_error` | DSP 처리와 정리가 모두 실패해도 최초 오류를 보존하고 종료 이벤트를 중복하지 않는다. |
+| 179 | `NativeWorkerIntegrationTests.test_engine_failure_and_close_failure_emit_only_one_error.<local>.capture` | 처리 오류를 유발하는 합성 입력을 캡처 콜백에 보낸다. |
+| 190 | `NativeWorkerIntegrationTests.test_stop_during_push_prevents_late_output_and_frees_engine` | 진행 중인 DSP에서 중지 요청을 받으면 완료 프레임을 UI에 넣지 않고 정리한다. |
+| 195 | `NativeWorkerIntegrationTests.test_stop_during_push_prevents_late_output_and_frees_engine.<local>.push` | DSP 작업 도중 중지 요청이 들어온 상황을 재현한다. |
+| 200 | `NativeWorkerIntegrationTests.test_stop_during_push_prevents_late_output_and_frees_engine.<local>.capture` | 중지 직후 도착한 콜백이 추가 DSP에 진입하지 않는지 검사한다. |
+| 212 | `NativeWorkerIntegrationTests.test_no_pcm_does_not_initialize_dsp` | 첫 PCM 없이 종료된 세션에는 불필요한 네이티브 컨텍스트를 만들지 않는다. |
+| 224 | `LiveDspDiagnosticsTests.test_partial_input_reports_stats_and_times_only_push` | FFT 미완성 입력도 진단을 보내며 최초 생성과 통계 조회는 시간에서 제외한다. |
+| 234 | `LiveDspDiagnosticsTests.test_partial_input_reports_stats_and_times_only_push.<local>.clock` | 결정론적인 push 시작·끝 시각을 제공해 측정 범위를 검증한다. |
+| 239 | `LiveDspDiagnosticsTests.test_partial_input_reports_stats_and_times_only_push.<local>.capture` | FFT 창보다 작은 합성 입력 하나만 전달한다. |
+| 259 | `LiveDspDiagnosticsTests.test_diagnostics_snapshot_is_copied_and_queue_stays_bounded` | 작업자 딕셔너리 변경이나 많은 부분 입력이 대기 중 UI 진단을 변조하거나 쌓지 않는다. |
+| 270 | `LiveDspDiagnosticsTests.test_ui_applies_partial_stats_without_drawing_or_duplicate_frame_comparison` | 부분 버퍼의 숫자만 갱신하고 이미 그린 FFT 프레임은 다시 비교하지 않는다. |
+| 286 | `LiveDspDiagnosticsTests.test_stale_stopping_closed_and_finished_stats_are_ignored` | 이전 세션이나 중지·종료 이후 진단이 마지막 정상 측정치를 덮지 않아야 한다. |
+| 300 | `LiveDspDiagnosticsTests.test_diagnostics_text_is_bounded_but_export_keeps_exact_numbers` | 아주 긴 세션과 느린 push는 짧게 표시하되 저장할 원래 숫자는 그대로 유지한다. |
+| 318 | `NativeBackendDisplayTests.test_backend_event_is_applied_only_on_ui_drain` | 큐에 넣는 동작은 Tk 변수를 건드리지 않고 UI 이벤트 처리에서만 선택을 표시한다. |
+| 327 | `NativeBackendDisplayTests.test_stale_stopping_closed_and_invalid_backend_events_are_ignored` | 이전 세션·중지 이후·창 종료·잘못된 엔진 명칭이 현재 화면을 덮지 않아야 한다. |
+| 340 | `NativeBackendDisplayTests.test_fallback_labels_are_localized_and_do_not_expose_raw_errors` | 대체 경로는 한영의 짧은 범주만 보여 주며 예외 속 개인 경로를 노출하지 않는다. |
+| 354 | `NativeBackendDisplayTests.test_restart_clears_previous_backend_before_first_pcm` | 재시작 후 첫 입력을 받기 전에는 지난 세션의 C++ 사용 표시를 남기지 않는다. |
+| 382 | `NativeSelfTestIntegrationTests.test_self_test_reports_explicit_fallback_without_claiming_native_parity` | DLL 없는 소스 실행은 대체 smoke를 검사하되 네이티브 동등성 통과라고 쓰지 않는다. |
+| 397 | `NativeSelfTestIntegrationTests.test_actual_native_self_test_checks_cpp_when_library_is_present` | 실제 DLL이 제공된 환경에서는 자체 진단이 C++ 경로와 NumPy의 수치를 비교한다. |
+| 413 | `NativeSelfTestIntegrationTests.test_developer_block_includes_native_cpp_and_header` | 개발자 DSP 블록에 Python 연결부와 실제 C++ 원문 및 공개 ABI가 포함돼야 한다. |
+| 426 | `NativeBackendLayoutTests.test_backend_labels_fit_minimum_window_without_clipping_heading_or_footer` | 960×600 한영 화면에서 C++와 긴 대체 문구 전체가 제목 및 고정 진행 영역과 함께 보여야 한다. |
+| 482 | `NativeBackendLayoutTests.test_language_rebuild_preserves_last_backend_and_localizes_reason` | 캡처 종료 뒤 언어 전환으로 UI를 다시 만들어도 마지막 엔진과 대체 이유가 보존돼야 한다. |
+| 519 | `NativeBackendLayoutTests.test_failure_status_does_not_only_blame_input_connection` | DSP 오류도 같은 실패 이벤트를 쓰므로 안내가 장치 연결만 원인으로 단정하지 않아야 한다. |
 
 ## `tests/test_voicing_display.py`
 
@@ -638,24 +770,25 @@
 | 줄 | 함수 | 설명 |
 |---:|---|---|
 | 21 | `build` | 고정 버전·대상·최적화 옵션으로 빌드하고 재현용 비식별 메타데이터를 저장한다. |
-| 68 | `main` | 다운로드나 전역 PATH 변경 없이 사용자가 지정한 컴파일러만 실행한다. |
+| 73 | `main` | 다운로드나 전역 PATH 변경 없이 사용자가 지정한 컴파일러만 실행한다. |
 
 ## `tools/verify_native.py`
 
 | 줄 | 함수 | 설명 |
 |---:|---|---|
-| 19 | `verify` | 여러 PCM 종류와 부분 블록 경계에서 실제 native 결과의 최대 오차를 모은다. |
-| 57 | `benchmark` | 생성·캡처를 제외한 동일 float32 PCM의 bridge 포함 push 지연 분포를 측정한다. |
-| 87 | `main` | 네이티브 사용을 강제 검증하고 선택적으로 로컬 벤치마크 JSON을 저장한다. |
+| 19 | `verify_dtype` | 하나의 입력 정밀도에서 실제 native 결과와 누적 카운터를 매 블록 비교한다. |
+| 68 | `verify` | float32 직접 입력과 기존 float64 입력을 실제 ABI 2에서 각각 검증한다. |
+| 82 | `benchmark` | 생성·캡처를 제외한 동일 float32 PCM의 bridge 포함 push 지연 분포를 측정한다. |
+| 123 | `main` | 네이티브 사용을 강제 검증하고 선택적으로 로컬 벤치마크 JSON을 저장한다. |
 
 ## `tools/generate_function_reference.py`
 
 | 줄 | 함수 | 설명 |
 |---:|---|---|
-| 41 | `_function_rows` | 한 소스 파일에서 함수 줄 번호·정규 이름·설명을 소스 순으로 모은다. |
-| 46 | `_function_rows.<local>.walk` | 클래스와 중첩 함수의 이름 경로를 유지하며 AST 본문을 순회한다. |
-| 61 | `generate` | 모든 배포 모듈의 함수 설명을 버전이 적힌 단일 문서로 저장한다. |
-| 85 | `main` | 현재 프로젝트 기준 함수 색인을 기본 파일명으로 생성한다. |
+| 44 | `_function_rows` | 한 소스 파일에서 함수 줄 번호·정규 이름·설명을 소스 순으로 모은다. |
+| 49 | `_function_rows.<local>.walk` | 클래스와 중첩 함수의 이름 경로를 유지하며 AST 본문을 순회한다. |
+| 64 | `generate` | 모든 배포 모듈의 함수 설명을 버전이 적힌 단일 문서로 저장한다. |
+| 88 | `main` | 현재 프로젝트 기준 함수 색인을 기본 파일명으로 생성한다. |
 
 ## `tools/write_manifest.py`
 
@@ -667,4 +800,4 @@
 
 ---
 
-총 함수 수: **521**
+총 함수 수: **639**

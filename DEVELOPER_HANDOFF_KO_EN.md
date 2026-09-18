@@ -1,11 +1,33 @@
-# ToneMatch TMP v0.0.08 — 개발 인수인계 / Developer Handoff
+# ToneMatch TMP v0.0.09 — 개발 인수인계 / Developer Handoff
 
-이 문서는 v0.0.08 포터블 개발 ZIP을 다른 Windows PC나 새 개발 세션에서 이어서 작업하기 위한 기준 문서입니다. 대화 기록이 아니라 압축에 포함된 소스, `QA_REPORT_v0.0.08.json`과 `BUILD_HISTORY.md`가 작업 상태의 근거입니다. 릴리스·빌드 기준일은 2026-09-10 KST입니다. 구현 설명과 검증 완료 여부를 구분하고, 미실행 검증은 QA에서 확인하세요.
+이 문서는 v0.0.09 포터블 개발 ZIP을 다른 Windows PC나 새 개발 세션에서 이어서 작업하기 위한 기준 문서입니다. 압축에 포함된 소스, `QA_REPORT_v0.0.09.json`과 `BUILD_HISTORY.md`가 작업 상태의 근거입니다. 릴리스·빌드 기준일은 2026-09-19 KST이며 서명되지 않은 CPU 포터블 개발자 프리릴리스입니다.
 
-This is the source-of-truth handoff for continuing the v0.0.08 portable development snapshot on another Windows PC or in a new development session. The archived source, `QA_REPORT_v0.0.08.json` and `BUILD_HISTORY.md`, not prior chat history, define the state being handed over. The release/build reference date is 2026-09-10 KST. Feature descriptions are not evidence of completed validation; consult QA for checks not yet performed.
+This handoff describes the v0.0.09 portable development snapshot for another Windows PC or a new development session. The archived source, `QA_REPORT_v0.0.09.json` and `BUILD_HISTORY.md` define its state. The release/build reference date is 2026-09-19 KST. This is an unsigned CPU portable developer prerelease.
 
-> v0.0.08 산출물의 정확한 크기와 해시는 패키징 완료 뒤 `BUILD_HISTORY.md`와 ZIP 옆 `ToneMatchTMP-v0.0.08-SHA256SUMS.txt`를 기준으로 합니다. 문서의 자리표시자를 검증값으로 오인하지 마세요.
-> After packaging, use `BUILD_HISTORY.md` and the sibling `ToneMatchTMP-v0.0.08-SHA256SUMS.txt` as the authority for exact v0.0.08 artifact sizes and hashes. Never treat pending placeholders as verified values.
+2026-09-19 빌드에서 한·영 숨김 UI 회귀를 포함한 자동 테스트 214개(48.577초)를
+경고를 오류로 취급해 통과했고, compileall, 소스·패키지 EXE 자체 진단과 실제 ABI 2
+float32/float64 30개 창 비교도 통과했습니다. 최대 스펙트럼 오차는 `2.1316e-14 dB`입니다.
+
+The 2026-09-19 build passed 214 tests in 48.577 seconds with warnings treated as
+errors, including hidden Korean/English UI regressions, compileall, source and
+packaged EXE self-tests, and 30 actual ABI-2 float32/float64 parity windows
+(maximum spectrum error `2.1316e-14 dB`).
+
+2026-09-16 소스 검증은 제공된 Room 335 음원의 31초 구간에서 기타+피아노 제거를 CPU로 실행했습니다. 2개 조각, 39회 단조 증가 진행률, peak 정규화, 원본 보존과 별도 실제 추론 취소 후 출력·부분 파일 정리를 확인했습니다. 청감 품질 평가는 수행하지 않았습니다.
+
+The 2026-09-16 source check removed guitar and piano from 31 seconds of the supplied Room 335 file on CPU. It verified two chunks, 39 monotonic progress updates, peak normalization, source preservation, and a separate real-inference cancellation with no output or partial files. Listening quality was not assessed.
+
+패키지 GUI는 실행과 악기 제거 탭 열기까지만 확인했고 제거 작업은 실행하지 않았습니다.
+전체 곡 패키지 UI 검증은 사용자 Escape 요청으로 중단하여 미실행으로 기록합니다.
+첫 모델 다운로드·네트워크 차단·CUDA·실제 캡처·청감 품질은 미검증입니다.
+
+The packaged GUI was launched and its Stem removal tab opened; no removal was
+performed there. The planned full-song packaged UI test was stopped by the user's
+Escape request and was not run. First model download, network-disabled operation,
+CUDA hardware, live capture and listening quality were not tested for this release.
+
+> 게시 전 최종 ZIP을 새로 검사해 manifest·소스·DLL·고지·SHA-256 일치를 확인합니다. 배포 ZIP 해시는 형제 파일 `ToneMatchTMP-v0.0.09-SHA256SUMS.txt`, 내부 파일 해시는 `MANIFEST.json`이 기준입니다.
+> Publication requires a fresh final ZIP check of the manifest, source, DLL, notices and SHA-256. The sibling `ToneMatchTMP-v0.0.09-SHA256SUMS.txt` is authoritative for the ZIP hash; `MANIFEST.json` covers its contents.
 
 ---
 
@@ -13,7 +35,7 @@ This is the source-of-truth handoff for continuing the v0.0.08 portable developm
 
 ### 1. 제품 범위와 변하지 않아야 할 계약
 
-- 앱 버전: `0.0.08`
+- 앱 버전: `0.0.09`
 - 대상 장치: Fender Tone Master Pro
 - 대상 펌웨어/모델 가이드: `1.8.58` / `Rev. J (2026-07)`
 - 플랫폼: 64-bit Windows, Python 3.12 계열
@@ -21,6 +43,7 @@ This is the source-of-truth handoff for continuing the v0.0.08 portable developm
 - 길이: 최소 3초, 시작 지점부터 최대 20분. 끝 `0`/빈칸은 전체 항목을 뜻하되 20분에서 제한
 - 풀믹스: Demucs `htdemucs_6s`로 분리한 guitar stem만 톤 특징·Reference·레시피에 사용; 코드 전용 원본 믹스 화성 참고는 별도 경로
 - 기타 단독 파일: 사용자 선택으로 AI 분리 생략
+- 악기 제거: 별도 작업 탭에서 Demucs 6-stem 중 1~5개를 제외하고 나머지를 새 44.1 kHz stereo PCM16 WAV 하나로 합산; 원본·기존 출력 비덮어쓰기
 - 출력: 상위 3개 Tone Master Pro 레시피, JSON, 독립형 HTML, 클립보드 텍스트, 실험적 코드·보이싱 단서, 레벨 정규화 Reference와 실시간 Current의 6밴드·주파수 차이
 - 기기 제어: Tone Master Pro/Pro Control 자동 쓰기 없음. 사용자가 값을 수동 적용
 - 네트워크: 오디오 업로드·YouTube 추출 없음. 앱이 직접 받는 콘텐츠는 첫 AI 모델뿐이며, 참고 URL은 외부 브라우저에 위임
@@ -35,6 +58,8 @@ Neural DSP Quad Cortex, Line 6 Helix Family와 예약 장치 슬롯은 UI 확장
 - `0.0.05`: 선택한 WASAPI 입력/loopback의 원시 파형·20 Hz~20 kHz 로그 스펙트럼·RMS/Peak dBFS·중심 주파수, 채널별 FFT power, 4프레임 평활화와 bounded 최신 프레임 전달
 - `0.0.06`: 분석한 로컬/분리 guitar PCM의 레벨 정규화 Reference 저장, 기존 실시간 모니터를 Current로 재사용, 6밴드와 주파수별 `Δ(Current−Reference)` 비교, 수치 진행률·경과 시간·실제 다운로드/내부 블록 진행, 콘솔 없는 출력 오류와 모델 오류 안내 수정
 - `0.0.07`: 코드 후보의 반복 근거·잡음·배음·역상 처리 보완, 약한 기타 stem의 원본 믹스 화성 참고, 출처·원본 시각·미확정·진단 표시, 작은 작업 영역과 완료 상태 UI 보완
+- `0.0.08`: 실시간 PCM 누적·채널별 FFT·4프레임 평활화의 C++17 엔진, C ABI 1·ctypes 브리지, 실제 백엔드와 NumPy 폴백
+- `0.0.09`: 톤 분석/악기 제거 작업 탭과 선택 악기 제거 WAV 저장, C ABI 2 float32 직접 입력과 float64 경로 유지, 엔진 입력/완성 창/잔여 frame 진단, 실시간 DSP push ms 표시
 
 v0.0.03에서 도입된 보이싱 결과는 톤 레시피와 별도의 참고 진단입니다. 완전한 다성음 채보, 타브 생성 또는 연주 정확도 판정으로 표현하지 않습니다.
 
@@ -98,9 +123,11 @@ Current용 두 번째 장치 스트림을 만들지 않습니다. Δ 부호는 �
 
 | 파일 | 책임 |
 |---|---|
-| `app.py` | Tkinter UI, 언어/장치/입력·연산 선택, 비동기 GPU/VRAM 진단, 녹음·분석·스펙트럼 작업 스레드, 수치 진행률·경과 시간, 콘솔 없는 출력 보호, Canvas 표시, 취소, 내보내기, 자체 진단 |
+| `app.py` | Tkinter 톤 분석/악기 제거 작업 탭, 언어/장치/입력·연산 선택, 비동기 GPU/VRAM 진단, 녹음·분석·제거·스펙트럼 작업 스레드, 수치 진행률·경과 시간, 콘솔 없는 출력 보호, Canvas 표시, 취소, 내보내기, 자체 진단 |
 | `engine.py` | 최대 20분 FFmpeg 디코딩, DSP 특징, AI 분리 호출, 템플릿 매칭, 출력 경로별 Amp/Cab과 결과 구조 |
-| `separator.py` | Demucs/PyTorch 자동/CPU/CUDA 선택·폴백, 명시 safetensors 캐시 우선 로더와 실제 다운로드/내부 블록 진행, 원인별 모델 오류, GPU/VRAM 진단, 추론 벤치마크, 30초 외부 조각별 guitar stem 생성 |
+| `separator.py` | Demucs/PyTorch 자동/CPU/CUDA 선택·폴백, 명시 safetensors 캐시 우선 로더와 실제 다운로드/내부 블록 진행, 원인별 모델 오류, GPU/VRAM 진단, 추론 벤치마크, 30초 외부 조각별 guitar stem 생성과 선택 stem 배열 콜백 |
+| `stem_removal.py` | 제거/유지 파트와 입력 검증, FFmpeg 디코딩, 남길 stem 합산·전역 peak 검사, 원자적 비덮어쓰기 PCM16 WAV 저장, 취소·임시 파일 정리 |
+| `native_dsp.py`, `native/tonematch_dsp.cpp`, `.h` | C ABI 2 float32/float64 실시간 PCM·FFT·평활화 엔진, 실제 C++/NumPy 선택과 입력/완성 창/잔여 frame 카운터 |
 | `recorder.py` | SoundCard 기반 WASAPI loopback·오디오 입력 목록, PCM16 녹음과 실시간 2,048-frame float32 블록 전달 |
 | `spectrum.py` | 입력 정규화, 채널별 FFT power, 20 Hz~20 kHz 스펙트럼·dBFS·중심 주파수 계산과 4프레임 평활화 |
 | `reference_compare.py` | 분석 PCM의 레벨 정규화 Reference 프로필, 6밴드 집계, 실시간 Current 보간과 `Δ(Current−Reference)` 계산 |
@@ -114,7 +141,7 @@ Current용 두 번째 장치 스트림을 만들지 않습니다. Δ 부호는 �
 | `ToneMatchTMP.spec` | PyInstaller 데이터·바이너리·숨은 import·버전 리소스 |
 | `build.ps1` | 테스트 후 깨끗한 PyInstaller 빌드 |
 
-`DEVELOPMENT_KO.md`는 v0.0.08 구현 구조 요약이고, `FUNCTION_REFERENCE_KO.md`는 배포 소스의 모든 함수와 한국어 docstring을 자동 색인합니다. 새 PC 재구성과 릴리스 판정은 이 문서를 우선합니다.
+`DEVELOPMENT_KO.md`는 v0.0.09 구현 구조 요약이고, `FUNCTION_REFERENCE_KO.md`는 배포 소스의 모든 함수와 한국어 docstring을 자동 색인합니다. 새 PC 재구성과 릴리스 판정은 이 문서를 우선합니다.
 
 #### v0.0.03 도입 코드/보이싱 API와 v0.0.07 도입 계약(현행 유지)
 
@@ -162,14 +189,53 @@ v0.0.07은 `analysis_source`를 `guitar_stem`/`provided_audio`/`original_mix`로
 - 무음·NaN·무한대와 공통 나이퀴스트 밖을 안전하게 처리하고 Reference가 없을 때 비교 결과를 꾸며내지 않습니다.
 - 실시간 Brightness·Body·Gain·Compression·Ambience·Match % 미터, 자동 EQ/TMP 추천·적용, 기기 프리셋 쓰기, C++/ASIO/WASAPI Exclusive는 v0.0.06 범위가 아닙니다.
 
+#### v0.0.09 C++ 입력·진단 계약
+
+- `native_dsp.py`는 번들 DLL의 C ABI 2를 요구합니다. ABI 1 DLL은 명시적 `backend="cpp"`에서 오류이며 `auto`에서는 실제 사유와 함께 NumPy 폴백입니다. 다른 버전의 DLL·브리지를 섞지 않습니다.
+- 정렬된 native-endian C-contiguous float32 배열은 `tm_dsp_push_f32`에 전달하며 종전 Python float64 upcast 복사를 생략합니다. float64 `tm_dsp_push`도 유지합니다. 다른 dtype·배치는 정규화가 필요할 수 있습니다.
+- 엔진 진단 `input_frames`는 수락된 입력 frame, `completed_windows`는 처리한 완성 FFT 창, `pending_frames`는 미완성 창에 남은 frame입니다. reset은 누적 카운터와 부분 입력을 함께 지웁니다.
+- 실시간 화면은 실제 백엔드와 DSP push 처리 시간(ms), 완성 창과 잔여 frame을 표시합니다. 이 시간은 처리 호출 범위이며 캡처·AI·UI 그리기나 오디오 왕복 지연이 아닙니다.
+- Python 출력 복사·잠금·SoundCard 공유 캡처는 남아 있습니다. 전체 zero-copy, lock-free, C++ 장치 I/O 또는 하드 실시간 엔진으로 표현하지 않습니다. AI·오프라인 톤·Reference·코드·레시피 변경도 아닙니다.
+- 이전 버전의 성능·테스트 수치는 역사로만 유지합니다. ABI 2 실제 실행, float32/float64 parity, 부분 입력·진단·reset·ABI 불일치 회귀와 이번 빌드의 패키지를 별도로 검증합니다.
+
+#### v0.0.09 선택 악기 제거 계약
+
+바깥쪽 `톤 분석`/`악기 제거` 작업 탭에서 기능을 선택합니다. 악기 제거는 로컬
+오디오·영상과 새 `.wav` 경로, 시작/끝, 자동/CPU/CUDA, 제거할 1~5개를 받습니다.
+선택 코드는 `vocals`, `drums`, `bass`, `guitar`, `piano`, `other`이며 아무것도
+선택하지 않거나 6개를 전부 선택하면 실행하지 않습니다. 최소 3초·최대 20분,
+끝 `0`/빈칸의 제한 규칙은 파일 분석과 같습니다.
+
+`stem_removal.remove_stems_from_file(...)`는 FFmpeg로 임시 44.1 kHz stereo
+PCM16을 디코딩하고 `separator.separate_stem_chunks(...)`로 남길 stem 배열을
+조각별 소비합니다. 합산은 float64, 임시 mix는 float32이며 최종 결과는 PCM16입니다.
+전체 합산 peak가 1보다 클 때만 `0.999 / peak`를 전 구간에 적용해 클리핑을
+방지합니다. 개별 stem 결과 파일은 만들지 않습니다.
+
+완성 WAV를 출력과 같은 폴더에 임시 저장한 뒤 Windows에서 비덮어쓰기
+`os.rename`으로 확정합니다. 다른 OS에서는 `os.link`를 사용합니다. 원본·기존
+출력 또는 처리 도중 생긴 목적지 파일을 덮어쓰면 안 됩니다. 완료·오류·취소 때
+디코딩·mix·partial을 정리하고, 확정 저장 이후 UI 콜백 오류로 성공을 뒤집지 않습니다.
+
+톤 분석과 같은 공식 `htdemucs_6s` 로더·사용자 캐시를 공유하고, 첫 모델 다운로드만
+네트워크를 사용합니다. 음원/출력은 로컬에 남깁니다. 진행률은 단계/처리 콜백 기반이며
+경과 시간과 구분합니다. 현재 추론 블록이나 네트워크 대기는 취소를 지연시킬 수 있고
+중간 체크포인트는 없습니다. 분석·녹음·모니터·하드웨어 검사·언어 재구성과 상호
+배타적으로 실행하며 worker는 큐를 통해 Tk 메인 스레드에 결과를 전달합니다.
+
+결과 사전은 별도 `tonematch-tmp-stem-removal/v1` 스키마이며 파트·구간·형식·실제
+장치·추론 시간·정규화 정보를 담습니다. 모델의 `piano` 추정은 모든 건반/신스
+분류가 아니며 `other`에도 건반 소리가 남을 수 있습니다. 누출·소리 손실·인공음과
+위상/어택/잔향 변화가 가능하므로 Logic Pro와 동일한 모델·분리 품질을 주장하지 않습니다.
+
 ### 4. 다른 PC에서 개발 환경 재구성
 
 권장 폴더 구조:
 
 ```text
-C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.08\
+C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.09\
 ├─ .venv\                 새 PC에서 다시 생성
-├─ ToneMatchTMP-v0.0.08.exe
+├─ ToneMatchTMP-v0.0.09.exe
 └─ source\                자체 완결된 개발 프로젝트
    ├─ app.py
    ├─ requirements.txt
@@ -185,7 +251,7 @@ C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.08\
 `build.ps1`는 프로젝트의 형제 위치인 `..\.venv`를 찾습니다. 압축에 `.venv`가 있더라도 사용하지 마세요. Python 가상환경에는 원래 PC의 절대 경로와 네이티브 바이너리가 들어가므로 새 PC에서 다시 만드는 것이 안전합니다.
 
 ```powershell
-Set-Location C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.08
+Set-Location C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.09
 py -3.12 -m venv .venv
 & .\.venv\Scripts\python.exe -m pip install --upgrade pip
 & .\.venv\Scripts\python.exe -m pip install -r .\source\requirements.txt
@@ -217,7 +283,7 @@ Set-Location .\source
 
 `_load_hf_separator_model`은 각 파일을 `local_files_only=True`로 먼저 확인하고 누락 파일만 공식 저장소에서 받습니다. Demucs의 범용 로더 대신 이 명시 로더를 사용하여 Hugging Face 오류를 숨긴 채 구형 모델 다운로드로 바뀌는 폴백을 제거했습니다. 다운로드용 `tqdm`은 콘솔 출력 없이 실제 바이트를 앱 콜백에 전달합니다. 총량 없는 수신은 바이트만 표시하며 캐시 확인·파일 수신·메모리 로딩을 구분합니다.
 
-`app.py`는 외부 라이브러리 import 전에 `sys.stdout`·`sys.stderr`가 `None`일 때만 안전한 스트림을 연결합니다. 콘솔 없는 EXE의 `'NoneType' object has no attribute 'write'`는 네트워크 상태와 무관한 출력 오류일 수 있으므로 인터넷 미연결로 단정하면 안 됩니다. 모델 준비 예외는 체인을 따라 서버·네트워크, 캐시 권한·디스크, 메모리 부족, 기타 모델·런타임 오류로 나눕니다. 릴리스 검증에서는 단순 자체 진단뿐 아니라 모델 준비를 실제로 실행하는 EXE 분석도 확인하고 그 결과를 `QA_REPORT_v0.0.08.json`과 `BUILD_HISTORY.md`에 남깁니다.
+`app.py`는 외부 라이브러리 import 전에 `sys.stdout`·`sys.stderr`가 `None`일 때만 안전한 스트림을 연결합니다. 콘솔 없는 EXE의 `'NoneType' object has no attribute 'write'`는 네트워크 상태와 무관한 출력 오류일 수 있으므로 인터넷 미연결로 단정하면 안 됩니다. 모델 준비 예외는 체인을 따라 서버·네트워크, 캐시 권한·디스크, 메모리 부족, 기타 모델·런타임 오류로 나눕니다. 릴리스 검증에서는 단순 자체 진단뿐 아니라 모델 준비를 실제로 실행하는 EXE 분석도 확인하고 그 결과를 `QA_REPORT_v0.0.09.json`과 `BUILD_HISTORY.md`에 남깁니다.
 
 기본 위치:
 
@@ -237,7 +303,7 @@ Set-Location .\source
 
 ```powershell
 $env:HF_HOME = "D:\ToneMatchTMP-model-cache"
-& .\ToneMatchTMP-v0.0.08.exe
+& .\ToneMatchTMP-v0.0.09.exe
 ```
 
 다른 PC에서 재다운로드하지 않으려면 모델의 배포 조건을 먼저 확인하고 `models--adefossez--HTDemucs-6s` 전체(`blobs`, `refs`, `snapshots` 포함)를 새 PC의 대응 경로로 복사합니다. 부분 다운로드나 실행 중이던 분석을 다른 PC에서 이어받는 기능은 보장하지 않습니다. 캐시 복사가 불완전하면 지우고 온라인 상태에서 다시 받는 편이 안전합니다.
@@ -265,7 +331,7 @@ $env:HF_HOME = "D:\ToneMatchTMP-model-cache"
 & ..\.venv\Scripts\python.exe -m unittest discover -s tests -v
 
 # 소스 자체 진단
-& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.08.json
+& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.09.json
 
 # 테스트 후 PyInstaller 빌드
 .\build.ps1 -ZigPath C:\Tools\zig-0.15.2\zig.exe
@@ -296,6 +362,8 @@ $env:HF_HOME = "D:\ToneMatchTMP-model-cache"
 18. 개발자 옵션을 끈 상태에서도 전체 단계 %와 경과 `mm:ss`가 보이고, 처리 콜백이 없는 동안 경과 시간만 갱신되며 완료·오류·취소 후 마지막 표시가 유지되는지 확인
 19. 콘솔 없는 포터블 EXE에서 실제 풀믹스 분석을 실행하여 모델 초기화, 캐시 확인 또는 실제 다운로드 수신량, 내부 분리 블록 진행과 추천 3개 완성을 확인. 일반 `--self-test-output` 통과만으로 이 경로를 검증했다고 기록하지 않음
 20. 첫 다운로드와 캐시 재사용 결과를 구분해 기록하고, 다운로드 총량 미상·취소·모델 예외 분류 및 `stdout`/`stderr`가 없는 시작 조건은 회귀 테스트 결과와 실제 실행 결과를 구분해 남김
+21. 바깥쪽 톤 분석/악기 제거 탭, 한·영 입력·긴 완료 문구·작은 창, 1~5개 선택과 3초/20분 경계, 진행률·취소·작업 상호 배타를 확인
+22. 악기 제거의 실제 캐시 모델 실행과 새 PCM16 stereo WAV 완성, 기존 파일/처리 중 생성 파일 비덮어쓰기, 전역 peak 감쇠와 완료/오류/취소 임시 파일 정리를 확인하고 mock·소스·최종 EXE 결과를 구분
 
 ### 8. 포터블 개발 ZIP 구성
 
@@ -318,14 +386,17 @@ $env:HF_HOME = "D:\ToneMatchTMP-model-cache"
 - `%TEMP%\ToneMatchTMP-error.log`
 - API 키, 토큰, 프록시·계정 정보와 개인 경로가 들어간 설정
 
-대상 파일명은 `ToneMatchTMP-v0.0.08-Windows-x64-Portable-Dev.zip`입니다. EXE·ZIP·자체 진단의 최종 SHA-256은 패키징이 모두 끝난 뒤 형제 파일 `ToneMatchTMP-v0.0.08-SHA256SUMS.txt`와 `BUILD_HISTORY.md`에 기록합니다.
+대상 파일명은 `ToneMatchTMP-v0.0.09-Windows-x64-Portable-Dev.zip`입니다. EXE·ZIP·자체 진단의 최종 SHA-256은 패키징이 모두 끝난 뒤 형제 파일 `ToneMatchTMP-v0.0.09-SHA256SUMS.txt`와 `BUILD_HISTORY.md`에 기록합니다.
 
 ### 9. 릴리스 게이트
 
-v0.0.08에서 다음 개발자가 재확인할 항목입니다. 실제 CUDA GPU, 물리 장치/loopback 실시간 스펙트럼·Reference Compare·녹음과 코드 서명은 이번 릴리스 PC에서 검증되지 않았다면 `BUILD_HISTORY.md`에 그대로 남깁니다.
+v0.0.09에서 다음 개발자가 재확인할 항목입니다. 실제 CUDA GPU, 물리 장치/loopback 실시간 스펙트럼·Reference Compare·녹음과 코드 서명은 이번 릴리스 PC에서 검증되지 않았다면 `BUILD_HISTORY.md`에 그대로 남깁니다.
 
-- `catalog.APP_VERSION`, 최신 `CHANGELOG`, `version_info.txt`, spec의 EXE 이름과 모든 현재 문서가 `0.0.08`인지
-- spec에 `i18n.py`, `devices.py`, `separator.py`, `recorder.py`, `spectrum.py`, `reference_compare.py`와 필요한 Demucs/PyTorch/SoundCard 런타임이 포함되는지
+- `catalog.APP_VERSION`, 최신 `CHANGELOG`, `version_info.txt`, spec의 EXE 이름과 모든 현재 문서가 `0.0.09`인지
+- 실제 C ABI 2 DLL의 float32/float64 수치·분할 입력·카운터/reset·오류 회귀와 ABI 1 거부/자동 폴백을 구분해 확인했는지
+- DSP push ms·완성 창·잔여 frame을 한·영/작은 창에서 표시하고 처리 시간을 왕복 지연 또는 전체 곡 AI 가속으로 설명하지 않는지
+- spec에 `i18n.py`, `devices.py`, `separator.py`, `stem_removal.py`, `native_dsp.py`, ABI-2 DLL, `recorder.py`, `spectrum.py`, `reference_compare.py`와 필요한 Demucs/PyTorch/SoundCard 런타임이 포함되는지
+- 악기 제거의 1~5개 선택, 새 44.1 kHz stereo PCM16 WAV, 비덮어쓰기와 임시 파일 정리·취소를 검증하고 사용자 음원/출력을 공개 산출물에서 제외했는지
 - `voicing.py`와 해당 테스트·표시 문자열이 포함되고, 실험 결과가 톤 추천 신뢰도와 혼동되지 않는지
 - `requirements.txt`가 새 의존성을 재현 가능하게 고정하는지
 - `THIRD_PARTY_NOTICES.txt`와 `licenses`가 Demucs, PyTorch, SoundCard, Hugging Face 관련 런타임/모델 조건을 반영하는지
@@ -343,7 +414,7 @@ v0.0.08에서 다음 개발자가 재확인할 항목입니다. 실제 CUDA GPU,
 - Reference Compare를 Match %·실시간 특징 미터·자동 EQ/TMP 추천 또는 C++ 장치 입출력/ASIO로 과장하지 않는지
 - 코드의 반복 근거·잡음/배음·역상·미확정 처리와 원본 믹스의 기타 운지/역위 비표시를 확인하고, 원본 화성 참고가 톤·Reference·레시피를 바꾸지 않는지
 - 선택 구간의 원본 시각과 출처·진단 안내가 GUI/JSON/한국어·영어 HTML에 일치하고, 작은 작업 영역과 긴 완료 문구에서도 버튼·상태 영역을 사용할 수 있는지
-- 다음 패치는 현재 파일·산출물 이름을 `0.0.09`로 올리되 v0.0.08 이하 역사 섹션은 다시 쓰지 않는지
+- 다음 패치는 현재 파일·산출물 이름을 `0.0.10`으로 올리되 v0.0.09 이하 역사 섹션은 다시 쓰지 않는지
 
 ---
 
@@ -351,7 +422,7 @@ v0.0.08에서 다음 개발자가 재확인할 항목입니다. 실제 CUDA GPU,
 
 ### 1. Product contract
 
-- App version: `0.0.08`
+- App version: `0.0.09`
 - Active target: Fender Tone Master Pro
 - Target firmware/model guide: `1.8.58` / `Rev. J (2026-07)`
 - Platform: 64-bit Windows with the Python 3.12 line
@@ -359,6 +430,7 @@ v0.0.08에서 다음 개발자가 재확인할 항목입니다. 실제 CUDA GPU,
 - Range: at least 3 seconds and at most 20 minutes from Start; End `0`/blank means the remainder of the item, capped at 20 minutes
 - Full mix: use only the Demucs `htdemucs_6s` guitar stem for tone features, Reference and recipes; optional original-mix harmony assistance is chord-only
 - Guitar-only input: user can skip AI separation
+- Stem removal: a separate workspace removes one to five of six Demucs estimates and sums the rest into one new 44.1 kHz stereo PCM16 WAV, without overwriting the source or an existing destination
 - Output: three Tone Master Pro recipes, JSON, standalone HTML, clipboard text, experimental chord/voicing cues, and six-band/frequency differences between a normalized Reference and live Current input
 - Device control: no automatic write to Tone Master Pro or Pro Control
 - Network: no audio upload and no YouTube extraction; the only content fetched directly by the app is the first-use AI model, while reference URLs are delegated to the external browser
@@ -373,6 +445,8 @@ Keep the version boundary explicit:
 - `0.0.05`: raw waveform, logarithmic 20 Hz-20 kHz spectrum, RMS/peak dBFS and centroid for the selected WASAPI input/loopback, using per-channel FFT power, four-frame smoothing, and bounded latest-frame delivery
 - `0.0.06`: a level-normalized Reference from analyzed local/isolated-guitar PCM, reuse of the existing live monitor as Current, six-band plus frequency-by-frequency delta (Current minus Reference), numeric progress/elapsed time with actual download and internal-block updates, and windowed-output/model-error fixes
 - `0.0.07`: repeated chord evidence and noise/harmonic/antiphase handling, original-mix harmony assistance for weak guitar stems, source/offset/unknown/diagnostic display, and small-work-area/completion-status UI adjustments
+- `0.0.08`: C++17 live PCM accumulation, per-channel FFT and four-frame smoothing, C ABI 1/ctypes bridge, actual backend display and NumPy fallback
+- `0.0.09`: Tone analysis/Stem removal workspaces and selective stem-removal WAV output, C ABI 2 direct float32 input with the float64 path retained, engine input/completed-window/pending-frame diagnostics, and live DSP push time
 
 The voicing output introduced in v0.0.03 is a separate diagnostic aid. Do not present it as complete polyphonic transcription, tablature, or performance grading.
 
@@ -461,19 +535,68 @@ without a Reference. Live Brightness, Body, Gain, Compression, Ambience, and Mat
 percent meters, automatic EQ/TMP recommendation or application, preset writing,
 C++, ASIO, and WASAPI Exclusive are outside v0.0.06.
 
+#### v0.0.09 selective stem-removal contract
+
+The outer `Tone analysis` and `Stem removal` workspace tabs separate the two tasks.
+Stem removal accepts a local audio/video source, a new `.wav` path, start/end,
+Auto/CPU/CUDA, and one to five of `vocals`, `drums`, `bass`, `guitar`, `piano`,
+and `other` to remove. Empty or all-six selections are rejected. The segment must
+contain at least three seconds; End `0`/blank means the remainder capped at 20 minutes.
+
+`stem_removal.remove_stems_from_file(...)` decodes temporary 44.1 kHz stereo PCM16
+with FFmpeg and consumes retained float32 stem arrays from
+`separator.separate_stem_chunks(...)`. Float64 summation feeds a temporary float32
+mix. A global gain of `0.999 / peak` applies only when the full mixture exceeds
+full scale; final output is stereo PCM16. No individual stem file is exported.
+
+The completed partial WAV is written beside the destination, then committed with
+Windows `os.rename`, which fails if the destination already exists; non-Windows
+uses `os.link`. Protect the source, pre-existing files, and a destination created
+during processing. Decoded audio, intermediate mix, and partial output are cleaned
+after completion, error, or cancellation. A UI callback failure after committed
+success must not reclassify the saved output as failure.
+
+The official `htdemucs_6s` loader and user cache are shared with tone analysis.
+First model acquisition may need the network; audio and outputs stay local.
+Progress follows processing callbacks and is distinct from elapsed time; an active
+inference block or pending network operation can delay cancellation. There are no
+checkpoints. Stem removal is mutually exclusive with tone analysis, recording,
+live monitoring, hardware probing, and language rebuilding. Workers return events
+through a queue; Tk changes stay on the main thread.
+
+The separate `tonematch-tmp-stem-removal/v1` result records selected/retained parts,
+range, format, actual device, inference timing, and normalization. The `piano`
+estimate is not an all-keyboard/synth detector; keyboard sounds may remain in
+`other`. Leakage, missing sounds, phase/attack/reverb changes, and artifacts are
+possible. This is a Logic-like workflow, not a claim of model or quality parity.
+
+#### v0.0.09 native-input and diagnostics contract
+
+`native_dsp.py` requires C ABI 2. ABI-1 DLLs fail strict `backend="cpp"` selection;
+automatic selection falls back to NumPy with a reason. Aligned native-endian
+C-contiguous float32 input reaches `tm_dsp_push_f32` without the old float64 upcast.
+The float64 `tm_dsp_push` path remains; other layouts may need normalization.
+`input_frames`, `completed_windows`, and `pending_frames` count accepted input,
+completed FFT windows, and retained partial input since reset. Reset clears them.
+The UI's DSP push ms measures the processing call, excluding capture, AI, UI, and
+audio round-trip latency. Output copies, locks, and SoundCard capture remain.
+Validate actual ABI-2 float32/float64 parity, counters/reset, partial blocks,
+error preservation, ABI rejection/fallback, and the final package independently
+of v0.0.08's historical results.
+
 ### 3. Recreate the environment on another PC
 
 Use this layout because `build.ps1` expects a sibling `..\.venv`:
 
 ```text
-C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.08\
+C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.09\
 ├─ .venv\                 recreate on the new PC
-├─ ToneMatchTMP-v0.0.08.exe
+├─ ToneMatchTMP-v0.0.09.exe
 └─ source\                self-contained development project
 ```
 
 ```powershell
-Set-Location C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.08
+Set-Location C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.09
 py -3.12 -m venv .venv
 & .\.venv\Scripts\python.exe -m pip install --upgrade pip
 & .\.venv\Scripts\python.exe -m pip install -r .\source\requirements.txt
@@ -491,7 +614,7 @@ That is the portable CPU baseline. On a compatible NVIDIA PC, first verify the b
 
 `separator.py` explicitly loads the official `adefossez/HTDemucs-6s` YAML and safetensors. `_load_hf_separator_model` first checks each file with `local_files_only=True`, downloading missing files only. This replaces the generic loader's silent legacy-model fallback after a Hugging Face failure. A console-free `tqdm` adapter forwards actual received bytes to the UI, reports file percentage only with a known total, and distinguishes cache lookup, download, and memory loading.
 
-Before importing external libraries, `app.py` supplies safe output streams only when `sys.stdout` or `sys.stderr` is `None`. The windowed EXE's `'NoneType' object has no attribute 'write'` failure can be an output-stream issue, not an internet outage. Model setup exceptions are categorized through their cause chain as server/network, cache permissions/disk, memory, or other model/runtime failures. Release verification must include packaged analysis that actually initializes the model, not only the standard self-test. Use `QA_REPORT_v0.0.08.json` and `BUILD_HISTORY.md` for verified outcomes.
+Before importing external libraries, `app.py` supplies safe output streams only when `sys.stdout` or `sys.stderr` is `None`. The windowed EXE's `'NoneType' object has no attribute 'write'` failure can be an output-stream issue, not an internet outage. Model setup exceptions are categorized through their cause chain as server/network, cache permissions/disk, memory, or other model/runtime failures. Release verification must include packaged analysis that actually initializes the model, not only the standard self-test. Use `QA_REPORT_v0.0.09.json` and `BUILD_HISTORY.md` for verified outcomes.
 
 The default model cache is:
 
@@ -513,7 +636,7 @@ To avoid downloading again on another PC, first check the model distribution ter
 
 ```powershell
 & ..\.venv\Scripts\python.exe -m unittest discover -s tests -v
-& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.08.json
+& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.09.json
 .\build.ps1 -ZigPath C:\Tools\zig-0.15.2\zig.exe
 ```
 
@@ -521,15 +644,15 @@ Before release, manually exercise guitar-only bypass, first-download full-mix is
 
 For the v0.0.06 progress/output fix, run an actual full-mix analysis in the final windowed portable EXE, exercising model initialization through cache lookup or download and continuing through internal separation blocks to three completed recommendations. The standard `--self-test-output` result alone does not validate that path. With developer mode off, verify that overall percentage and elapsed `mm:ss` stay visible, elapsed time refreshes while callbacks are pending without inventing progress, and the last values remain after completion, errors, or cancellation. Record first-download, cache-reuse, and offline checks separately. Distinguish mocked regression coverage for missing `stdout`/`stderr`, unknown download totals, cancellation, and categorized model failures from paths actually exercised in the EXE.
 
-The target archive name is `ToneMatchTMP-v0.0.08-Windows-x64-Portable-Dev.zip`. Its `source` folder must be self-contained and include source, tests, FFmpeg, the native DLL, C++ source/header, bridge and native build script, build metadata, base/CUDA setup files, documentation, and licenses alongside the EXE built from the same code. Record final artifact hashes only after packaging in the sibling checksum file and `BUILD_HISTORY.md`. Exclude virtual environments, compiler/toolchain archives, build caches, model weights, personal media/results, raw logs, credentials, and machine-specific settings.
+The target archive name is `ToneMatchTMP-v0.0.09-Windows-x64-Portable-Dev.zip`. Its `source` folder must be self-contained and include source, tests, FFmpeg, the native DLL, C++ source/header, bridge and native build script, build metadata, base/CUDA setup files, documentation, and licenses alongside the EXE built from the same code. Record final artifact hashes only after packaging in the sibling checksum file and `BUILD_HISTORY.md`. Exclude virtual environments, compiler/toolchain archives, build caches, model weights, personal media/results, raw logs, credentials, and machine-specific settings.
 
 ### 6. Resume checklist for the next developer or agent
 
 1. Verify the archive hash and extract it to a writable local folder.
 2. Read `README_KO.md`, this file, and `BUILD_HISTORY.md` before editing.
 3. Recreate the sibling virtual environment and run the full test suite.
-4. Confirm every current version-bearing file says `0.0.08` and that `BUILD_HISTORY.md` keeps all prior version sections unchanged.
-5. Confirm the PyInstaller spec includes `native_dsp.py`, the ABI-1 DLL, `reference_compare.py` and `spectrum.py` plus the existing modules and lazy AI/recording dependencies. The developer archive must also carry native source/header, native tests and the build script.
+4. Confirm every current version-bearing file says `0.0.09` and that `BUILD_HISTORY.md` keeps all prior version sections unchanged.
+5. Confirm the PyInstaller spec includes `stem_removal.py`, `native_dsp.py`, the ABI-2 DLL, `reference_compare.py` and `spectrum.py` plus the existing modules and lazy AI/recording dependencies. The developer archive must also carry native source/header, native tests and the build script.
 6. Confirm third-party notices and license files cover the AI/recording stack, model terms and the native binary's linked runtimes.
 7. Keep AI weights and user data out of the archive.
 8. Verify CPU/CUDA diagnostics and all three Amp/Cab routes; do not claim real GPU validation without compatible hardware.
@@ -540,4 +663,5 @@ The target archive name is `ToneMatchTMP-v0.0.08-Windows-x64-Portable-Dev.zip`. 
 13. Replace pending placeholders with test, self-test, artifact-size, and SHA-256 results in `BUILD_HISTORY.md`.
 14. If using a new Codex/task session, explicitly provide the extracted `source` folder (or clone `https://github.com/JH-Prime/ToneMatchTMP`) and ask it to treat these handoff documents as context. Chat history and interrupted analysis state are not embedded in the ZIP.
 15. Verify repeated chord evidence, noise/harmonic/antiphase rejection, original-mix source labeling without guitar-shape/inversion claims, original-file times and unknown intervals in both languages. Confirm that the fallback does not change tone features, Reference or recipes, and that small work areas and long completed-status text remain usable. Record actual MP3/EXE checks separately from synthetic or mocked coverage.
-16. For the next patch, increment version-bearing files and artifact names from `0.0.08` to `0.0.09`; do not rewrite historical release sections.
+16. Verify both outer workspaces in Korean/English and small windows; exercise one-to-five selection, three-second/20-minute ranges, progress, cancellation, task exclusion, new stereo PCM16 WAV output, destination races, peak normalization, and temporary-file cleanup. Separate mocks, source runtime checks, and final EXE checks.
+17. For the next patch, increment version-bearing files and artifact names from `0.0.09` to `0.0.10`; do not rewrite historical release sections.

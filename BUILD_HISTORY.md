@@ -8,6 +8,7 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 | 버전 | 상태 | 범위 |
 |---|---|---|
+| `0.0.09` | 서명되지 않은 CPU 포터블 개발자 프리릴리스 | 선택 악기 제거 도구와 C ABI 2 float32 직접 입력·실시간 DSP 진단 |
 | `0.0.08` | 포터블 개발 프리뷰 빌드·검증 완료 | C++17 실시간 PCM·FFT·평활화 엔진, ABI 브리지와 NumPy 폴백 |
 | `0.0.07` | 포터블 개발 프리뷰 빌드·검증 완료 | 코드 근거·원본 화성 참고·반응형 분석 UI |
 | `0.0.06` | 포터블 개발 프리뷰 빌드·검증 완료 | Reference Compare, 실시간 분석 진행률, 콘솔 없는 EXE 모델 오류 수정 |
@@ -16,6 +17,94 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 | `0.0.03` | 포터블 개발 프리뷰 빌드 완료 | 포터블 개발 ZIP, 한·영 handoff, 로그·빌드 이력, NumPy 코드/보이싱 분석(실험) |
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
+
+## 0.0.09 — Selective stem removal and native DSP ABI 2
+
+- 작업일 / Work dates: `2026-09-13–19 KST`; build reference date: `2026-09-19 KST`
+- 상태 / Status: `UNSIGNED CPU PORTABLE DEVELOPER PRERELEASE — validation limits below`
+- 기반 / Based on: v0.0.08 C++ live DSP engine migration
+
+### 이 버전에 속하는 변경 / Changes owned by this version
+
+- C ABI 2의 `tm_dsp_push_f32` 입력 추가, 기존 float64 `tm_dsp_push` 경로 유지
+- 정렬된 native-endian C-contiguous float32 입력에서 Python float64 upcast 복사 제거
+- 엔진이 수락한 `input_frames`, `completed_windows`, `pending_frames` 진단과 reset 초기화
+- 실시간 화면에 DSP push ms·완성 FFT 창·잔여 frame 표시, 실제 C++/NumPy 백엔드 구분 유지
+- 예전 ABI 1 DLL은 strict C++ 선택에서 오류, 자동 선택에서는 사유와 함께 NumPy 폴백
+- 바깥쪽 `톤 분석 / Tone analysis`와 `악기 제거 / Stem removal` 작업 탭을 분리
+- 별도 악기 제거 도구에서 로컬 오디오·영상의 `vocals`, `drums`,
+  `bass`, `guitar`, `piano`, `other` 가운데 1~5개를 선택해 제거
+- `stem_removal.py`가 Demucs `htdemucs_6s`의 나머지 stem을 조각별로 합산하고 새
+  44.1 kHz stereo PCM16 WAV로 확정 저장; 원본과 이미 존재하는 출력은 비덮어쓰기
+- Windows에서 같은 폴더의 완성 partial을 비덮어쓰기 `os.rename`으로 확정해
+  처리 도중 생성된 출력 파일도 보호; 합산 peak가 1을 넘을 때만 전 구간 동일 감쇠 적용
+- 최소 3초·최대 20분 구간, 자동/CPU/CUDA 선택, 실제 모델 다운로드/캐시 상태와
+  내부 처리 기반 진행률·경과 시간·취소, 작업 중 다른 오디오 작업과의 상호 배타 처리
+- 개별 stem은 저장하지 않고 임시 디코딩·float mix·부분 출력은 완료/오류/취소 뒤 정리
+- 기존 톤 분석, Python/Tk UI와 SoundCard/WASAPI 공유 캡처 계약 유지
+
+### 검증 경계 / Verification boundary
+
+입력 변환 한 경로를 줄인 것이며 Python 출력 복사·잠금·필요한 입력 정규화는 남습니다.
+전체 zero-copy, C++ 장치 콜백, ASIO/독점 모드 또는 하드 실시간 구현을 뜻하지 않습니다.
+DSP push 시간은 처리 호출만 측정하며 캡처·AI·UI 그리기·오디오 왕복 지연이 아닙니다.
+이전 v0.0.08의 테스트·MP3·성능 결과는 역사 기록으로만 보존하고 이번 검증으로 재사용하지 않습니다.
+
+악기 제거는 Logic Pro의 Stem Splitter와 비슷한 사용자 흐름을 지향한 로컬 보조
+기능이지 Apple Logic Pro와 동일한 모델·품질·분류를 구현했다는 뜻이 아닙니다.
+Demucs가 추정한 stem에는 다른 악기 누출, 위상·어택·잔향 변화와 인공음이 생길 수
+있습니다. 사용자 음원과 출력은 로컬에 머물고 모델 준비 때만 네트워크를 사용합니다.
+
+The float32 fast path removes the compatible input's Python float64 upcast, not
+all copying or synchronization. DSP push time excludes capture, AI, UI drawing
+and audio round-trip latency. Any performance result must identify this version,
+the tested machine, input layout and workload. User audio and private logs stay local.
+
+### 릴리스 게이트 결과 / Release gate result
+
+- [x] `2026-09-14` 사전 확인: 제공 Room 335 음원의 0~3초 CPU 악기 제거 smoke — guitar+piano 제거,
+  1 chunk, inference `3.476 s`, 44.1 kHz stereo PCM16 `529,244` bytes,
+  peak `0.696726`, normalization `false`, 남은 partial 파일 없음
+  (아래 31초 검증에 앞선 초기 기능 확인)
+- [x] `2026-09-16` 실제 CPU 소스 검증: Room 335의 0~31초 guitar+piano 제거,
+  2 chunks, 진행률 `39`회 단조 증가, inference `13.650 s`, 전체 `17.217 s`,
+  44.1 kHz stereo PCM16 `1,367,100` frames. 합산 peak `1.045119`에서
+  전 구간 gain `0.955872`를 적용해 출력 peak `32,734`로 정규화
+- [x] 같은 소스 검증에서 원본 보존, 실제 추론 취소, 취소 후 출력·부분 파일 없음 확인;
+  사용자 음원 업로드와 청감 품질 평가는 수행하지 않음
+- [x] `2026-09-19` 전체 자동 테스트 `214 tests`, `48.577 s`, warnings-as-errors,
+  compileall 통과
+- [x] 실제 ABI 2 DLL의 float32/float64 경로 각 `15`개, 총 `30`개 창 비교 통과;
+  최대 스펙트럼 오차 `2.1316e-14 dB`, stream stats·reset 통과.
+  분할 입력·오류·폴백 회귀는 위 자동 테스트에 포함
+- [x] 소스 자체 진단 통과: C++ ABI 2 float32/float64 parity, stream stats/reset,
+  추천 `3`개, Reference `6`밴드, 개발자 소스 `11`개와 악기 제거 소스 포함
+- [x] 이번 버전으로 제공 MP3 `252.61초`의 완성 FFT 창 `5,439개` 비교 통과;
+  float32 직접 입력·카운터 확인, 최대 스펙트럼 오차 `1.2513e-10 dB`
+- [x] `2026-09-19` 44.1 kHz·2채널·2,048-frame float32 DSP push 측정:
+  C++ 중앙값 `0.1482 ms`, NumPy `0.65745 ms`, 약 `4.44배`; 경로별 `2,560`회,
+  순서 교대와 warmup 포함. 동일 ABI 2의 float64 변환 대조군은 `0.1536 ms`이며
+  v0.0.08 바이너리와의 비교가 아님. 호환 입력에서 push당 `32,768 bytes` 변환 할당 제거
+- [x] 패키지 EXE 자체 진단 통과; 실제 C++ ABI 2 경로 확인
+- [x] 숨김 Tk 자동 회귀에서 한·영 DSP 표시·작은 창 및 악기 제거 UI 검증 통과;
+  1~5개 선택·20분 경계·취소·비덮어쓰기·임시 파일 정리는 자동 테스트에 포함
+- [x] 패키지 GUI 실행과 악기 제거 탭 열기 확인; 해당 GUI에서 제거 작업은 실행하지 않음
+- [ ] 전체 곡 패키지 UI end-to-end — `NOT RUN`: 사용자 Escape 요청으로 검증을
+  중단했으며 자동 UI 회귀·소스 31초 추론·EXE 자체 진단으로 이를 대체하지 않음
+- [ ] 첫 모델 다운로드, 네트워크 차단 실행, 실제 마이크/loopback 캡처·왕복 지연,
+  CUDA 장치, 청감 품질, 코드 서명 — `NOT TESTED`
+
+초기 ZIP의 manifest·소스·native 확인 뒤 최신 README와 staging 사본의 불일치를
+발견해 문서와 QA를 다시 반영했습니다. 최종 게시 조건은 새 ZIP의 manifest·동일 소스·
+DLL·고지·SHA-256·사용자 데이터 제외와 새 압축 해제 EXE 자체 진단 재검증입니다.
+그 결과는 `QA_REPORT_v0.0.09.json`에 기록하며, 위 미실행 항목을 통과로 표시하지 않습니다.
+
+### 최종 산출물 기록 / Final artifact record
+
+배포 ZIP의 최종 해시는 ZIP 옆
+`ToneMatchTMP-v0.0.09-SHA256SUMS.txt`, 내부 각 파일은 `MANIFEST.json`이 기준입니다.
+`diagnostics/native-build.json`의 ABI·소스/DLL 해시와 `native-verification.json`의
+수치 비교·측정값이 동일 빌드에 속하는지 확인한 뒤 업로드합니다.
 
 ## 0.0.08 — C++ live DSP engine migration
 

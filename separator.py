@@ -14,7 +14,7 @@ import time
 import wave
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Iterable
 
 import numpy as np
 
@@ -25,6 +25,7 @@ SEPARATOR_MODEL = "htdemucs_6s"
 SEPARATOR_SAMPLE_RATE = 44_100
 SEPARATION_CHUNK_SECONDS = 30.0
 SEPARATION_OVERLAP = 0.15
+SEPARATOR_STEMS = ("vocals", "drums", "bass", "guitar", "piano", "other")
 
 
 class SeparationError(RuntimeError):
@@ -46,6 +47,27 @@ class SeparationInfo:
     processed_chunks: int
     guitar_rms_dbfs: float
     guitar_peak_dbfs: float
+    model_downloaded_during_run: bool
+    requested_device: str
+    resolved_device: str
+    inference_total_seconds: float
+    inference_seconds_per_chunk: float
+    realtime_factor: float
+    peak_gpu_memory_bytes: int | None
+
+
+@dataclass(frozen=True)
+class StemSeparationInfo:
+    """여러 stem을 메모리 조각으로 전달한 한 번의 분리 실행 정보를 정의한다."""
+
+    model: str
+    backend: str
+    sample_rate: int
+    channels: int
+    source_duration_seconds: float
+    processed_chunks: int
+    available_stems: tuple[str, ...]
+    requested_stems: tuple[str, ...]
     model_downloaded_during_run: bool
     requested_device: str
     resolved_device: str
@@ -477,6 +499,235 @@ def _tensor_to_pcm16(waveform: object) -> tuple[bytes, float, float, int]:
     sample_count = int(array.size)
     pcm = np.round(np.clip(array, -0.999, 0.999) * 32767.0).astype("<i2")
     return pcm.tobytes(), square_sum, peak, sample_count
+
+
+def _normalize_stem_names(stem_names: Iterable[str]) -> tuple[str, ...]:
+    """요청 stem 목록을 모델의 고정 순서로 정규화하고 알 수 없는 이름을 거부한다."""
+    if isinstance(stem_names, (str, bytes)):
+        candidates = {str(stem_names).strip().lower()}
+    else:
+        candidates = {str(name).strip().lower() for name in stem_names}
+    candidates.discard("")
+    unknown = sorted(candidates.difference(SEPARATOR_STEMS))
+    if unknown:
+        detail = ", ".join(unknown)
+        raise SeparationError(
+            f"지원하지 않는 stem입니다: {detail}. / Unsupported stem: {detail}."
+        )
+    requested = tuple(name for name in SEPARATOR_STEMS if name in candidates)
+    if not requested:
+        raise SeparationError(
+            "분리할 stem을 하나 이상 선택하세요. / Select at least one stem to separate."
+        )
+    return requested
+
+
+def _tensor_to_stereo_array(waveform: object) -> np.ndarray:
+    """Demucs 채널 우선 텐서를 수명이 독립적인 stereo float32 배열로 변환한다."""
+    array = np.asarray(waveform.detach().to("cpu").numpy(), dtype=np.float32)
+    if array.ndim == 1:
+        array = array[np.newaxis, :]
+    if array.ndim != 2 or array.shape[1] == 0:
+        raise SeparationError(
+            "분리 모델이 비어 있거나 잘못된 오디오 배열을 반환했습니다. "
+            "/ The separation model returned an empty or invalid audio array."
+        )
+    if array.shape[0] == 1:
+        array = np.repeat(array, 2, axis=0)
+    elif array.shape[0] != 2:
+        raise SeparationError(
+            "분리 모델의 출력은 mono 또는 stereo여야 합니다. "
+            "/ Separation model output must be mono or stereo."
+        )
+    if not np.all(np.isfinite(array)):
+        raise SeparationError(
+            "분리 모델 출력에 유효하지 않은 숫자가 있습니다. "
+            "/ Separation model output contains non-finite samples."
+        )
+    return np.array(array, dtype=np.float32, order="C", copy=True)
+
+
+def separate_stem_chunks(
+    source_wav: str | Path,
+    stem_names: Iterable[str],
+    consume_chunk: Callable[[dict[str, np.ndarray]], None],
+    progress: Callable[[float, str], None] | None = None,
+    cancel_requested: Callable[[], bool] | None = None,
+    language: str = "ko",
+    compute_preference: str = "auto",
+) -> StemSeparationInfo:
+    """6-stem 모델을 한 번 실행하고 선택한 stem을 파일 없이 조각별 콜백에 전달한다.
+
+    콜백에 전달되는 배열은 ``(2, frames)`` 형태의 float32이며 다음 콜백 전에도
+    유효하다. 이 API는 stem 파일을 만들지 않으므로 호출자가 합성·통계 등 필요한
+    결과만 스트리밍으로 처리할 수 있다.
+    """
+    source_path = Path(source_wav)
+    if not source_path.is_file():
+        raise SeparationError(tr("error.file_missing", language))
+    if not callable(consume_chunk):
+        raise SeparationError(
+            "stem 조각 처리 콜백이 필요합니다. / A stem chunk consumer is required."
+        )
+    requested_stems = _normalize_stem_names(stem_names)
+    requested_device = _normalize_compute_preference(compute_preference)
+    _check_cancelled(cancel_requested, language)
+    was_cached = separator_model_is_cached()
+    if progress:
+        progress(18, tr("progress.separator_cache", language))
+    try:
+        import torch
+        from demucs.api import Separator
+    except Exception as exc:
+        raise SeparationError(tr("error.separator_runtime", language, detail=exc)) from exc
+
+    resolved_device = resolve_compute_device(requested_device, torch)
+    if resolved_device == "cpu":
+        processor_count = os.cpu_count() or 2
+        torch.set_num_threads(max(1, min(8, processor_count - 1)))
+    tracker = _SeparationProgress(progress, cancel_requested, language)
+
+    class ProgressSeparator(Separator):
+        """검증된 6-stem 모델과 앱 진행 콜백을 Demucs API에 연결한다."""
+
+        def _load_model(self) -> None:
+            """safetensors 모델을 주입하고 Demucs 입출력 형식을 초기화한다."""
+            self._model = _load_hf_separator_model(progress, cancel_requested, language)
+            self._audio_channels = self._model.audio_channels
+            self._samplerate = self._model.samplerate
+
+    try:
+        separator = ProgressSeparator(
+            model=SEPARATOR_MODEL,
+            device=resolved_device,
+            shifts=0,
+            split=True,
+            overlap=SEPARATION_OVERLAP,
+            jobs=0,
+            progress=False,
+            callback=tracker,
+        )
+        _check_cancelled(cancel_requested, language)
+    except (SeparationCancelled, KeyboardInterrupt) as exc:
+        _safe_cuda_empty_cache(torch, resolved_device)
+        raise SeparationCancelled(tr("error.cancelled", language)) from exc
+    except Exception as exc:
+        _safe_cuda_empty_cache(torch, resolved_device)
+        detail = f"{type(exc).__name__}: {exc}"
+        raise SeparationError(tr(_model_error_key(exc), language, detail=detail)) from exc
+
+    try:
+        model_sources = tuple(str(name).strip().lower() for name in separator.model.sources)
+        missing_sources = tuple(name for name in SEPARATOR_STEMS if name not in model_sources)
+        if missing_sources:
+            detail = ", ".join(missing_sources)
+            raise SeparationError(
+                f"6-stem 모델에 필요한 소스가 없습니다: {detail}. "
+                f"/ Required sources are missing from the 6-stem model: {detail}."
+            )
+        try:
+            source_handle = wave.open(str(source_path), "rb")
+        except (OSError, wave.Error) as exc:
+            raise SeparationError(tr("error.audio_read", language)) from exc
+
+        with source_handle:
+            source_channels = source_handle.getnchannels()
+            sample_width = source_handle.getsampwidth()
+            sample_rate = source_handle.getframerate()
+            total_frames = source_handle.getnframes()
+            if sample_width != 2 or sample_rate != SEPARATOR_SAMPLE_RATE:
+                raise SeparationError(tr("error.separator_format", language))
+            if source_channels < 1:
+                raise SeparationError(tr("error.no_channels", language))
+            if total_frames < 1:
+                raise SeparationError(tr("error.separation_empty", language))
+
+            frames_per_chunk = int(round(SEPARATION_CHUNK_SECONDS * sample_rate))
+            total_chunks = max(1, math.ceil(total_frames / frames_per_chunk))
+            processed_chunks = 0
+            processed_frames = 0
+            inference_total_seconds = 0.0
+            _safe_cuda_reset_peak_memory(torch, resolved_device)
+            for chunk_index in range(total_chunks):
+                _check_cancelled(cancel_requested, language)
+                raw = source_handle.readframes(frames_per_chunk)
+                if not raw:
+                    break
+                if len(raw) % (sample_width * source_channels):
+                    raise SeparationError(
+                        "입력 PCM 데이터가 잘려 있습니다. / Input PCM data is truncated."
+                    )
+                chunk_frames = len(raw) // (sample_width * source_channels)
+                tracker.begin_chunk(
+                    separator.model,
+                    chunk_index,
+                    total_chunks,
+                    total_frames,
+                    chunk_index * frames_per_chunk,
+                    chunk_frames,
+                )
+                mixture = torch.from_numpy(_pcm16_chunk(raw, source_channels))
+                try:
+                    _safe_cuda_synchronize(torch, resolved_device)
+                    inference_started = time.perf_counter()
+                    with torch.inference_mode():
+                        origin, stems = separator.separate_tensor(mixture, sr=sample_rate)
+                    _safe_cuda_synchronize(torch, resolved_device)
+                    inference_total_seconds += time.perf_counter() - inference_started
+                except KeyboardInterrupt as exc:
+                    raise SeparationCancelled(tr("error.cancelled", language)) from exc
+                except Exception as exc:
+                    raise SeparationError(tr("error.separation_failed", language, detail=exc)) from exc
+                _check_cancelled(cancel_requested, language)
+                absent = tuple(name for name in requested_stems if name not in stems)
+                if absent:
+                    detail = ", ".join(absent)
+                    raise SeparationError(
+                        f"분리 결과에 필요한 stem이 없습니다: {detail}. "
+                        f"/ Required stems are missing from separation output: {detail}."
+                    )
+                converted = {name: _tensor_to_stereo_array(stems[name]) for name in requested_stems}
+                lengths = {array.shape[1] for array in converted.values()}
+                if lengths != {chunk_frames}:
+                    raise SeparationError(
+                        "분리 결과의 길이가 입력 조각과 다릅니다. "
+                        "/ Separated stem length does not match the input chunk."
+                    )
+                consume_chunk(converted)
+                processed_chunks += 1
+                processed_frames += chunk_frames
+                tracker.finish_chunk()
+                del mixture, stems, origin, converted
+
+        if processed_chunks < 1:
+            raise SeparationError(tr("error.separation_empty", language))
+        if processed_frames != total_frames:
+            raise SeparationError(
+                "입력 WAV의 실제 길이가 헤더와 다릅니다. / Input WAV length does not match its header."
+            )
+        if progress:
+            progress(68, tr("progress.separation_done", language))
+        source_duration_seconds = total_frames / sample_rate
+        peak_gpu_memory_bytes = _safe_cuda_peak_memory(torch, resolved_device)
+        return StemSeparationInfo(
+            model=SEPARATOR_MODEL,
+            backend=f"Demucs 4.1 / PyTorch {resolved_device.upper()}",
+            sample_rate=sample_rate,
+            channels=2,
+            source_duration_seconds=source_duration_seconds,
+            processed_chunks=processed_chunks,
+            available_stems=SEPARATOR_STEMS,
+            requested_stems=requested_stems,
+            model_downloaded_during_run=not was_cached and separator_model_is_cached(),
+            requested_device=requested_device,
+            resolved_device=resolved_device,
+            inference_total_seconds=inference_total_seconds,
+            inference_seconds_per_chunk=inference_total_seconds / processed_chunks,
+            realtime_factor=inference_total_seconds / max(source_duration_seconds, 1e-12),
+            peak_gpu_memory_bytes=peak_gpu_memory_bytes,
+        )
+    finally:
+        _safe_cuda_empty_cache(torch, resolved_device)
 
 
 def separate_guitar_wav(

@@ -36,6 +36,9 @@ def _application() -> ToneMatchApp:
     application.spectrum_backend = None
     application.spectrum_fallback_reason = None
     application.spectrum_backend_var = Mock()
+    application.spectrum_diagnostics_var = Mock()
+    application.last_live_dsp_diagnostics = None
+    application.last_spectrum_frame = None
     application._append_debug_log = Mock()
     application.root = Mock()
     application.closing = False
@@ -78,10 +81,13 @@ class NativeWorkerIntegrationTests(unittest.TestCase):
             application._spectrum_monitor_worker(7, "synthetic-device", application.spectrum_stop_event, "ko")
         events = _events(application)
         self.assertEqual(events, [("spectrum_backend", 7, "cpp", None), ("spectrum_finished", 7)])
-        session, actual = application.spectrum_frames.get_nowait()
+        session, actual, diagnostics = application.spectrum_frames.get_nowait()
         self.assertEqual(session, 7)
         np.testing.assert_allclose(actual.magnitudes_dbfs, expected.magnitudes_dbfs, rtol=0, atol=1e-6)
         self.assertAlmostEqual(actual.rms_dbfs, expected.rms_dbfs, places=9)
+        self.assertEqual(diagnostics["input_frames"], 4096)
+        self.assertEqual(diagnostics["completed_windows"], 2)
+        self.assertEqual(diagnostics["pending_frames"], 0)
 
     def test_irregular_blocks_use_one_engine_and_latest_frame_queue(self) -> None:
         """작은 PCM 조각이 누적되고 여러 FFT 구간의 최신 결과 하나만 UI 큐에 남아야 한다."""
@@ -115,9 +121,13 @@ class NativeWorkerIntegrationTests(unittest.TestCase):
         factory.assert_called_once_with(48_000, 2, backend="auto", fft_size=2048, history_size=4)
         tracked.close.assert_called_once()
         self.assertEqual(application.spectrum_frames.qsize(), 1)
-        session, actual = application.spectrum_frames.get_nowait()
+        session, actual, diagnostics = application.spectrum_frames.get_nowait()
         self.assertEqual(session, 7)
         np.testing.assert_allclose(actual.magnitudes_dbfs, expected.magnitudes_dbfs, atol=1e-12)
+        self.assertEqual(diagnostics["input_frames"], len(samples))
+        self.assertEqual(diagnostics["completed_windows"], 4)
+        self.assertEqual(diagnostics["pending_frames"], 91)
+        self.assertGreaterEqual(diagnostics["push_ms"], 0)
         self.assertEqual([event[0] for event in _events(application)], ["spectrum_backend", "spectrum_finished"])
         application.spectrum_backend_var.set.assert_not_called()
 
@@ -145,6 +155,7 @@ class NativeWorkerIntegrationTests(unittest.TestCase):
         application = _application()
         engine = Mock(backend="cpp", fallback_reason=None)
         engine.push.return_value = None
+        engine.stream_stats.return_value = {"input_frames": 100, "completed_windows": 0, "pending_frames": 100}
 
         def capture(device: str, stop: threading.Event, callback: object, language: str) -> None:
             """첫 블록 뒤 장치 연결 해제를 흉내 낸다."""
@@ -207,6 +218,100 @@ class NativeWorkerIntegrationTests(unittest.TestCase):
         self.assertEqual(_events(application), [("spectrum_finished", 7)])
 
 
+class LiveDspDiagnosticsTests(unittest.TestCase):
+    """실시간 숫자 진단이 처리 범위·큐 한도·세션 경계를 정확히 지키는지 검사한다."""
+
+    def test_partial_input_reports_stats_and_times_only_push(self) -> None:
+        """FFT 미완성 입력도 진단을 보내며 최초 생성과 통계 조회는 시간에서 제외한다."""
+        application = _application()
+        calls = []
+        engine = Mock(backend="cpp", fallback_reason=None)
+        engine.push.side_effect = lambda _samples: calls.append("push")
+        engine.stream_stats.side_effect = lambda: calls.append("stats") or {"input_frames": 100, "completed_windows": 0, "pending_frames": 100}
+        engine.close.side_effect = lambda: calls.append("close")
+        clock_values = iter((1_000_000, 1_750_000))
+
+        def clock() -> int:
+            """결정론적인 push 시작·끝 시각을 제공해 측정 범위를 검증한다."""
+            calls.append("time")
+            return next(clock_values)
+
+        def capture(device: str, stop: threading.Event, callback: object, language: str) -> None:
+            """FFT 창보다 작은 합성 입력 하나만 전달한다."""
+            callback(np.zeros((100, 2), dtype=np.float32), 48_000)
+
+        with (
+            patch("app.monitor_capture_device", side_effect=capture),
+            patch("app.create_spectrum_engine", side_effect=lambda *args, **kwargs: calls.append("create") or engine),
+            patch("app.time.perf_counter_ns", side_effect=clock),
+        ):
+            application._spectrum_monitor_worker(7, "synthetic-device", application.spectrum_stop_event, "ko")
+        self.assertEqual(calls, ["create", "time", "push", "time", "stats", "close"])
+        session, frame, diagnostics = application.spectrum_frames.get_nowait()
+        self.assertEqual(session, 7)
+        self.assertIsNone(frame)
+        self.assertEqual(diagnostics["push_ms"], 0.75)
+        self.assertEqual(diagnostics["pending_frames"], 100)
+        self.assertIn("excludes_capture_gui_ai_and_io_latency", diagnostics["timing_scope"])
+        self.assertEqual([event[0] for event in _events(application)], ["spectrum_backend", "spectrum_finished"])
+        application.spectrum_diagnostics_var.set.assert_not_called()
+
+    def test_diagnostics_snapshot_is_copied_and_queue_stays_bounded(self) -> None:
+        """작업자 딕셔너리 변경이나 많은 부분 입력이 대기 중 UI 진단을 변조하거나 쌓지 않는다."""
+        application = _application()
+        diagnostics = {"push_ms": 0.25, "completed_windows": 0, "pending_frames": 100}
+        for index in range(100):
+            diagnostics["pending_frames"] = index
+            application._offer_latest_spectrum(7, None, diagnostics)
+        diagnostics["pending_frames"] = 1000
+        self.assertEqual(application.spectrum_frames.qsize(), 1)
+        self.assertEqual(application.spectrum_frames.get_nowait()[2]["pending_frames"], 99)
+
+    def test_ui_applies_partial_stats_without_drawing_or_duplicate_frame_comparison(self) -> None:
+        """부분 버퍼의 숫자만 갱신하고 이미 그린 FFT 프레임은 다시 비교하지 않는다."""
+        application = _application()
+        application._apply_spectrum_frame = Mock()
+        diagnostics = {"push_ms": 0.25, "completed_windows": 0, "pending_frames": 100}
+        application._offer_latest_spectrum(7, None, diagnostics)
+        application._drain_spectrum_frames()
+        self.assertEqual(application.last_live_dsp_diagnostics, diagnostics)
+        application._apply_spectrum_frame.assert_not_called()
+        frame = object()
+        application.last_spectrum_frame = frame
+        application._offer_latest_spectrum(7, frame, diagnostics)
+        application._drain_spectrum_frames()
+        application._apply_spectrum_frame.assert_not_called()
+        self.assertEqual(application.spectrum_diagnostics_var.set.call_count, 2)
+
+    def test_stale_stopping_closed_and_finished_stats_are_ignored(self) -> None:
+        """이전 세션이나 중지·종료 이후 진단이 마지막 정상 측정치를 덮지 않아야 한다."""
+        for scenario in ("stale", "stopping", "closed", "finished"):
+            with self.subTest(scenario=scenario):
+                application = _application()
+                application.spectrum_stop_requested = scenario == "stopping"
+                application.closing = scenario == "closed"
+                if scenario == "finished":
+                    application.spectrum_worker = None
+                application._offer_latest_spectrum(6 if scenario == "stale" else 7, None, {"push_ms": 1, "completed_windows": 2, "pending_frames": 3})
+                application._drain_spectrum_frames()
+                self.assertIsNone(application.last_live_dsp_diagnostics)
+                application.spectrum_diagnostics_var.set.assert_not_called()
+
+    def test_diagnostics_text_is_bounded_but_export_keeps_exact_numbers(self) -> None:
+        """아주 긴 세션과 느린 push는 짧게 표시하되 저장할 원래 숫자는 그대로 유지한다."""
+        application = _application()
+        diagnostics = {"push_ms": 105.123456, "completed_windows": 123_456_789, "pending_frames": 2047}
+        application.last_live_dsp_diagnostics = diagnostics.copy()
+        for language in ("ko", "en"):
+            application.language = language
+            label = application._spectrum_diagnostics_text()
+            self.assertIn("99+ms", label)
+            self.assertIn("123.5M", label)
+            self.assertIn("2047", label)
+            self.assertLess(len(label), 48)
+        self.assertEqual(application.last_live_dsp_diagnostics, diagnostics)
+
+
 class NativeBackendDisplayTests(unittest.TestCase):
     """스레드 이벤트와 표시 문구가 실제 현재 백엔드만 드러내는지 확인한다."""
 
@@ -266,6 +371,8 @@ class NativeBackendDisplayTests(unittest.TestCase):
         self.assertEqual(application.spectrum_session_id, 8)
         self.assertIsNone(application.spectrum_backend)
         self.assertNotIn("C++", application.spectrum_backend_var.set.call_args.args[0])
+        self.assertIsNone(application.last_live_dsp_diagnostics)
+        self.assertEqual(application.spectrum_diagnostics_var.set.call_args.args[0], tr("status.spectrum_diagnostics_pending", "ko"))
         thread.return_value.start.assert_called_once()
 
 
@@ -282,6 +389,9 @@ class NativeSelfTestIntegrationTests(unittest.TestCase):
         self.assertTrue(status["smoke_ok"])
         self.assertFalse(status["parity_ok"])
         self.assertTrue(status["partial_buffer_reset_ok"])
+        self.assertTrue(status["stream_stats_ok"])
+        self.assertTrue(status["float32_smoke_ok"])
+        self.assertFalse(status["float32_parity_ok"])
         self.assertFalse(status["capture_device_tested"])
 
     def test_actual_native_self_test_checks_cpp_when_library_is_present(self) -> None:
@@ -294,6 +404,10 @@ class NativeSelfTestIntegrationTests(unittest.TestCase):
         self.assertTrue(status["available"])
         self.assertTrue(status["smoke_ok"])
         self.assertTrue(status["parity_ok"])
+        self.assertEqual(status["abi_version"], 2)
+        self.assertTrue(status["float32_parity_ok"])
+        self.assertTrue(status["stream_stats_ok"])
+        self.assertEqual(status["tested_stream_stats"], {"input_frames": 2048 * 8 + 127, "completed_windows": 8, "pending_frames": 127})
         self.assertGreater(status["frames_checked"], 0)
 
     def test_developer_block_includes_native_cpp_and_header(self) -> None:
@@ -331,6 +445,8 @@ class NativeBackendLayoutTests(unittest.TestCase):
                             application.spectrum_backend = backend
                             application.spectrum_fallback_reason = reason
                             application.spectrum_backend_var.set(application._spectrum_backend_text())
+                            application.last_live_dsp_diagnostics = {"push_ms": 12.345, "completed_windows": 123_456_789, "pending_frames": 2047}
+                            application.spectrum_diagnostics_var.set(application._spectrum_diagnostics_text())
                             application.analysis_progress_percent = 100.0
                             application.analysis_elapsed_seconds = 105.0
                             application._refresh_analysis_progress()
@@ -341,13 +457,18 @@ class NativeBackendLayoutTests(unittest.TestCase):
                             heading = application.spectrum_tab.grid_slaves(row=3, column=0)[0]
                             heading_label = heading.grid_slaves(row=0, column=0)[0]
                             backend_label = heading.grid_slaves(row=0, column=1)[0]
+                            frequency_heading = application.spectrum_tab.grid_slaves(row=5, column=0)[0]
+                            frequency_label = frequency_heading.grid_slaves(row=0, column=0)[0]
+                            diagnostics_label = frequency_heading.grid_slaves(row=0, column=1)[0]
                             font = tkfont.Font(root=root, font=backend_label.cget("font"))
                             self.assertLessEqual(font.measure(application.spectrum_backend_var.get()) + 2, backend_label.winfo_width())
                             self.assertGreaterEqual(heading_label.winfo_height(), heading_label.winfo_reqheight())
                             self.assertGreaterEqual(heading_label.winfo_width(), heading_label.winfo_reqwidth())
                             self.assertLessEqual(heading_label.winfo_rootx() + heading_label.winfo_width(), backend_label.winfo_rootx())
+                            self.assertLessEqual(font.measure(application.spectrum_diagnostics_var.get()) + 2, diagnostics_label.winfo_width())
+                            self.assertLessEqual(frequency_label.winfo_rootx() + frequency_label.winfo_width(), diagnostics_label.winfo_rootx())
                             footer = application.progress.master
-                            for widget in (heading, heading_label, backend_label, footer, application.progress, application.status_text, application.result_title_label, application.result_summary_label):
+                            for widget in (heading, heading_label, backend_label, frequency_heading, frequency_label, diagnostics_label, footer, application.progress, application.status_text, application.result_title_label, application.result_summary_label):
                                 x = widget.winfo_rootx() - root.winfo_rootx()
                                 y = widget.winfo_rooty() - root.winfo_rooty()
                                 self.assertGreaterEqual(x, 0)
@@ -371,6 +492,7 @@ class NativeBackendLayoutTests(unittest.TestCase):
                 patch("app._window_work_area", return_value=(0, 0, 992, 664)),
             ):
                 application = ToneMatchApp(root)
+                application.last_live_dsp_diagnostics = {"push_ms": 0.25, "completed_windows": 42, "pending_frames": 127}
                 for backend, reason, key in (
                     ("cpp", None, "status.spectrum_backend_cpp"),
                     ("numpy", "Native DSP DLL is not installed.", "status.spectrum_backend_numpy_missing"),
@@ -389,6 +511,7 @@ class NativeBackendLayoutTests(unittest.TestCase):
                             self.assertEqual(application.spectrum_backend, backend)
                             self.assertEqual(application.spectrum_fallback_reason, reason)
                             self.assertEqual(application.spectrum_backend_var.get(), tr(key, language))
+                            self.assertEqual(application.spectrum_diagnostics_var.get(), tr("status.spectrum_diagnostics", language, ms="0.25", windows="42", pending=127))
                             self.assertEqual(root.state(), "withdrawn")
         finally:
             root.destroy()

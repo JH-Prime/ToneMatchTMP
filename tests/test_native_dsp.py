@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import ctypes
 import sys
 import tempfile
 import unittest
@@ -43,6 +44,53 @@ def _assert_frame(test: unittest.TestCase, actual: SpectrumFrame, expected: Spec
     test.assertAlmostEqual(actual.rms_dbfs, expected.rms_dbfs, delta=1e-9)
     test.assertAlmostEqual(actual.peak_dbfs, expected.peak_dbfs, delta=1e-9)
     test.assertAlmostEqual(actual.spectral_centroid_hz, expected.spectral_centroid_hz, delta=1e-7)
+
+
+class InputPreparationTests(unittest.TestCase):
+    """ABI 2 입력의 정밀도·정렬·소유권과 float32 무변환 경로를 검증한다."""
+
+    def test_aligned_contiguous_float32_does_not_allocate_input_sized_copy(self) -> None:
+        """캡처의 native float32 배열은 읽기 전용인 경우에도 같은 메모리로 전달한다."""
+        for mono in (False, True):
+            source = _signal(128, 1 if mono else 2).astype(np.float32)
+            if mono:
+                source = source[:, 0]
+            source.flags.writeable = False
+            actual = native_dsp._prepare_block(source, 1 if mono else 2, native_float32=True)
+            self.assertEqual(actual.dtype, np.dtype(np.float32))
+            self.assertEqual(actual.ctypes.data, source.ctypes.data)
+            self.assertTrue(np.shares_memory(actual, source))
+            self.assertTrue(actual.flags.c_contiguous and actual.flags.aligned)
+            self.assertFalse(actual.flags.writeable)
+
+    def test_strided_and_unaligned_float32_are_copied_to_safe_layout(self) -> None:
+        """stride와 정렬이 맞지 않는 float32는 정밀도를 유지하며 안전한 배열로 준비한다."""
+        unaligned = np.ndarray((128, 2), dtype=np.float32,
+                               buffer=np.zeros(128 * 2 * 4 + 1, dtype=np.uint8), offset=1)
+        unaligned[:] = _signal(128)
+        self.assertFalse(unaligned.flags.aligned)
+        for source in (_signal(256).astype(np.float32)[::2], unaligned,
+                       _signal(128).astype(np.float32)[:, ::-1]):
+            with self.subTest(strides=source.strides, aligned=source.flags.aligned):
+                actual = native_dsp._prepare_block(source, 2, native_float32=True)
+                self.assertEqual(actual.dtype, np.dtype(np.float32))
+                self.assertTrue(actual.flags.c_contiguous and actual.flags.aligned)
+                self.assertFalse(np.shares_memory(actual, source))
+                np.testing.assert_array_equal(actual, source)
+
+    def test_other_dtypes_and_non_native_endian_keep_double_conversion(self) -> None:
+        """기존 float64 정밀도를 낮추지 않고 다른 dtype도 기존 double 경로로 보낸다."""
+        opposite_endian = ">f4" if sys.byteorder == "little" else "<f4"
+        source64 = np.array([[0.123456789012345, -0.123456789012345]])
+        sources = (source64, source64.astype(opposite_endian), source64.astype(np.float16),
+                   np.array([[1, -1]], dtype=np.int16), np.array([[True, False]]))
+        for source in sources:
+            with self.subTest(dtype=source.dtype):
+                actual = native_dsp._prepare_block(source, 2, native_float32=True)
+                self.assertEqual(actual.dtype, np.dtype(np.float64))
+                self.assertTrue(actual.flags.c_contiguous and actual.flags.aligned)
+                np.testing.assert_array_equal(actual, source.astype(np.float64))
+        self.assertIs(native_dsp._prepare_block(source64, 2, native_float32=True), source64)
 
 
 class PythonStreamingTests(unittest.TestCase):
@@ -97,6 +145,54 @@ class PythonStreamingTests(unittest.TestCase):
             engine.push(_signal(2_048))
         with self.assertRaises(NativeDspError):
             engine.reset()
+        with self.assertRaises(NativeDspError):
+            engine.stream_stats()
+
+    def test_stream_counters_track_partial_multiple_windows_reset_and_ownership(self) -> None:
+        """입력 수와 실제 완성 창 수는 반환 프레임 수와 구분하고 reset에서 함께 비운다."""
+        engine = PythonSpectrumEngine(44_100, 2, fft_size=128)
+        accepted = 0
+        try:
+            for size in (13, 115, 400, 1, 19):
+                engine.push(_signal(size).astype(np.float32))
+                accepted += size
+                expected = {"input_frames": accepted, "completed_windows": accepted // 128,
+                            "pending_frames": accepted % 128}
+                actual = engine.stream_stats()
+                self.assertEqual(actual, expected)
+                actual["input_frames"] = -1
+                self.assertEqual(engine.stream_stats(), expected)
+            with self.assertRaises(ValueError):
+                engine.push(np.zeros((10, 1)))
+            self.assertEqual(engine.stream_stats(), expected)
+            engine.reset()
+            self.assertEqual(engine.stream_stats(), dict.fromkeys(expected, 0))
+        finally:
+            engine.close()
+
+    def test_counter_overflow_preserves_pending_history_and_statistics(self) -> None:
+        """거대한 실행 없이 uint64 카운터 경계를 설정해 overflow 사전 거부를 검증한다."""
+        engine = PythonSpectrumEngine(44_100, 2, fft_size=128)
+        try:
+            engine.push(_signal(127))
+            engine._input_frames = native_dsp.MAX_STREAM_FRAMES
+            saved = engine.stream_stats()
+            pending = engine._pending.copy()
+            with self.assertRaisesRegex(NativeDspError, "counter would overflow"):
+                engine.push(_signal(1))
+            self.assertEqual(engine.stream_stats(), saved)
+            np.testing.assert_array_equal(engine._pending, pending)
+            engine._input_frames = 127
+            engine._completed_windows = native_dsp.MAX_STREAM_FRAMES
+            saved = engine.stream_stats()
+            with self.assertRaisesRegex(NativeDspError, "counter would overflow"):
+                engine.push(_signal(1))
+            self.assertEqual(engine.stream_stats(), saved)
+            np.testing.assert_array_equal(engine._pending, pending)
+            engine.reset()
+            self.assertEqual(engine.stream_stats(), dict.fromkeys(saved, 0))
+        finally:
+            engine.close()
 
     def test_invalid_shapes_and_types_do_not_consume_pending_pcm(self) -> None:
         """잘못된 PCM을 거부한 뒤에도 이미 모은 유효 부분 블록을 보존해야 한다."""
@@ -213,7 +309,7 @@ class NativeSelectionTests(unittest.TestCase):
             placeholder = Path(temporary) / "tonematch_dsp.dll"
             placeholder.touch()
             wrong = Mock()
-            wrong.tm_dsp_abi_version.return_value = 2
+            wrong.tm_dsp_abi_version.return_value = 1
             with patch.object(native_dsp, "_library_candidates", return_value=(placeholder,)), \
                  patch.object(native_dsp.ctypes, "CDLL", return_value=wrong):
                 with self.assertRaisesRegex(NativeDspError, "ABI mismatch"):
@@ -238,6 +334,45 @@ class NativeSelectionTests(unittest.TestCase):
                 library.tm_dsp_destroy.assert_called_once()
                 self.assertEqual(library.tm_dsp_destroy.call_args.args[0].value, 1234)
 
+    def test_abi_one_library_is_explicitly_rejected_and_auto_uses_numpy(self) -> None:
+        """ABI 1 DLL에 새 함수를 호출하지 않고 strict 오류와 자동 대체를 구분한다."""
+        with tempfile.TemporaryDirectory(prefix="tonematch_dsp_abi1_") as temporary:
+            placeholder = Path(temporary) / "tonematch_dsp.dll"
+            placeholder.touch()
+            old = Mock()
+            old.tm_dsp_abi_version.return_value = 1
+            with patch.object(native_dsp, "_library_candidates", return_value=(placeholder,)), \
+                 patch.object(native_dsp.ctypes, "CDLL", return_value=old):
+                with self.assertRaisesRegex(NativeDspError, "expected 2, received 1"):
+                    create_spectrum_engine(44_100, 2, backend="cpp")
+                engine = create_spectrum_engine(44_100, 2, backend="auto")
+                try:
+                    self.assertEqual(engine.backend, "numpy")
+                    self.assertIn("expected 2, received 1", engine.fallback_reason)
+                    engine.push(_signal(2048))
+                    self.assertEqual(engine.stream_stats(), {"input_frames": 2048, "completed_windows": 1,
+                                                             "pending_frames": 0})
+                finally:
+                    engine.close()
+            old.tm_dsp_create.assert_not_called()
+
+    def test_abi_two_library_requires_all_new_symbols(self) -> None:
+        """ABI 번호만 올리고 float32·통계 함수를 누락한 DLL도 안전하게 거부한다."""
+        names = ("tm_dsp_abi_version", "tm_dsp_create", "tm_dsp_destroy", "tm_dsp_reset",
+                 "tm_dsp_bin_count", "tm_dsp_frequencies", "tm_dsp_push", "tm_dsp_push_f32",
+                 "tm_dsp_stream_stats")
+        with tempfile.TemporaryDirectory(prefix="tonematch_dsp_symbols_") as temporary:
+            placeholder = Path(temporary) / "tonematch_dsp.dll"
+            placeholder.touch()
+            for missing in ("tm_dsp_push_f32", "tm_dsp_stream_stats"):
+                library = Mock(spec=[name for name in names if name != missing])
+                library.tm_dsp_abi_version.return_value = 2
+                with self.subTest(missing=missing), \
+                     patch.object(native_dsp, "_library_candidates", return_value=(placeholder,)), \
+                     patch.object(native_dsp.ctypes, "CDLL", return_value=library):
+                    with self.assertRaisesRegex(NativeDspError, "required ABI functions"):
+                        native_dsp._load_library()
+
 
 @unittest.skipUnless(any(path.is_file() for path in native_dsp._library_candidates()), "Native DSP DLL is not built")
 class NativeParityTests(unittest.TestCase):
@@ -249,7 +384,142 @@ class NativeParityTests(unittest.TestCase):
         info = native_runtime_info()
         self.assertTrue(info["available"], info)
         self.assertEqual(info["backend"], "cpp")
-        self.assertEqual(info["abi_version"], 1)
+        self.assertEqual(info["abi_version"], 2)
+
+    def test_float32_direct_pointer_and_caller_pcm_are_preserved(self) -> None:
+        """정렬된 float32는 원본 포인터를 사용하고 C++ 정규화는 호출자 PCM을 바꾸지 않는다."""
+        source = _signal(2048).astype(np.float32)
+        source[:3] = [[np.nan, np.inf], [-np.inf, 2.0], [-2.0, 0.0]]
+        snapshot = source.copy()
+        source.flags.writeable = False
+        engine = NativeSpectrumEngine(44_100, 2)
+        reference = PythonSpectrumEngine(44_100, 2)
+        try:
+            with patch.object(engine._library, "tm_dsp_push_f32", wraps=engine._library.tm_dsp_push_f32) as push32, \
+                 patch.object(engine._library, "tm_dsp_push", wraps=engine._library.tm_dsp_push) as push64:
+                actual = engine.push(source)
+                self.assertEqual(ctypes.cast(push32.call_args.args[1], ctypes.c_void_p).value, source.ctypes.data)
+                push32.assert_called_once()
+                push64.assert_not_called()
+            _assert_frame(self, actual, reference.push(source))
+            np.testing.assert_array_equal(source, snapshot)
+        finally:
+            engine.close()
+            reference.close()
+
+    def test_float32_layouts_and_mixed_precision_stream_match_numpy(self) -> None:
+        """부분 창 사이 dtype 전환과 endian·정렬·stride의 차이가 같은 수치를 내야 한다."""
+        unaligned = np.ndarray((160, 2), dtype=np.float32,
+                               buffer=np.zeros(160 * 2 * 4 + 1, dtype=np.uint8), offset=1)
+        unaligned[:] = _signal(160)
+        opposite_endian = ">f4" if sys.byteorder == "little" else "<f4"
+        blocks = (_signal(13).astype(np.float32), _signal(115), _signal(320).astype(np.float32)[::2],
+                  unaligned, _signal(256).astype(opposite_endian), _signal(128).astype(np.float16),
+                  _signal(128).astype(np.float32)[:, ::-1], np.full((128, 2), 2, dtype=np.int16))
+        native = NativeSpectrumEngine(44_100, 2, fft_size=128)
+        python = PythonSpectrumEngine(44_100, 2, fft_size=128)
+        accepted = 0
+        try:
+            for source in blocks:
+                snapshot = source.copy()
+                actual, expected = native.push(source), python.push(source)
+                if expected is None:
+                    self.assertIsNone(actual)
+                else:
+                    _assert_frame(self, actual, expected)
+                accepted += len(source)
+                counters = {"input_frames": accepted, "completed_windows": accepted // 128,
+                            "pending_frames": accepted % 128}
+                self.assertEqual(native.stream_stats(), counters)
+                self.assertEqual(python.stream_stats(), counters)
+                np.testing.assert_array_equal(source, snapshot)
+        finally:
+            native.close()
+            python.close()
+
+    def test_stream_counters_reset_query_ownership_and_close(self) -> None:
+        """실제 native 누적량은 완성 창 여러 개와 꼬리를 세고 조회 결과를 재사용하지 않는다."""
+        engine = NativeSpectrumEngine(44_100, 2, fft_size=128)
+        try:
+            self.assertEqual(engine.stream_stats(), {"input_frames": 0, "completed_windows": 0, "pending_frames": 0})
+            engine.push(_signal(128 * 7 + 19).astype(np.float32))
+            expected = {"input_frames": 915, "completed_windows": 7, "pending_frames": 19}
+            counters = engine.stream_stats()
+            self.assertEqual(counters, expected)
+            counters["input_frames"] = -1
+            self.assertEqual(engine.stream_stats(), expected)
+            with self.assertRaises(ValueError):
+                engine.push(np.zeros((32, 1), dtype=np.float32))
+            self.assertEqual(engine.stream_stats(), expected)
+            engine.reset()
+            self.assertEqual(engine.stream_stats(), dict.fromkeys(expected, 0))
+            self.assertIsNone(engine.push(_signal(127).astype(np.float32)))
+            self.assertEqual(engine.stream_stats()["pending_frames"], 127)
+        finally:
+            engine.close()
+        with self.assertRaises(NativeDspError):
+            engine.stream_stats()
+
+    def test_float32_c_abi_rejections_stats_capacity_and_mixed_pushes(self) -> None:
+        """새 C 진입점도 모든 사전 거부에서 PCM·이력·카운터·출력 경계를 보존해야 한다."""
+        library = native_dsp._load_library()
+        handle = library.tm_dsp_create(44_100, 2, 128, 4, 20.0, 20_000.0)
+        self.assertTrue(handle)
+        count = library.tm_dsp_bin_count(handle)
+        waveform, magnitudes, stats = (np.full(length + 2, 123_456.0) for length in (128, count, 3))
+        outputs = (waveform, magnitudes, stats)
+        pointers = tuple(native_dsp._double_pointer(values) for values in outputs)
+        counters = np.full(5, 123_456, dtype=np.uint64)
+        counter_pointer = counters.ctypes.data_as(native_dsp._UINT64_POINTER)
+        source = _signal(256).astype(np.float32)
+        reference = PythonSpectrumEngine(44_100, 2, fft_size=128)
+        try:
+            for arguments in ((None, counter_pointer, 3), (handle, None, 3), (handle, counter_pointer, 2)):
+                self.assertEqual(library.tm_dsp_stream_stats(*arguments), -1)
+                np.testing.assert_array_equal(counters, 123_456)
+            first = source[:192]
+            options = [handle, first.ctypes.data_as(native_dsp._FLOAT_POINTER), len(first),
+                       pointers[0], 128, pointers[1], count, pointers[2], 3]
+            self.assertEqual(library.tm_dsp_push_f32(*options), 1)
+            reference.push(first)
+            self.assertEqual(library.tm_dsp_stream_stats(handle, counter_pointer, 3), 3)
+            np.testing.assert_array_equal(counters, [192, 1, 64, 123_456, 123_456])
+            for values in outputs:
+                values[:] = 123_456.0
+            options[2] = 64
+            for index, value in ((0, None), (1, None), (2, 10_000_001), (3, None), (4, 127),
+                                 (5, None), (6, count - 1), (7, None), (8, 2)):
+                rejected = options.copy()
+                rejected[index] = value
+                with self.subTest(index=index, value=value):
+                    self.assertEqual(library.tm_dsp_push_f32(*rejected), -1)
+                    for values in outputs:
+                        np.testing.assert_array_equal(values, 123_456.0)
+                    self.assertEqual(library.tm_dsp_stream_stats(handle, counter_pointer, 3), 3)
+                    np.testing.assert_array_equal(counters, [192, 1, 64, 123_456, 123_456])
+            empty = options.copy()
+            empty[1], empty[2] = None, 0
+            self.assertEqual(library.tm_dsp_push_f32(*empty), 0)
+            for values in outputs:
+                np.testing.assert_array_equal(values, 123_456.0)
+            # float32로 모은 부분 창을 기존 double 진입점으로 완성해 같은 상태 공유를 검증한다.
+            tail = source[192:].astype(np.float64)
+            options[1] = native_dsp._double_pointer(tail)
+            self.assertEqual(library.tm_dsp_push(*options), 1)
+            expected = reference.push(tail)
+            actual = SpectrumFrame(waveform[:128].astype(np.float32), expected.frequencies_hz,
+                                   magnitudes[:count], *stats[:3])
+            _assert_frame(self, actual, expected)
+            self.assertEqual(library.tm_dsp_stream_stats(handle, counter_pointer, 3), 3)
+            np.testing.assert_array_equal(counters, [256, 2, 0, 123_456, 123_456])
+            for values, length in zip(outputs, (128, count, 3)):
+                np.testing.assert_array_equal(values[length:], 123_456.0)
+            self.assertEqual(library.tm_dsp_reset(handle), 0)
+            self.assertEqual(library.tm_dsp_stream_stats(handle, counter_pointer, 3), 3)
+            np.testing.assert_array_equal(counters, [0, 0, 0, 123_456, 123_456])
+        finally:
+            library.tm_dsp_destroy(handle)
+            reference.close()
 
     def test_multichannel_rates_history_and_multiple_windows_match_numpy(self) -> None:
         """여러 설정과 임의 블록 경계에서도 native와 NumPy 결과가 일치해야 한다."""

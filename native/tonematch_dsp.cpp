@@ -14,6 +14,20 @@ constexpr double kPi = 3.141592653589793238462643383279502884;
 constexpr double kDbfsFloor = -120.0;
 constexpr uint32_t kMaximumFramesPerPush = 10000000;
 
+// 실제 입력으로 도달하기 어려운 uint64 경계도 빌드 시 검증하는 순수 사전 검사이다.
+constexpr bool counters_can_accept(uint64_t input_frames, uint64_t completed_windows,
+                                   uint32_t pending_frames, uint32_t fft_size,
+                                   uint32_t frames) noexcept {
+    const uint64_t completed = (static_cast<uint64_t>(pending_frames) + frames) / fft_size;
+    return frames <= std::numeric_limits<uint64_t>::max() - input_frames &&
+           completed <= std::numeric_limits<uint64_t>::max() - completed_windows;
+}
+
+static_assert(counters_can_accept(UINT64_MAX - 1, 0, 0, 128, 1), "counter boundary accepts exact maximum");
+static_assert(!counters_can_accept(UINT64_MAX, 0, 0, 128, 1), "input counter overflow is rejected");
+static_assert(!counters_can_accept(0, UINT64_MAX, 127, 128, 1), "window counter overflow is rejected");
+static_assert(counters_can_accept(UINT64_MAX, UINT64_MAX, 0, 128, 0), "empty push preserves full counters");
+
 // 표시 하한 이하의 파워를 정확한 무음으로 바꿔 Python 평활화 규칙과 맞춘다.
 double history_power(double power) noexcept {
     if (power <= 0.0) {
@@ -110,6 +124,8 @@ public:
     // 미완성 입력과 이전 장치의 표시 이력을 할당 없이 모두 초기화한다.
     void reset() noexcept {
         filled_frames_ = 0;
+        input_frames_ = 0;
+        completed_windows_ = 0;
         history_count_ = 0;
         history_next_ = 0;
         std::fill(pcm_.begin(), pcm_.end(), 0.0);
@@ -135,8 +151,21 @@ public:
         std::copy(frequencies_.begin(), frequencies_.end(), out);
     }
 
+    // 누적 카운터가 표현 범위를 넘으면 입력을 읽거나 상태를 바꾸기 전에 거부한다.
+    bool can_accept(uint32_t frames) const noexcept {
+        return counters_can_accept(input_frames_, completed_windows_, filled_frames_, fft_size_, frames);
+    }
+
+    // 입력과 완성 창 및 미완성 부분 창을 실제 처리 상태에서 조회한다.
+    void copy_stream_stats(uint64_t *out) const noexcept {
+        out[0] = input_frames_;
+        out[1] = completed_windows_;
+        out[2] = filled_frames_;
+    }
+
     // 임의 길이의 블록을 고정 창으로 나누고 최신 완성 창의 결과만 출력한다.
-    int push(const double *interleaved, uint32_t frames, double *waveform,
+    template <typename Sample>
+    int push(const Sample *interleaved, uint32_t frames, double *waveform,
              double *magnitudes, double *stats) noexcept {
         uint32_t consumed = 0;
         int completed = 0;
@@ -159,6 +188,8 @@ public:
         if (completed > 0) {
             write_output(waveform, magnitudes, stats);
         }
+        input_frames_ += frames;
+        completed_windows_ += static_cast<uint64_t>(completed);
         return completed;
     }
 
@@ -260,6 +291,8 @@ private:
     uint32_t fft_size_;
     uint32_t history_size_;
     uint32_t filled_frames_ = 0;
+    uint64_t input_frames_ = 0;
+    uint64_t completed_windows_ = 0;
     uint32_t history_count_ = 0;
     uint32_t history_next_ = 0;
     double coherent_gain_ = 0.0;
@@ -277,10 +310,34 @@ private:
     std::vector<double> peak_history_;
 };
 
+// double/float 입력이 동일한 사전 검증과 할당 없는 처리 규칙을 공유하게 한다.
+template <typename Sample>
+int push_checked(void *handle, const Sample *interleaved, uint32_t frames,
+                 double *waveform, uint32_t waveform_capacity, double *magnitudes,
+                 uint32_t magnitude_capacity, double *stats, uint32_t stats_capacity) noexcept {
+    if (handle == nullptr || (frames > 0 && interleaved == nullptr) ||
+        waveform == nullptr || magnitudes == nullptr || stats == nullptr ||
+        frames > kMaximumFramesPerPush) {
+        return -1;
+    }
+    try {
+        DspEngine &engine = *static_cast<DspEngine *>(handle);
+        if (waveform_capacity < engine.fft_size() || magnitude_capacity < engine.bin_count() ||
+            stats_capacity < 3 || static_cast<std::size_t>(frames) >
+                std::numeric_limits<std::size_t>::max() / sizeof(Sample) / engine.channels() ||
+            !engine.can_accept(frames)) {
+            return -1;
+        }
+        return engine.push(interleaved, frames, waveform, magnitudes, stats);
+    } catch (...) {
+        return -2;
+    }
+}
+
 }  // namespace
 
 // 로더가 DLL과 Python bridge의 C ABI 호환성을 검사할 수 있게 한다.
-uint32_t tm_dsp_abi_version(void) noexcept { return 1; }
+uint32_t tm_dsp_abi_version(void) noexcept { return 2; }
 
 // 유효하지 않은 설정과 할당 실패를 모두 NULL로 반환하여 예외 전파를 막는다.
 void *tm_dsp_create(uint32_t sample_rate, uint32_t channels, uint32_t fft_size,
@@ -350,19 +407,26 @@ int tm_dsp_frequencies(void *handle, double *out, uint32_t capacity) noexcept {
 int tm_dsp_push(void *handle, const double *interleaved, uint32_t frames,
                 double *waveform, uint32_t waveform_capacity, double *magnitudes,
                 uint32_t magnitude_capacity, double *stats, uint32_t stats_capacity) noexcept {
-    if (handle == nullptr || (frames > 0 && interleaved == nullptr) ||
-        waveform == nullptr || magnitudes == nullptr || stats == nullptr ||
-        frames > kMaximumFramesPerPush) {
+    return push_checked(handle, interleaved, frames, waveform, waveform_capacity,
+                        magnitudes, magnitude_capacity, stats, stats_capacity);
+}
+
+// float32 입력을 별도 변환 배열 없이 같은 double 정밀도 DSP로 공급한다.
+int tm_dsp_push_f32(void *handle, const float *interleaved, uint32_t frames,
+                    double *waveform, uint32_t waveform_capacity, double *magnitudes,
+                    uint32_t magnitude_capacity, double *stats, uint32_t stats_capacity) noexcept {
+    return push_checked(handle, interleaved, frames, waveform, waveform_capacity,
+                        magnitudes, magnitude_capacity, stats, stats_capacity);
+}
+
+// 출력 용량을 확인한 뒤 같은 스트림의 단조 증가 카운터를 복사한다.
+int tm_dsp_stream_stats(void *handle, uint64_t *out, uint32_t capacity) noexcept {
+    if (handle == nullptr || out == nullptr || capacity < 3) {
         return -1;
     }
     try {
-        DspEngine &engine = *static_cast<DspEngine *>(handle);
-        if (waveform_capacity < engine.fft_size() || magnitude_capacity < engine.bin_count() ||
-            stats_capacity < 3 || static_cast<std::size_t>(frames) >
-                std::numeric_limits<std::size_t>::max() / sizeof(double) / engine.channels()) {
-            return -1;
-        }
-        return engine.push(interleaved, frames, waveform, magnitudes, stats);
+        static_cast<const DspEngine *>(handle)->copy_stream_stats(out);
+        return 3;
     } catch (...) {
         return -2;
     }

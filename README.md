@@ -1,28 +1,39 @@
-# ToneMatch TMP 0.0.08
+# ToneMatch TMP 0.0.09
 
 ToneMatch TMP is an unofficial, pre-release Windows desktop tool that analyzes a
 local audio/video file or Windows playback capture, isolates the guitar stem,
 and recommends three starting-point tone chains for Fender Tone Master Pro.
-It also provides an experimental chord/voicing timeline. Version 0.0.08 prioritizes
-a C++17 live-DSP engine: a preallocated PCM accumulator, per-channel FFT, and
-four-frame smoothing behind a versioned C ABI and Python `ctypes` bridge. The
-monitor displays the actual C++ or NumPy backend. Python/Tk UI, SoundCard capture,
-AI isolation, offline tone/Reference analysis and chord/voicing behavior remain
-unchanged. The release/build reference date is 2026-09-10 KST. Version 0.0.07's
+It also provides an experimental chord/voicing timeline. Version 0.0.09 adds a
+separate local Stem removal tool and extends the C++17 live-DSP engine through
+C ABI 2. The tool can remove one to five selected Demucs `htdemucs_6s` parts—
+vocals, drums, bass, guitar, piano, or other—and mix the remaining stems into a
+new WAV. The monitor uses direct float32 input and displays the actual C++ or
+NumPy backend, DSP push time, completed FFT windows and pending frames. Existing
+tone/Reference/chord analysis and SoundCard capture remain available. The
+release/build reference date is 2026-09-19 KST. Version 0.0.07's
 chord evidence and small-window fixes are retained. Verified
-test and package outcomes are recorded in `QA_REPORT_v0.0.08.json` and
+test and package outcomes are recorded in `QA_REPORT_v0.0.09.json` and
 `BUILD_HISTORY.md`; this feature summary is not proof that a release gate passed.
 
 한국어 설치·사용 안내는 [README_KO.md](README_KO.md)를 먼저 읽어 주세요.
 
-## Verified v0.0.08 summary
+## v0.0.09 validation status
 
-162 automated tests passed, including actual C++ execution. On this PC, live DSP
-push median was 0.1494 ms with C++ versus 0.6513 ms with NumPy (about 4.36×;
-2,560 calls each). This excludes capture, GUI, AI and offline analysis. All 5,439
-complete FFT windows from the supplied 252.61-second MP3 matched within tolerance.
-The portable EXE also completed full AI analysis and retained its footer at
-960×600. Built 2026-09-10, final validation 2026-09-11 KST; see the QA report for limits.
+This is an unsigned CPU portable developer prerelease.
+The 2026-09-19 build passed all 214 tests with warnings treated as errors,
+including hidden Korean/English UI regressions, compileall, source and packaged
+EXE self-tests, and 30 actual ABI-2 float32/float64 parity windows.
+On 2026-09-16, the source app removed guitar and piano from 31 seconds of the
+supplied Room 335 file on CPU across two chunks. All 39 progress updates were
+monotonic, peak normalization was exercised, and the source remained unchanged.
+A separate real-inference cancellation left no output or partial files.
+The packaged GUI was launched and its Stem removal tab opened, but no removal
+was run there. The planned full-song packaged UI check was stopped by the user's
+Escape request and was not performed. First model download, network-disabled
+operation, CUDA hardware, live capture and listening quality were not tested for
+this release. Publication requires a fresh ZIP integrity and source-consistency
+check; detailed evidence is in the QA report and `BUILD_HISTORY.md`.
+Measurements from v0.0.08 apply only to that release.
 
 ## Current scope
 
@@ -30,14 +41,23 @@ The portable EXE also completed full AI analysis and retained its footer at
 - Tone Master Pro firmware 1.8.58 and Model Guide Rev. J catalog
 - Up to 20 minutes per analysis; `end = 0` means through the end, capped at 20 minutes
 - Demucs `htdemucs_6s` guitar-stem isolation for full mixes
+- Separate outer `Tone analysis` and `Stem removal` workspace tabs; the latter removes any one to five selected
+  `vocals`/`drums`/`bass`/`guitar`/`piano`/`other` estimates, mixes what remains,
+  and writes one new 44.1 kHz stereo PCM16 WAV
+- Stem-removal progress, elapsed time and cancellation, with no source or
+  existing-destination overwrite and cleanup of decoded/mix/partial temporary files
 - Visible stage-weighted analysis percentage and elapsed time, with actual model
   download bytes/file percentage and completed Demucs-block audio duration
 - Auto/CPU/CUDA compute preference with GPU, VRAM, inference-time, and real-time-factor diagnostics
 - Windows WASAPI loopback/audio-input recording when no local file is available
 - Live raw-input waveform and logarithmic 20 Hz-20 kHz spectrum for the selected
   WASAPI input or playback loopback, with RMS/peak dBFS and spectral centroid
-- C++ live-DSP by default when the bundled ABI-1 DLL is available and compatible;
+- C++ live-DSP by default when the bundled ABI-2 DLL is available and compatible;
   explicit NumPy fallback reporting when it cannot be used
+- Direct aligned, native-endian, C-contiguous float32 input without the former
+  Python float64 upcast; float64 input remains supported
+- Live DSP push time and engine input/completed-window/pending-frame diagnostics,
+  separate from capture time, AI analysis and audio round-trip latency
 - A level-normalized reference spectrum from the analyzed local source or isolated
   guitar stem, compared against Current live input as Reference, Current, and delta
   (Current minus Reference) across six stable frequency bands
@@ -61,8 +81,25 @@ presets to Tone Master Pro and does not claim to recover the original rig, exact
 DSP, or physical guitar fingering. Candidate shapes are suggestions, not detected
 tablature.
 
+Open the outer `Stem removal` workspace tab for a Logic-like workflow; it does not claim Apple
+Logic Pro model or quality parity. Choose a local audio/video source, a new `.wav`
+destination, a range of at least three seconds and at most 20 minutes, a compute
+mode, and one to five parts to remove. End `0`/blank means the remainder of the
+source subject to the 20-minute cap. The app sums only the unselected Demucs stems
+and publishes a single stereo PCM16 file. It never modifies the source, refuses an
+existing destination, and does not save individual stems. Saving uses atomic
+no-overwrite creation, including when another file appears at the destination
+during processing. If the kept-stem sum would exceed full scale,
+one global gain reduction prevents clipping while preserving relative levels.
+`Piano` is the model's piano estimate, not a separate detector for every keyboard
+or synthesizer sound; such sounds may also fall into `Other`. User audio and output
+stay local; only first-use model acquisition needs the network. Leakage, missing
+instruments, phase/attack/reverb changes, and other separation artifacts are
+expected limitations, so keep the source and audition the result.
+
 The AI model weights are not committed or redistributed. The first full-mix
-analysis downloads them to the current Windows user's Hugging Face cache.
+analysis or Stem removal job downloads them to the current Windows user's
+Hugging Face cache.
 The app checks the cache before downloading the official YAML/safetensors model;
 it does not silently fall back to legacy model downloads. Version 0.0.06 also
 guards missing console output streams in the windowed EXE, preventing the
@@ -126,15 +163,22 @@ URLs remain browser shortcuts and source records only. The monitor is WASAPI sha
 mode through Python/SoundCard; it is not a C++ device-I/O callback, ASIO, WASAPI
 Exclusive, or a hard-real-time audio path.
 
-`native_dsp.py` loads only the bundled `resources/tonematch_dsp.dll`, checks ABI 1,
+`native_dsp.py` loads only the bundled `resources/tonematch_dsp.dll`, checks ABI 2,
 and selects C++ automatically when compatible. Missing or incompatible native
 code falls back to the NumPy reference path and reports the actual backend;
 explicit developer `backend="cpp"` requests fail instead of silently falling back.
+An older ABI-1 DLL is incompatible: do not mix files from different release ZIPs.
 The accumulator retains incomplete FFT windows for the next input block; stop or
 reset discards that partial window. Completed non-overlapping windows use the
 same channel-power and four-frame smoothing contract. Native processing buffers
-are allocated at creation, but Python copies, locks and shared-mode capture
-remain, so this is not a lock-free or hard-real-time claim.
+are allocated at creation. Compatible float32 input reaches `tm_dsp_push_f32`
+without a Python float64 conversion; other layouts may require normalization.
+The float64 path remains available. The engine reports accepted `input_frames`,
+`completed_windows` and `pending_frames`; reset clears these counters and the
+partial window. DSP push time measures the processing call, not device capture,
+AI, UI drawing or audio round-trip latency. Python output copies, locks and
+shared-mode capture remain, so this is not an end-to-end zero-copy, lock-free or
+hard-real-time claim.
 
 ## Develop and build
 
@@ -154,7 +198,7 @@ py -3.12 -m venv ..\.venv
 & ..\.venv\Scripts\python.exe -m pip install -r requirements.txt
 & ..\.venv\Scripts\python.exe tools\build_native.py --zig C:\Tools\zig-0.15.2\zig.exe
 & ..\.venv\Scripts\python.exe -m unittest discover -s tests -v
-& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.08.json
+& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.09.json
 & ..\.venv\Scripts\python.exe app.py
 ```
 

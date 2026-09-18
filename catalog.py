@@ -8,18 +8,52 @@
 from __future__ import annotations
 
 
-APP_VERSION = "0.0.08"
+APP_VERSION = "0.0.09"
 TARGET_FIRMWARE = "1.8.58"
 MODEL_GUIDE_REVISION = "Rev. J (2026-07)"
-BUILD_DATE = "2026-09-10"
+BUILD_DATE = "2026-09-19"
 
 
 # 앱 내부의 변경 기록 화면과 배포 문서가 함께 사용하는 단일 원본이다.
 # 이후 패치는 0.0.02, 0.0.03, 0.0.04처럼 한 단계씩 올리고 최신 항목을 맨 위에 둔다.
 CHANGELOG: list[dict] = [
     {
-        "version": "0.0.08",
+        "version": "0.0.09",
         "date": BUILD_DATE,
+        "status": "공개 개발 프리뷰",
+        "status_en": "Public development preview",
+        "changes": [
+            "로컬 오디오·영상의 Demucs 6개 스템에서 선택한 악기를 제외해 새 스테레오 WAV로 저장",
+            "C ABI 2의 float32 직접 입력으로 정렬된 연속 캡처 PCM의 불필요한 float64 배열 변환 제거",
+            "기존 double 입력의 정밀도와 C++의 NaN/Inf·클리핑·부분 창·평활화 계약 유지",
+            "입력 프레임·완성 FFT 창·미완성 버퍼 수를 엔진에서 조회하고 초기화·종료 수명 검증",
+            "실시간 DSP 처리 시간과 창·버퍼 상태를 최신 프레임과 함께 표시하며 이전 세션 갱신 차단",
+            "ABI 1 DLL 혼용을 검출하고 자동 NumPy 폴백과 실제 ABI 2 배포 검증을 구분",
+        ],
+        "changes_en": [
+            "Adds local six-stem Demucs removal that excludes selected instruments and writes a new stereo WAV",
+            "Adds direct float32 input through C ABI 2, avoiding the input-sized float64 conversion for aligned contiguous capture PCM",
+            "Preserves double-input precision and native sanitization, clipping, partial-window and smoothing contracts",
+            "Exposes accepted input frames, completed FFT windows and pending frames with reset and lifetime checks",
+            "Shows live DSP push duration and window/buffer state alongside the latest frame while rejecting stale sessions",
+            "Detects mixed ABI 1 DLLs and distinguishes automatic NumPy fallback from required ABI 2 release verification",
+        ],
+        "known_issues": [
+            "스템 제거는 AI 추정이므로 악기 누출·잔향·왜곡이 남을 수 있고 원본 트랙을 정확히 복원하지 않음",
+            "DSP 처리 시간은 장치 캡처·화면 표시·AI 분석·오디오 왕복 지연을 포함하지 않음",
+            "입력 정렬이나 연속성에 따라 복사가 필요하며 출력 복사·잠금·SoundCard 캡처는 유지됨",
+            "C++ 장치 입출력·ASIO·독점 모드·하드 실시간·새 톤 지표·기기 자동 쓰기는 포함하지 않음",
+        ],
+        "known_issues_en": [
+            "Stem removal is an AI estimate; bleed, ambience and artifacts can remain and it does not reconstruct original multitracks",
+            "DSP duration excludes device capture, rendering, AI analysis and round-trip audio latency",
+            "Unaligned or noncontiguous input may require a copy; output copies, locks and SoundCard capture remain",
+            "No C++ device I/O, ASIO, exclusive mode, hard-real-time guarantees, new tone meters or automatic device writing",
+        ],
+    },
+    {
+        "version": "0.0.08",
+        "date": "2026-09-10",
         "status": "공개 개발 프리뷰",
         "status_en": "Public development preview",
         "changes": [

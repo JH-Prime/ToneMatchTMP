@@ -32,6 +32,9 @@ def build(project: Path, zig_path: str) -> dict:
     build_dir = project / "build" / "native"
     build_dir.mkdir(parents=True, exist_ok=True)
     output = build_dir / "tonematch_dsp.dll"
+    source_paths = (project / "native" / "tonematch_dsp.cpp", project / "native" / "tonematch_dsp.h")
+    source_bytes = {path: path.read_bytes() for path in source_paths}
+    source_digests = {path: hashlib.sha256(content).hexdigest() for path, content in source_bytes.items()}
     flags = ["-std=c++17", "-O3", "-g0", "-shared", "-target", "x86_64-windows-gnu",
              "-Wall", "-Wextra", "-Werror"]
     command = [str(compiler), "c++", *flags, "native/tonematch_dsp.cpp", "-o", str(output)]
@@ -39,25 +42,27 @@ def build(project: Path, zig_path: str) -> dict:
     environment["ZIG_GLOBAL_CACHE_DIR"] = str(build_dir / "global-cache")
     environment["ZIG_LOCAL_CACHE_DIR"] = str(build_dir / "local-cache")
     subprocess.run(command, cwd=project, env=environment, check=True)
+    if any(path.read_bytes() != source_bytes[path] for path in source_paths):
+        raise RuntimeError("Native source changed during compilation; rebuild from a stable checkout.")
     # 성공 종료만으로 정적 archive를 DLL로 잘못 배포하지 않도록 실제 로더도 검사한다.
     with output.open("rb") as stream:
         if stream.read(2) != b"MZ":
             raise RuntimeError("Compiler output is not a Windows PE library.")
     library = ctypes.CDLL(str(output))
     for symbol in ("tm_dsp_abi_version", "tm_dsp_create", "tm_dsp_destroy", "tm_dsp_reset",
-                   "tm_dsp_bin_count", "tm_dsp_frequencies", "tm_dsp_push"):
+                   "tm_dsp_bin_count", "tm_dsp_frequencies", "tm_dsp_push", "tm_dsp_push_f32", "tm_dsp_stream_stats"):
         getattr(library, symbol)
     library.tm_dsp_abi_version.restype = ctypes.c_uint32
-    if library.tm_dsp_abi_version() != 1:
-        raise RuntimeError("Built library does not implement DSP ABI 1.")
+    if library.tm_dsp_abi_version() != 2:
+        raise RuntimeError("Built library does not implement DSP ABI 2.")
     destination = project / "resources" / "tonematch_dsp.dll"
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(output, destination)
     record = {
-        "compiler": f"Zig {version} c++", "target": "x86_64-windows-gnu", "flags": flags,
+        "compiler": f"Zig {version} c++", "target": "x86_64-windows-gnu", "flags": flags, "abi_version": 2,
         "compiler_archive_url": ZIG_ARCHIVE_URL, "compiler_archive_sha256": ZIG_ARCHIVE_SHA256,
-        "sources": {str(path.relative_to(project)).replace("\\", "/"): hashlib.sha256(path.read_bytes()).hexdigest()
-                    for path in (project / "native" / "tonematch_dsp.cpp", project / "native" / "tonematch_dsp.h")},
+        "sources": {str(path.relative_to(project)).replace("\\", "/"): source_digests[path]
+                    for path in source_paths},
         "library": "resources/tonematch_dsp.dll", "sha256": hashlib.sha256(destination.read_bytes()).hexdigest(),
         "size_bytes": destination.stat().st_size,
     }

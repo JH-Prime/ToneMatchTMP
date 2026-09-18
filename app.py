@@ -1,7 +1,8 @@
-"""ToneMatch TMP v0.0.08 데스크톱 애플리케이션.
+"""ToneMatch TMP v0.0.09 데스크톱 애플리케이션.
 
 로컬 오디오·영상 또는 Windows PC 재생음 녹음을 받아 AI로 guitar stem만
 분리하고, Tone Master Pro에 수동 적용할 설명 가능한 톤 체인을 추천한다.
+별도 악기 제거 작업에서는 선택한 소리를 제외한 새 혼합 WAV를 저장한다.
 """
 
 from __future__ import annotations
@@ -82,11 +83,13 @@ from recorder import (
 from report import recipe_as_text, save_html
 from separator import separator_runtime_status
 from spectrum import SpectrumFrame, analyze_spectrum_frame
+from stem_removal import StemRemovalCancelled, StemRemovalError, remove_stems_from_file
 from voicing import pitch_class_names
 
 
 APP_NAME = "ToneMatch TMP"
 INPUT_METHODS = ("local", "record")
+REMOVABLE_STEMS = ("vocals", "drums", "bass", "guitar", "piano", "other")
 SUPPORTED_AUDIO_PATTERN = "*.wav *.mp3 *.flac *.m4a *.aac *.ogg *.opus *.wma *.aiff *.aif *.mp4 *.mov *.mkv *.webm"
 
 
@@ -186,13 +189,15 @@ class ToneMatchApp:
         self.result: dict | None = None
         self.worker: threading.Thread | None = None
         self.record_worker: threading.Thread | None = None
+        self.stem_worker: threading.Thread | None = None
         self.spectrum_worker: threading.Thread | None = None
         self.spectrum_stop_event: threading.Event | None = None
         self.spectrum_session_id = 0
         self.spectrum_stop_requested = False
         self.spectrum_backend: str | None = None
         self.spectrum_fallback_reason: str | None = None
-        self.spectrum_frames: queue.Queue[tuple[int, SpectrumFrame]] = queue.Queue(maxsize=1)
+        self.spectrum_frames: queue.Queue[tuple[int, SpectrumFrame | None, dict | None]] = queue.Queue(maxsize=1)
+        self.last_live_dsp_diagnostics: dict | None = None
         self.last_spectrum_frame: SpectrumFrame | None = None
         self.last_reference_comparison: dict | None = None
         self.events: queue.Queue[tuple] = queue.Queue()
@@ -201,6 +206,13 @@ class ToneMatchApp:
         self.analysis_elapsed_seconds = 0.0
         self.analysis_progress_percent = 0.0
         self.record_stop_event = threading.Event()
+        self.stem_cancel_event = threading.Event()
+        self.stem_started_at: float | None = None
+        self.stem_elapsed_seconds = 0.0
+        self.stem_progress_percent = 0.0
+        self.stem_result: dict[str, object] | None = None
+        self.stem_status_key = "status.stem_ready"
+        self.stem_status_values: dict[str, object] = {}
         self.closing = False
         self.temporary_recordings: set[Path] = set()
         self.capture_devices: list[CaptureDevice] = []
@@ -222,6 +234,7 @@ class ToneMatchApp:
         self.selected_debug_block = "input"
         self.completed_debug_blocks: set[str] = {"boot"}
         self._load_settings()
+        self.stem_compute_backend_code = self.compute_backend_code
 
         self.file_var = tk.StringVar()
         self.url_var = tk.StringVar()
@@ -237,6 +250,16 @@ class ToneMatchApp:
         self.input_method_var = tk.StringVar()
         self.capture_var = tk.StringVar()
         self.developer_var = tk.BooleanVar(value=False)
+        self.stem_source_var = tk.StringVar()
+        self.stem_destination_var = tk.StringVar()
+        self.stem_start_var = tk.StringVar(value="0")
+        self.stem_end_var = tk.StringVar(value="0")
+        self.stem_compute_var = tk.StringVar(value=choice_label("compute", self.stem_compute_backend_code, self.language))
+        self.stem_remove_vars = {stem: tk.BooleanVar(value=False) for stem in REMOVABLE_STEMS}
+        self.stem_progress_var = tk.DoubleVar(value=0.0)
+        self.stem_progress_detail_var = tk.StringVar()
+        self.stem_status_var = tk.StringVar(value=tr(self.stem_status_key, self.language))
+        self.stem_summary_var = tk.StringVar(value=tr("ui.stem_result_empty", self.language))
 
         self._configure_style()
         self._build_ui()
@@ -309,6 +332,8 @@ class ToneMatchApp:
         style.map("TNotebook.Tab", background=[("selected", COLORS["panel_alt"])], foreground=[("selected", COLORS["accent"])])
         style.configure("Developer.TCheckbutton", background=COLORS["bg"], foreground=COLORS["muted"], font=(font, 9, "bold"), padding=4)
         style.map("Developer.TCheckbutton", background=[("active", COLORS["bg"])], foreground=[("selected", COLORS["accent"]), ("active", COLORS["text"])])
+        style.configure("Alt.TCheckbutton", background=COLORS["panel_alt"], foreground=COLORS["text"], font=(font, 9), padding=4)
+        style.map("Alt.TCheckbutton", background=[("active", COLORS["panel_alt"])], foreground=[("selected", COLORS["accent"]), ("active", COLORS["text"]), ("disabled", "#64727c")])
         style.configure("Treeview", background=COLORS["panel_alt"], foreground=COLORS["text"], fieldbackground=COLORS["panel_alt"], borderwidth=0, rowheight=28, font=(font, 9))
         style.configure("Treeview.Heading", background="#101820", foreground=COLORS["muted"], relief="flat", font=(font, 9, "bold"))
         self.root.option_add("*TCombobox*Listbox.background", "#0d151c")
@@ -382,6 +407,7 @@ class ToneMatchApp:
         self.mix_var.set(choice_label("mix", self.mix_code, self.language))
         self.output_var.set(choice_label("output", self.output_code, self.language))
         self.compute_var.set(choice_label("compute", self.compute_backend_code, self.language))
+        self.stem_compute_var.set(choice_label("compute", self.stem_compute_backend_code, self.language))
         self.input_method_var.set(_input_method_label(self.input_method_code, self.language))
 
         shell = ttk.Frame(self.root, padding=(14, 12, 14, 10))
@@ -528,8 +554,15 @@ class ToneMatchApp:
 
         right = self._panel(shell, row=1, column=1, sticky="nsew")
         right.columnconfigure(0, weight=1)
-        right.rowconfigure(2, weight=1)
-        top = ttk.Frame(right, style="Panel.TFrame")
+        right.rowconfigure(0, weight=1)
+        self.workspace_notebook = ttk.Notebook(right)
+        self.workspace_notebook.grid(row=0, column=0, sticky="nsew")
+        self.analysis_workspace = ttk.Frame(self.workspace_notebook, style="Panel.TFrame", padding=(8, 8, 8, 4))
+        self.workspace_notebook.add(self.analysis_workspace, text=tr("ui.tone_analysis_tab", self.language))
+        self.analysis_workspace.columnconfigure(0, weight=1)
+        self.analysis_workspace.rowconfigure(2, weight=1)
+
+        top = ttk.Frame(self.analysis_workspace, style="Panel.TFrame")
         top.grid(row=0, column=0, sticky="ew", pady=(0, 9))
         top.columnconfigure(0, weight=1)
         self.result_title_var = tk.StringVar(value=tr("ui.result", self.language))
@@ -544,11 +577,11 @@ class ToneMatchApp:
         self.copy_button = ttk.Button(result_actions, text=tr("ui.copy_recipe", self.language), command=self._copy_recipe, state="disabled")
         self.copy_button.grid(row=0, column=2, padx=(6, 0))
         self.summary_var = tk.StringVar(value=tr("ui.empty_summary", self.language))
-        self.result_summary_label = ttk.Label(right, textvariable=self.summary_var, style="Muted.TLabel", wraplength=700, width=1)
+        self.result_summary_label = ttk.Label(self.analysis_workspace, textvariable=self.summary_var, style="Muted.TLabel", wraplength=700, width=1)
         self.result_summary_label.grid(row=1, column=0, sticky="ew", pady=(0, 9))
-        right.bind("<Configure>", self._resize_result_labels)
+        self.analysis_workspace.bind("<Configure>", self._resize_result_labels)
 
-        self.notebook = ttk.Notebook(right)
+        self.notebook = ttk.Notebook(self.analysis_workspace)
         self.notebook.grid(row=2, column=0, sticky="nsew")
         self.notebook.bind("<<NotebookTabChanged>>", self._update_copy_availability)
         for rank in range(1, 4):
@@ -617,6 +650,7 @@ class ToneMatchApp:
         self.notebook.hide(self.debug_tab)
         self.notebook.hide(self.changelog_tab)
         self._update_copy_availability()
+        self._build_stem_removal_tab()
 
         footer = ttk.Frame(shell)
         footer.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(10, 0))
@@ -632,6 +666,193 @@ class ToneMatchApp:
             self._show_result(self.result, reset_notebook=False)
         if self.last_spectrum_frame is not None:
             self._apply_spectrum_frame(self.last_spectrum_frame, update_comparison=False)
+
+    def _build_stem_removal_tab(self) -> None:
+        """원본과 분리된 악기 선택을 받는 독립적인 스크롤 탭을 만든다."""
+        self.stem_tab = ttk.Frame(self.workspace_notebook, style="Alt.TFrame")
+        self.workspace_notebook.add(self.stem_tab, text=tr("ui.stem_removal_tab", self.language))
+        self.stem_tab.rowconfigure(0, weight=1)
+        self.stem_tab.columnconfigure(0, weight=1)
+
+        self.stem_canvas = tk.Canvas(
+            self.stem_tab,
+            bg=COLORS["panel_alt"],
+            highlightthickness=0,
+            borderwidth=0,
+            width=1,
+            height=1,
+        )
+        self.stem_canvas.grid(row=0, column=0, sticky="nsew")
+        scrollbar = ttk.Scrollbar(self.stem_tab, orient="vertical", command=self.stem_canvas.yview)
+        scrollbar.grid(row=0, column=1, sticky="ns")
+        self.stem_canvas.configure(yscrollcommand=scrollbar.set)
+        content = ttk.Frame(self.stem_canvas, style="Alt.TFrame", padding=(16, 14, 16, 16))
+        self.stem_scroll_window = self.stem_canvas.create_window((0, 0), window=content, anchor="nw")
+        content.bind("<Configure>", self._sync_stem_scroll_region)
+        self.stem_canvas.bind("<Configure>", self._resize_stem_scroll_content)
+        self.stem_canvas.bind("<MouseWheel>", self._scroll_stem_tab)
+        content.columnconfigure(0, weight=1)
+
+        ttk.Label(
+            content,
+            text=tr("ui.stem_removal_title", self.language),
+            background=COLORS["panel_alt"],
+            foreground=COLORS["accent"],
+            font=(self.ui_font, 15, "bold"),
+        ).grid(row=0, column=0, sticky="ew")
+        ttk.Label(
+            content,
+            text=tr("ui.stem_removal_intro", self.language),
+            background=COLORS["panel_alt"],
+            foreground=COLORS["muted"],
+            font=(self.ui_font, 9),
+            justify="left",
+            wraplength=380,
+        ).grid(row=1, column=0, sticky="ew", pady=(2, 10))
+
+        source = ttk.Frame(content, style="Alt.TFrame")
+        source.grid(row=2, column=0, sticky="ew")
+        source.columnconfigure(0, weight=1)
+        ttk.Label(source, text=tr("ui.stem_source", self.language), background=COLORS["panel_alt"], foreground=COLORS["text"]).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 3))
+        self.stem_source_entry = ttk.Entry(source, textvariable=self.stem_source_var)
+        self.stem_source_entry.grid(row=1, column=0, sticky="ew", padx=(0, 6))
+        self.stem_source_button = ttk.Button(source, text=tr("ui.choose_file", self.language), command=self._choose_stem_source)
+        self.stem_source_button.grid(row=1, column=1)
+        self.stem_use_analysis_button = ttk.Button(source, text=tr("ui.stem_use_analysis_source", self.language), command=self._use_analysis_source_for_stem)
+        self.stem_use_analysis_button.grid(row=2, column=0, columnspan=2, sticky="e", pady=(5, 0))
+
+        destination = ttk.Frame(content, style="Alt.TFrame")
+        destination.grid(row=3, column=0, sticky="ew", pady=(8, 0))
+        destination.columnconfigure(0, weight=1)
+        ttk.Label(destination, text=tr("ui.stem_destination", self.language), background=COLORS["panel_alt"], foreground=COLORS["text"]).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 3))
+        self.stem_destination_entry = ttk.Entry(destination, textvariable=self.stem_destination_var)
+        self.stem_destination_entry.grid(row=1, column=0, sticky="ew", padx=(0, 6))
+        self.stem_destination_button = ttk.Button(destination, text=tr("ui.stem_choose_output", self.language), command=self._choose_stem_destination)
+        self.stem_destination_button.grid(row=1, column=1)
+
+        options = ttk.Frame(content, style="Alt.TFrame")
+        options.grid(row=4, column=0, sticky="ew", pady=(8, 0))
+        options.columnconfigure((0, 1), weight=1)
+        ttk.Label(options, text=tr("ui.start_seconds", self.language), background=COLORS["panel_alt"], foreground=COLORS["text"]).grid(row=0, column=0, sticky="w", pady=(0, 3))
+        ttk.Label(options, text=tr("ui.stem_end_seconds", self.language), background=COLORS["panel_alt"], foreground=COLORS["text"]).grid(row=0, column=1, sticky="w", pady=(0, 3), padx=(8, 0))
+        self.stem_start_entry = ttk.Entry(options, textvariable=self.stem_start_var, width=10)
+        self.stem_start_entry.grid(row=1, column=0, sticky="ew")
+        self.stem_end_entry = ttk.Entry(options, textvariable=self.stem_end_var, width=10)
+        self.stem_end_entry.grid(row=1, column=1, sticky="ew", padx=(8, 0))
+        self.stem_compute_combo = ttk.Combobox(options, textvariable=self.stem_compute_var, values=choice_values("compute", self.language), state="readonly", width=20)
+        ttk.Label(options, text=tr("ui.stem_compute", self.language), background=COLORS["panel_alt"], foreground=COLORS["text"]).grid(row=2, column=0, columnspan=2, sticky="w", pady=(7, 3))
+        self.stem_compute_combo.grid(row=3, column=0, columnspan=2, sticky="ew")
+        self.stem_compute_combo.bind("<<ComboboxSelected>>", self._change_stem_compute_backend)
+
+        stems = ttk.Frame(content, style="Alt.TFrame")
+        stems.grid(row=5, column=0, sticky="ew", pady=(10, 0))
+        stems.columnconfigure((0, 1, 2), weight=1)
+        ttk.Label(stems, text=tr("ui.stem_select_remove", self.language), background=COLORS["panel_alt"], foreground=COLORS["text"], font=(self.ui_font, 10, "bold")).grid(row=0, column=0, columnspan=3, sticky="w", pady=(0, 3))
+        self.stem_checkbuttons: list[ttk.Checkbutton] = []
+        for index, stem in enumerate(REMOVABLE_STEMS):
+            checkbox = ttk.Checkbutton(stems, text=tr(f"stem.{stem}", self.language), variable=self.stem_remove_vars[stem], style="Alt.TCheckbutton")
+            checkbox.grid(row=1 + index // 3, column=index % 3, sticky="w")
+            self.stem_checkbuttons.append(checkbox)
+
+        ttk.Label(
+            content,
+            text=tr("ui.stem_local_notice", self.language),
+            background=COLORS["panel_alt"],
+            foreground=COLORS["muted"],
+            font=(self.ui_font, 8),
+            justify="left",
+            wraplength=380,
+        ).grid(row=6, column=0, sticky="ew", pady=(9, 0))
+        ttk.Label(
+            content,
+            text=tr("ui.stem_experimental_notice", self.language),
+            background=COLORS["panel_alt"],
+            foreground=COLORS["warning"],
+            font=(self.ui_font, 8),
+            justify="left",
+            wraplength=380,
+        ).grid(row=7, column=0, sticky="ew", pady=(4, 0))
+
+        ttk.Label(content, textvariable=self.stem_summary_var, background=COLORS["panel_alt"], foreground=COLORS["blue"], justify="left", wraplength=380, width=1).grid(row=8, column=0, sticky="ew", pady=(10, 0))
+
+        # 긴 옵션/결과를 스크롤해도 취소와 진행률은 항상 화면에 남긴다.
+        self.stem_footer = ttk.Frame(self.stem_tab, style="Alt.TFrame", padding=(16, 10, 16, 12))
+        self.stem_footer.grid(row=1, column=0, columnspan=2, sticky="ew")
+        self.stem_footer.columnconfigure(0, weight=1)
+        actions = ttk.Frame(self.stem_footer, style="Alt.TFrame")
+        actions.grid(row=0, column=0, sticky="ew")
+        actions.columnconfigure(0, weight=1)
+        self.stem_start_button = ttk.Button(actions, text=tr("ui.stem_start", self.language), style="Accent.TButton", command=self._start_stem_removal)
+        self.stem_start_button.grid(row=0, column=0, sticky="ew")
+        self.stem_cancel_button = ttk.Button(actions, text=tr("ui.stem_cancel", self.language), style="Danger.TButton", command=self._cancel_stem_removal, state="disabled")
+        self.stem_cancel_button.grid(row=0, column=1, padx=(6, 0))
+        self.stem_progress = ttk.Progressbar(self.stem_footer, variable=self.stem_progress_var, maximum=100)
+        self.stem_progress.grid(row=1, column=0, sticky="ew", pady=(8, 3))
+        ttk.Label(self.stem_footer, textvariable=self.stem_progress_detail_var, background=COLORS["panel_alt"], foreground=COLORS["text"], width=1).grid(row=2, column=0, sticky="ew")
+        self.stem_status_text = tk.Text(self.stem_footer, width=1, height=3, wrap="word", bg=COLORS["panel_alt"], fg=COLORS["muted"], font=(self.ui_font, 9), relief="flat", borderwidth=0, highlightthickness=0, state="disabled")
+        self.stem_status_text.grid(row=3, column=0, sticky="ew", pady=(3, 0))
+        previous_trace = getattr(self, "stem_status_trace", None)
+        if previous_trace is not None:
+            self.stem_status_var.trace_remove("write", previous_trace)
+        self.stem_status_trace = self.stem_status_var.trace_add("write", self._refresh_stem_status_text)
+        self._refresh_stem_status_text()
+        for widget in content.winfo_children():
+            if isinstance(widget, ttk.Label):
+                widget.configure(width=1, wraplength=380)
+        self._bind_stem_mousewheel(content)
+
+        self.stem_control_widgets = [
+            self.stem_source_entry,
+            self.stem_source_button,
+            self.stem_use_analysis_button,
+            self.stem_destination_entry,
+            self.stem_destination_button,
+            self.stem_start_entry,
+            self.stem_end_entry,
+            *self.stem_checkbuttons,
+        ]
+        self._refresh_stem_localization()
+        self._update_stem_availability()
+
+    def _sync_stem_scroll_region(self, _event: object | None = None) -> None:
+        """내용 전체와 현재 뷰포트 중 큰 높이를 악기 제거 탭 스크롤 범위로 사용한다."""
+        if hasattr(self, "stem_canvas") and self.stem_canvas.winfo_exists():
+            bounds = self.stem_canvas.bbox(self.stem_scroll_window)
+            if bounds is not None:
+                viewport_height = max(1, self.stem_canvas.winfo_height())
+                self.stem_canvas.configure(scrollregion=(0, 0, max(1, bounds[2]), max(viewport_height, bounds[3])))
+
+    def _resize_stem_scroll_content(self, event: tk.Event) -> None:
+        """창 폭이 달라져도 악기 제거 폼이 탭의 가로 공간을 채우게 한다."""
+        if hasattr(self, "stem_canvas") and self.stem_canvas.winfo_exists():
+            self.stem_canvas.itemconfigure(self.stem_scroll_window, width=max(1, event.width))
+            content = self.stem_canvas.nametowidget(self.stem_canvas.itemcget(self.stem_scroll_window, "window"))
+            for widget in content.winfo_children():
+                if isinstance(widget, ttk.Label):
+                    widget.configure(wraplength=max(1, event.width - 32))
+            self._sync_stem_scroll_region()
+
+    def _bind_stem_mousewheel(self, widget: tk.Widget) -> None:
+        """캔버스 안의 자식 위젯 위에서도 폼을 스크롤할 수 있게 연결한다."""
+        widget.bind("<MouseWheel>", self._scroll_stem_tab)
+        for child in widget.winfo_children():
+            self._bind_stem_mousewheel(child)
+
+    def _refresh_stem_status_text(self, *_args: object) -> None:
+        """긴 단계 안내가 고정 하단 영역의 높이를 늘리지 않게 표시한다."""
+        if not hasattr(self, "stem_status_text") or not self.stem_status_text.winfo_exists():
+            return
+        self.stem_status_text.configure(state="normal")
+        self.stem_status_text.delete("1.0", "end")
+        self.stem_status_text.insert("1.0", self.stem_status_var.get())
+        self.stem_status_text.configure(state="disabled")
+        self.stem_status_text.yview_moveto(0.0)
+
+    def _scroll_stem_tab(self, event: tk.Event) -> str:
+        """악기 제거 탭 위의 Windows 마우스 휠을 해당 캔버스에만 적용한다."""
+        if hasattr(self, "stem_canvas") and self.stem_canvas.winfo_exists():
+            self.stem_canvas.yview_scroll(int(-event.delta / 120), "units")
+        return "break"
 
     def _build_debug_tab(self) -> None:
         """처리 순서도, 클릭형 실제 소스, 런타임 로그와 디버그 번들 버튼을 만든다."""
@@ -774,13 +995,26 @@ class ToneMatchApp:
         self.waveform_canvas.grid(row=4, column=0, sticky="nsew", pady=(3, 8))
         self.waveform_canvas.bind("<Configure>", self._spectrum_canvas_resized)
 
+        frequency_heading = ttk.Frame(self.spectrum_tab, style="Alt.TFrame")
+        frequency_heading.grid(row=5, column=0, sticky="ew")
+        frequency_heading.columnconfigure(1, weight=1)
         ttk.Label(
-            self.spectrum_tab,
+            frequency_heading,
             text=tr("ui.frequency_spectrum", self.language),
             background=COLORS["panel_alt"],
             foreground=COLORS["text"],
             font=(self.ui_font, 9, "bold"),
-        ).grid(row=5, column=0, sticky="w")
+        ).grid(row=0, column=0, sticky="w")
+        self.spectrum_diagnostics_var = tk.StringVar(value=self._spectrum_diagnostics_text())
+        ttk.Label(
+            frequency_heading,
+            textvariable=self.spectrum_diagnostics_var,
+            background=COLORS["panel_alt"],
+            foreground=COLORS["muted"],
+            font=(self.ui_font, 8),
+            width=1,
+            anchor="e",
+        ).grid(row=0, column=1, sticky="ew", padx=(6, 0))
         self.spectrum_canvas = tk.Canvas(self.spectrum_tab, height=250, bg="#081017", highlightbackground=COLORS["border"], highlightthickness=1, bd=0)
         self.spectrum_canvas.grid(row=6, column=0, sticky="nsew", pady=(3, 0))
         self.spectrum_canvas.bind("<Configure>", self._spectrum_canvas_resized)
@@ -1243,10 +1477,11 @@ class ToneMatchApp:
         except queue.Empty:
             pass
 
-    def _offer_latest_spectrum(self, session_id: int, frame: SpectrumFrame) -> None:
-        """작업 스레드에서 가장 최신 프레임 하나만 bounded 큐에 남긴다."""
+    def _offer_latest_spectrum(self, session_id: int, frame: SpectrumFrame | None, diagnostics: dict | None = None) -> None:
+        """최신 프레임과 같은 입력 시점의 숫자 진단을 원자적으로 bounded 큐 하나에 남긴다."""
+        snapshot = (session_id, frame, dict(diagnostics) if diagnostics is not None else None)
         try:
-            self.spectrum_frames.put_nowait((session_id, frame))
+            self.spectrum_frames.put_nowait(snapshot)
             return
         except queue.Full:
             pass
@@ -1255,13 +1490,13 @@ class ToneMatchApp:
         except queue.Empty:
             pass
         try:
-            self.spectrum_frames.put_nowait((session_id, frame))
+            self.spectrum_frames.put_nowait(snapshot)
         except queue.Full:
             pass
 
     def _drain_spectrum_frames(self) -> None:
         """bounded 큐의 최신 측정치만 꺼내 메인 스레드에서 화면에 반영한다."""
-        latest: tuple[int, SpectrumFrame] | None = None
+        latest: tuple[int, SpectrumFrame | None, dict | None] | None = None
         try:
             while True:
                 latest = self.spectrum_frames.get_nowait()
@@ -1272,8 +1507,13 @@ class ToneMatchApp:
             and latest[0] == self.spectrum_session_id
             and self._spectrum_is_running()
             and not self.spectrum_stop_requested
+            and not self.closing
         ):
-            self._apply_spectrum_frame(latest[1])
+            if latest[2] is not None:
+                self.last_live_dsp_diagnostics = latest[2]
+                self.spectrum_diagnostics_var.set(self._spectrum_diagnostics_text())
+            if latest[1] is not None and latest[1] is not self.last_spectrum_frame:
+                self._apply_spectrum_frame(latest[1])
         if not self.closing:
             try:
                 self.root.after(50, self._drain_spectrum_frames)
@@ -1297,6 +1537,7 @@ class ToneMatchApp:
         other_busy = bool(
             (self.worker and self.worker.is_alive())
             or (self.record_worker and self.record_worker.is_alive())
+            or self._stem_is_running()
             or self.hardware_probe_active
         )
         if other_busy:
@@ -1313,7 +1554,9 @@ class ToneMatchApp:
         self.spectrum_stop_requested = False
         self.spectrum_backend = None
         self.spectrum_fallback_reason = None
+        self.last_live_dsp_diagnostics = None
         self.spectrum_backend_var.set(self._spectrum_backend_text())
+        self.spectrum_diagnostics_var.set(self._spectrum_diagnostics_text())
         self._clear_spectrum_frame_queue()
         self.last_reference_comparison = None
         self._populate_reference_rows()
@@ -1342,10 +1585,11 @@ class ToneMatchApp:
         engine = None
         configuration = None
         failure = None
+        latest_frame = None
 
         def handle_block(block: np.ndarray, sample_rate: int) -> None:
             """첫 PCM에서 엔진을 만들고 임의 길이 블록을 고정 FFT 구간으로 누적한다."""
-            nonlocal engine, configuration
+            nonlocal engine, configuration, latest_frame
             if stop_event.is_set():
                 return
             samples = np.asarray(block)
@@ -1361,10 +1605,27 @@ class ToneMatchApp:
                     sample_rate, channels, backend="auto", fft_size=2048, history_size=4,
                 )
                 configuration = current_configuration
+                latest_frame = None
                 self.events.put(("spectrum_backend", session_id, engine.backend, engine.fallback_reason))
+            started_ns = time.perf_counter_ns()
             frame = engine.push(samples)
-            if frame is not None and not stop_event.is_set():
-                self._offer_latest_spectrum(session_id, frame)
+            push_ms = (time.perf_counter_ns() - started_ns) / 1_000_000.0
+            if stop_event.is_set():
+                return
+            diagnostics = {
+                "session_id": session_id,
+                "backend": engine.backend,
+                "push_ms": push_ms,
+                **engine.stream_stats(),
+                "sample_rate": sample_rate,
+                "channels": channels,
+                "fft_size": 2048,
+                "timing_scope": "engine.push_only_excludes_capture_gui_ai_and_io_latency",
+            }
+            if frame is not None:
+                latest_frame = frame
+            if not stop_event.is_set():
+                self._offer_latest_spectrum(session_id, latest_frame, diagnostics)
 
         try:
             monitor_capture_device(device_id, stop_event, handle_block, language)
@@ -1395,6 +1656,27 @@ class ToneMatchApp:
                 reason_key = "abi"
             return tr(f"status.spectrum_backend_numpy_{reason_key}", self.language)
         return tr("status.spectrum_backend_pending", self.language)
+
+    def _spectrum_diagnostics_text(self) -> str:
+        """마지막 push 시간과 엔진 내부 창·대기 프레임 수를 높이 고정 한 줄로 표시한다."""
+        diagnostics = self.last_live_dsp_diagnostics
+        if diagnostics is None:
+            return tr("status.spectrum_diagnostics_pending", self.language)
+        count = int(diagnostics["completed_windows"])
+        if count >= 1_000_000_000:
+            windows = f"{count / 1_000_000_000:.1f}G"
+        elif count >= 1_000_000:
+            windows = f"{count / 1_000_000:.1f}M"
+        elif count >= 10_000:
+            windows = f"{count / 1_000:.1f}k"
+        else:
+            windows = str(count)
+        milliseconds = float(diagnostics["push_ms"])
+        duration = f"{milliseconds:.2f}" if milliseconds < 100 else "99+"
+        return tr(
+            "status.spectrum_diagnostics", self.language,
+            ms=duration, windows=windows, pending=int(diagnostics["pending_frames"]),
+        )
 
     def _apply_spectrum_backend(self, session_id: int, backend: str, reason: str | None) -> None:
         """현재 활성 세션의 DSP 선택 이벤트만 Tk 스레드에서 화면과 진단에 반영한다."""
@@ -1445,6 +1727,7 @@ class ToneMatchApp:
         other_busy = bool(
             (self.worker and self.worker.is_alive())
             or (self.record_worker and self.record_worker.is_alive())
+            or self._stem_is_running()
             or self.hardware_probe_active
         )
         if active:
@@ -1489,6 +1772,7 @@ class ToneMatchApp:
         if (
             (self.worker and self.worker.is_alive())
             or (self.record_worker and self.record_worker.is_alive())
+            or self._stem_is_running()
             or self._spectrum_is_running()
         ):
             self.language_var.set(LANGUAGE_LABELS[self.language])
@@ -1501,9 +1785,15 @@ class ToneMatchApp:
         self.mix_code = choice_code("mix", self.mix_var.get())
         self.output_code = choice_code("output", self.output_var.get())
         self.compute_backend_code = choice_code("compute", self.compute_var.get())
+        self.stem_compute_backend_code = choice_code("compute", self.stem_compute_var.get())
         self.input_method_code = _input_method_code(self.input_method_var.get())
         self.device_id = device_id_from_label(self.device_var.get())
         developer_enabled = self.developer_var.get()
+        stem_workspace_selected = bool(
+            hasattr(self, "workspace_notebook")
+            and hasattr(self, "stem_tab")
+            and self.workspace_notebook.select() == str(self.stem_tab)
+        )
         self.language = new_language
         if self.result:
             self.result = relocalize_result(self.result, self.language)
@@ -1514,6 +1804,8 @@ class ToneMatchApp:
         self.developer_var.set(developer_enabled)
         if developer_enabled:
             self._toggle_developer_mode()
+        if stem_workspace_selected:
+            self.workspace_notebook.select(self.stem_tab)
         self._save_settings()
 
     def _change_device(self, _event: object | None = None) -> None:
@@ -1533,6 +1825,7 @@ class ToneMatchApp:
             self.hardware_probe_active
             or (self.worker and self.worker.is_alive())
             or (self.record_worker and self.record_worker.is_alive())
+            or self._stem_is_running()
             or self._spectrum_is_running()
         ):
             return
@@ -1560,8 +1853,12 @@ class ToneMatchApp:
         if self.compute_backend_code == "cuda" and not cuda_available:
             self.compute_backend_code = "auto"
             self._save_settings()
+        if self.stem_compute_backend_code == "cuda" and not cuda_available:
+            self.stem_compute_backend_code = "auto"
         self.compute_combo.configure(values=tuple(choice_label("compute", code, self.language) for code in codes))
         self.compute_var.set(choice_label("compute", self.compute_backend_code, self.language))
+        self.stem_compute_combo.configure(values=tuple(choice_label("compute", code, self.language) for code in codes))
+        self.stem_compute_var.set(choice_label("compute", self.stem_compute_backend_code, self.language))
         self._populate_diagnostics()
         self._update_analysis_availability()
         self._append_debug_log(
@@ -1586,6 +1883,7 @@ class ToneMatchApp:
         busy = bool(
             (self.worker and self.worker.is_alive())
             or (self.record_worker and self.record_worker.is_alive())
+            or self._stem_is_running()
             or self._spectrum_is_running()
         )
         active = bool(enabled and not busy and not self.hardware_probe_active)
@@ -1724,6 +2022,7 @@ class ToneMatchApp:
             return
         if (
             (self.worker and self.worker.is_alive())
+            or self._stem_is_running()
             or self._spectrum_is_running()
             or self.hardware_probe_active
         ):
@@ -1878,10 +2177,11 @@ class ToneMatchApp:
         self.progress_detail_var.set(tr("progress.overall", self.language, percent=self.analysis_progress_percent, elapsed=elapsed))
 
     def _tick_analysis_progress(self) -> None:
-        """다운로드나 추론 콜백을 기다리는 동안에도 경과 시간을 계속 갱신한다."""
+        """분석·악기 제거 콜백을 기다리는 동안에도 각 경과 시간을 계속 갱신한다."""
         if self.closing:
             return
         self._refresh_analysis_progress()
+        self._refresh_stem_progress()
         try:
             self.root.after(250, self._tick_analysis_progress)
         except tk.TclError:
@@ -1891,6 +2191,275 @@ class ToneMatchApp:
         """완료·오류·취소 시 마지막 진행률과 소요 시간을 화면에 보존한다."""
         self._refresh_analysis_progress()
         self.analysis_started_at = None
+
+    def _stem_is_running(self) -> bool:
+        """작업자의 종료 이벤트를 UI가 반영할 때까지 새 작업 시작을 막는다."""
+        return getattr(self, "stem_worker", None) is not None
+
+    def _set_stem_status(self, key: str, **values: object) -> None:
+        """언어 전환 뒤에도 다시 만들 수 있도록 악기 제거 상태 키와 값을 보존한다."""
+        self.stem_status_key = key
+        self.stem_status_values = dict(values)
+        self.stem_status_var.set(tr(key, self.language, **values))
+
+    def _localized_stem_names(self, stems: object) -> str:
+        """코어가 반환한 안정적인 stem 코드를 현재 언어의 쉼표 목록으로 바꾼다."""
+        values = stems if isinstance(stems, (list, tuple)) else ()
+        names = [tr(f"stem.{stem}", self.language) for stem in values if stem in REMOVABLE_STEMS]
+        return ", ".join(names) if names else "—"
+
+    def _render_stem_summary(self) -> None:
+        """마지막 출력 파일과 제거·유지 항목, 처리 장치를 한영 요약으로 표시한다."""
+        if not self.stem_result:
+            self.stem_summary_var.set(tr("ui.stem_result_empty", self.language))
+            return
+        result = self.stem_result
+        output_path = str(result.get("output_path", self.stem_destination_var.get()))
+        self.stem_summary_var.set(
+            tr(
+                "ui.stem_result_summary",
+                self.language,
+                file=Path(output_path).name or "—",
+                removed=self._localized_stem_names(result.get("removed_stems")),
+                kept=self._localized_stem_names(result.get("kept_stems")),
+                duration=float(result.get("duration_seconds", 0.0)),
+                inference=float(result.get("inference_total_seconds", 0.0)),
+                device=str(result.get("resolved_device", "—")).upper(),
+            )
+        )
+
+    def _refresh_stem_localization(self) -> None:
+        """재구성된 탭의 상태·결과·가속 라벨을 현재 언어에 맞춰 복원한다."""
+        self.stem_compute_var.set(choice_label("compute", self.stem_compute_backend_code, self.language))
+        self.stem_status_var.set(tr(self.stem_status_key, self.language, **self.stem_status_values))
+        self._render_stem_summary()
+        self._refresh_stem_progress()
+
+    def _refresh_stem_progress(self) -> None:
+        """AI 콜백 진행률과 별개로 악기 제거 작업의 실제 경과 시간을 표시한다."""
+        if self.stem_started_at is not None:
+            self.stem_elapsed_seconds = max(0.0, time.monotonic() - self.stem_started_at)
+        seconds = int(self.stem_elapsed_seconds)
+        elapsed = f"{seconds // 60:02d}:{seconds % 60:02d}"
+        self.stem_progress_detail_var.set(
+            tr("progress.stem_overall", self.language, percent=self.stem_progress_percent, elapsed=elapsed)
+        )
+
+    def _finish_stem_progress(self) -> None:
+        """완료·실패·취소 시 마지막 악기 제거 경과 시간을 고정한다."""
+        self._refresh_stem_progress()
+        self.stem_started_at = None
+
+    def _change_stem_compute_backend(self, _event: object | None = None) -> None:
+        """악기 제거 전용 가속 선택을 auto·cuda·cpu 코드로 보존한다."""
+        self.stem_compute_backend_code = choice_code("compute", self.stem_compute_var.get())
+        self.stem_compute_var.set(choice_label("compute", self.stem_compute_backend_code, self.language))
+
+    @staticmethod
+    def _default_stem_destination(source: str) -> str:
+        """원본 옆에서 기존 파일과 충돌하지 않는 새 WAV 기본 이름을 찾는다."""
+        source_path = Path(source).expanduser()
+        base = source_path.with_name(f"{source_path.stem}_ToneMatchTMP-removed.wav")
+        candidate = base
+        index = 2
+        while candidate.exists():
+            candidate = base.with_name(f"{base.stem}-{index}{base.suffix}")
+            index += 1
+        return str(candidate)
+
+    def _set_stem_source(self, path: str) -> None:
+        """명시적으로 선택한 입력과 충돌하지 않는 출력 기본값을 함께 채운다."""
+        self.stem_source_var.set(path)
+        self.stem_destination_var.set(self._default_stem_destination(path))
+        self._set_stem_status("status.stem_ready")
+
+    def _choose_stem_source(self) -> None:
+        """악기 제거 전용 로컬 오디오·영상 입력을 파일 선택기로 받는다."""
+        filetypes = ((tr("dialog.audio_files", self.language), SUPPORTED_AUDIO_PATTERN), (tr("dialog.all_files", self.language), "*.*"))
+        path = filedialog.askopenfilename(title=tr("dialog.choose_stem_source_title", self.language), filetypes=filetypes)
+        if path:
+            self._set_stem_source(path)
+
+    def _use_analysis_source_for_stem(self) -> None:
+        """현재 톤 분석 입력이 실제 로컬 파일일 때 악기 제거 입력으로 복사한다."""
+        path = self.file_var.get().strip().strip('"')
+        if not path or not Path(path).is_file():
+            messagebox.showwarning(APP_NAME, tr("error.stem_choose_source", self.language))
+            return
+        self._set_stem_source(path)
+
+    def _choose_stem_destination(self) -> None:
+        """개별 stem이 아닌 최종 혼합 WAV의 새 저장 경로를 선택한다."""
+        source = self.stem_source_var.get().strip().strip('"')
+        default = self._default_stem_destination(source) if source else Path("ToneMatchTMP-removed.wav")
+        path = filedialog.asksaveasfilename(
+            title=tr("dialog.choose_stem_output_title", self.language),
+            defaultextension=".wav",
+            initialdir=str(Path(default).parent),
+            initialfile=Path(default).name,
+            filetypes=(("WAV", "*.wav"),),
+        )
+        if path:
+            self.stem_destination_var.set(path)
+
+    def _parse_stem_removal_inputs(self) -> dict[str, object]:
+        """악기 제거 입력·출력·시간·선택을 검증하고 코어 호출 인자로 바꾼다."""
+        source_text = self.stem_source_var.get().strip().strip('"')
+        if not source_text or not Path(source_text).is_file():
+            raise StemRemovalError(tr("error.stem_choose_source", self.language))
+        destination_text = self.stem_destination_var.get().strip().strip('"')
+        if not destination_text:
+            raise StemRemovalError(tr("error.stem_choose_destination", self.language))
+        destination = Path(destination_text)
+        if destination.suffix.lower() != ".wav":
+            raise StemRemovalError(tr("error.stem_output_wav", self.language))
+        if not destination.parent.is_dir():
+            raise StemRemovalError(tr("error.stem_output_folder", self.language))
+        source = Path(source_text)
+        if str(source.resolve()).casefold() == str(destination.resolve()).casefold():
+            raise StemRemovalError(tr("error.stem_same_file", self.language))
+        if destination.exists():
+            raise StemRemovalError(tr("error.stem_output_exists", self.language))
+
+        try:
+            start = float(self.stem_start_var.get().strip() or "0")
+            end = float(self.stem_end_var.get().strip() or "0")
+        except ValueError as exc:
+            raise StemRemovalError(tr("error.time_number", self.language)) from exc
+        if not math.isfinite(start) or not math.isfinite(end) or start < 0 or end < 0:
+            raise StemRemovalError(tr("error.time_positive", self.language))
+        if end != 0 and end <= start:
+            raise StemRemovalError(tr("error.end_after_start", self.language))
+        if end != 0 and end - start < 3:
+            raise StemRemovalError(tr("error.minimum_segment", self.language))
+        if end != 0:
+            end = min(end, start + MAX_ANALYSIS_SECONDS)
+            self.stem_end_var.set(f"{end:g}")
+
+        removed = [stem for stem in REMOVABLE_STEMS if self.stem_remove_vars[stem].get()]
+        if not removed:
+            raise StemRemovalError(tr("error.stem_select_one", self.language))
+        if len(removed) >= len(REMOVABLE_STEMS):
+            raise StemRemovalError(tr("error.stem_keep_one", self.language))
+        self.stem_compute_backend_code = choice_code("compute", self.stem_compute_var.get())
+        return {
+            "source": str(source),
+            "destination": str(destination),
+            "removed_stems": removed,
+            "start_seconds": start,
+            "end_seconds": end,
+            "compute_preference": self.stem_compute_backend_code,
+            "language": self.language,
+        }
+
+    def _start_stem_removal(self) -> None:
+        """검증된 악기 제거 요청을 UI 밖의 작업 스레드에서 시작한다."""
+        if self._stem_is_running():
+            return
+        other_busy = bool(
+            (self.worker and self.worker.is_alive())
+            or (self.record_worker and self.record_worker.is_alive())
+            or self._spectrum_is_running()
+            or self.hardware_probe_active
+        )
+        if other_busy:
+            messagebox.showinfo(APP_NAME, tr("dialog.wait_for_task", self.language))
+            return
+        try:
+            request = self._parse_stem_removal_inputs()
+        except StemRemovalError as exc:
+            messagebox.showwarning(APP_NAME, str(exc))
+            return
+
+        self.stem_result = None
+        self.stem_summary_var.set(tr("ui.stem_result_empty", self.language))
+        self.stem_cancel_event.clear()
+        self.stem_started_at = time.monotonic()
+        self.stem_elapsed_seconds = 0.0
+        self.stem_progress_percent = 2.0
+        self.stem_progress_var.set(2.0)
+        self._refresh_stem_progress()
+        self._set_stem_status("status.stem_preparing")
+        self._append_debug_log(
+            f"stem removal request · {Path(str(request['source'])).name} · "
+            f"remove={','.join(request['removed_stems'])} · compute={request['compute_preference']}"
+        )
+        self.stem_worker = threading.Thread(target=self._stem_removal_worker, args=(request,), daemon=True)
+        self.stem_worker.start()
+        self._update_analysis_availability()
+
+    def _cancel_stem_removal(self) -> None:
+        """현재 AI 조각 경계에서 악기 제거를 멈추도록 취소 신호를 보낸다."""
+        if self._stem_is_running():
+            self.stem_cancel_event.set()
+            self.stem_cancel_button.configure(state="disabled")
+            self._set_stem_status("status.stem_cancelling")
+            self._append_debug_log("stem removal cancellation requested")
+
+    def _stem_removal_worker(self, request: dict[str, object]) -> None:
+        """코어 분리를 실행하고 Tk에서 처리할 진행·결과 이벤트만 큐에 넣는다."""
+        def progress(value: float, text: str) -> None:
+            """코어 진행 콜백을 Tk 메인 스레드용 불변 이벤트로 복사한다."""
+            self.events.put(("stem_progress", value, str(text)))
+
+        try:
+            result = remove_stems_from_file(
+                **request,
+                progress=progress,
+                cancel_requested=self.stem_cancel_event.is_set,
+            )
+            self.events.put(("stem_done", dict(result)))
+        except Exception as exc:
+            self.events.put(("stem_error", exc, traceback.format_exc()))
+
+    def _show_stem_result(self, result: dict[str, object]) -> None:
+        """완료된 출력과 처리 요약을 표시하고 모든 공통 컨트롤을 복구한다."""
+        self.stem_worker = None
+        self.stem_result = dict(result)
+        output_path = str(result.get("output_path", self.stem_destination_var.get()))
+        self.stem_destination_var.set(output_path)
+        self.stem_progress_percent = 100.0
+        self.stem_progress_var.set(100.0)
+        self._finish_stem_progress()
+        self._set_stem_status("status.stem_complete", file=Path(output_path).name or "—")
+        self._render_stem_summary()
+        self._append_debug_log(
+            f"stem removal complete · {Path(output_path).name} · "
+            f"remove={','.join(str(value) for value in result.get('removed_stems', ()))}"
+        )
+        self._update_analysis_availability()
+
+    def _show_stem_error(self, exc: Exception, detail: str) -> None:
+        """악기 제거 실패·취소를 구분해 표시하고 작업 전 컨트롤 상태로 돌아간다."""
+        self.stem_worker = None
+        self._finish_stem_progress()
+        cancelled = isinstance(exc, StemRemovalCancelled)
+        self._set_stem_status("status.stem_cancelled" if cancelled else "status.stem_failed")
+        self._append_debug_log(f"stem removal error · {type(exc).__name__} · {exc}\n{detail}")
+        if not cancelled:
+            message = str(exc) if isinstance(exc, StemRemovalError) else tr("dialog.unexpected", self.language, error=exc)
+            messagebox.showerror(APP_NAME, message)
+        self._update_analysis_availability()
+
+    def _update_stem_availability(self) -> None:
+        """다른 모든 장시간 작업과 악기 제거 컨트롤을 상호 배타적으로 잠근다."""
+        if not hasattr(self, "stem_start_button") or not self.stem_start_button.winfo_exists():
+            return
+        active = self._stem_is_running()
+        other_busy = bool(
+            (self.worker and self.worker.is_alive())
+            or (self.record_worker and self.record_worker.is_alive())
+            or self._spectrum_is_running()
+            or self.hardware_probe_active
+        )
+        editable = not active and not other_busy
+        for widget in self.stem_control_widgets:
+            widget.configure(state="normal" if editable else "disabled")
+        self.stem_compute_combo.configure(state="readonly" if editable else "disabled")
+        self.stem_start_button.configure(state="normal" if editable else "disabled")
+        self.stem_cancel_button.configure(
+            state="normal" if active and not self.stem_cancel_event.is_set() else "disabled"
+        )
 
     def _choose_audio(self) -> None:
         """파일 선택 창에서 오디오 또는 영상 경로를 받아 입력 상태를 갱신한다."""
@@ -1936,7 +2505,7 @@ class ToneMatchApp:
         """검증된 요청을 별도 스레드에서 시작하고 취소·내보내기 상태를 설정한다."""
         if self.worker and self.worker.is_alive():
             return
-        if (self.record_worker and self.record_worker.is_alive()) or self._spectrum_is_running() or self.hardware_probe_active:
+        if (self.record_worker and self.record_worker.is_alive()) or self._stem_is_running() or self._spectrum_is_running() or self.hardware_probe_active:
             messagebox.showinfo(APP_NAME, tr("dialog.wait_for_task", self.language))
             return
         try:
@@ -2009,6 +2578,8 @@ class ToneMatchApp:
 
     def _drain_events(self) -> None:
         """백그라운드 분석·녹음·스펙트럼 제어 이벤트를 Tk 메인 스레드에서 처리한다."""
+        if self.closing:
+            return
         try:
             while True:
                 event = self.events.get_nowait()
@@ -2032,6 +2603,21 @@ class ToneMatchApp:
                     self._recording_completed(event[1], event[2])
                 elif event[0] == "record_error":
                     self._recording_failed(event[1], event[2])
+                elif event[0] == "stem_progress":
+                    value = float(event[1])
+                    if math.isfinite(value):
+                        self.stem_progress_percent = max(
+                            self.stem_progress_percent,
+                            min(100.0, max(0.0, value)),
+                        )
+                    self.stem_progress_var.set(self.stem_progress_percent)
+                    self._refresh_stem_progress()
+                    if not self.stem_cancel_event.is_set():
+                        self.stem_status_var.set(event[2])
+                elif event[0] == "stem_done":
+                    self._show_stem_result(event[1])
+                elif event[0] == "stem_error":
+                    self._show_stem_error(event[1], event[2])
                 elif event[0] == "hardware_status":
                     self._apply_hardware_status(event[1])
                 elif event[0] == "spectrum_backend":
@@ -2111,6 +2697,7 @@ class ToneMatchApp:
         self._populate_diagnostics()
         self._refresh_reference_profile(reset_comparison=reset_notebook)
         if reset_notebook:
+            self.workspace_notebook.select(self.analysis_workspace)
             self.notebook.select(0)
         self.status_var.set(tr("status.complete", self.language))
         self.analyze_button.configure(text=tr("ui.analyze_again", self.language))
@@ -2204,6 +2791,7 @@ class ToneMatchApp:
         busy = (
             (self.worker and self.worker.is_alive())
             or (self.record_worker and self.record_worker.is_alive())
+            or self._stem_is_running()
             or self._spectrum_is_running()
             or self.hardware_probe_active
         )
@@ -2212,6 +2800,7 @@ class ToneMatchApp:
         self.language_combo.configure(state="disabled" if busy else "readonly")
         self._set_compute_controls_enabled(not busy)
         self._update_spectrum_availability()
+        self._update_stem_availability()
         self._update_copy_availability()
 
     def _update_copy_availability(self, _event: object | None = None) -> None:
@@ -2223,7 +2812,11 @@ class ToneMatchApp:
             str(getattr(self, "debug_tab", "")),
             str(getattr(self, "changelog_tab", "")),
         }
-        busy = bool((self.worker and self.worker.is_alive()) or (self.record_worker and self.record_worker.is_alive()))
+        busy = bool(
+            (self.worker and self.worker.is_alive())
+            or (self.record_worker and self.record_worker.is_alive())
+            or self._stem_is_running()
+        )
         has_content = bool(self.result) or selected_tab in developer_tabs
         self.copy_button.configure(state="normal" if has_content and not busy else "disabled")
 
@@ -2334,7 +2927,7 @@ class ToneMatchApp:
         destination = filedialog.asksaveasfilename(title=tr("dialog.debug_bundle_title", self.language), defaultextension=".zip", initialfile=initial, filetypes=(("ZIP", "*.zip"),))
         if not destination:
             return
-        source_names = ("app.py", "catalog.py", "debug_info.py", "devices.py", "engine.py", "i18n.py", "native_dsp.py", "native/tonematch_dsp.cpp", "native/tonematch_dsp.h", "recorder.py", "reference_compare.py", "report.py", "separator.py", "spectrum.py", "voicing.py")
+        source_names = ("app.py", "catalog.py", "debug_info.py", "devices.py", "engine.py", "i18n.py", "native_dsp.py", "native/tonematch_dsp.cpp", "native/tonematch_dsp.h", "recorder.py", "reference_compare.py", "report.py", "separator.py", "spectrum.py", "stem_removal.py", "voicing.py")
         diagnostics = {
             "app_version": APP_VERSION,
             "build_date": BUILD_DATE,
@@ -2344,6 +2937,7 @@ class ToneMatchApp:
             "separator": self.hardware_status or {"status": "not_probed"},
             "native_dsp": native_runtime_info(),
             "last_live_dsp_backend": self.spectrum_backend,
+            "last_live_dsp_diagnostics": self.last_live_dsp_diagnostics,
             "data_root": str(self.data_root),
         }
         try:
@@ -2369,10 +2963,20 @@ class ToneMatchApp:
         self.closing = True
         self.analysis_cancel_event.set()
         self.record_stop_event.set()
+        self.stem_cancel_event.set()
         if self.spectrum_stop_event is not None:
             self.spectrum_stop_event.set()
         self.spectrum_session_id += 1
         self._clear_spectrum_frame_queue()
+        self.root.withdraw()
+        self._finish_close_after_stem_cleanup()
+
+    def _finish_close_after_stem_cleanup(self) -> None:
+        """악기 제거 작업이 임시 음원을 정리할 때까지 숨은 메인 루프를 유지한다."""
+        worker = getattr(self, "stem_worker", None)
+        if worker is not None and worker.is_alive():
+            self.root.after(80, self._finish_close_after_stem_cleanup)
+            return
         self._save_settings()
         for path in self.temporary_recordings:
             try:
@@ -2435,10 +3039,13 @@ def _self_test_native_dsp() -> dict:
         frames_checked = 0
         max_magnitude_error = 0.0
         parity_ok = True
+        stream_stats_ok = engine.stream_stats() == {"input_frames": 0, "completed_windows": 0, "pending_frames": 0}
         for size in sizes:
             actual = engine.push(samples[cursor : cursor + size])
             expected = reference.push(samples[cursor : cursor + size])
             cursor += size
+            expected_stats = {"input_frames": cursor, "completed_windows": cursor // 2048, "pending_frames": cursor % 2048}
+            stream_stats_ok = stream_stats_ok and engine.stream_stats() == expected_stats and reference.stream_stats() == expected_stats
             if actual is None or expected is None:
                 parity_ok = parity_ok and actual is None and expected is None
                 continue
@@ -2453,16 +3060,54 @@ def _self_test_native_dsp() -> dict:
                 and abs(actual.spectral_centroid_hz - expected.spectral_centroid_hz) < 1e-6
             )
         engine.reset()
-        pending = engine.push(np.zeros((2047, 2)))
-        silent = engine.push(np.zeros((1, 2)))
+        reference.reset()
+        float32_parity_ok = True
+        float32_frames_checked = 0
+        float32_max_magnitude_error = 0.0
+        cursor = 0
+        float32_samples = samples.astype(np.float32)
+        for size in sizes:
+            actual = engine.push(float32_samples[cursor : cursor + size])
+            expected = reference.push(float32_samples[cursor : cursor + size])
+            cursor += size
+            expected_stats = {"input_frames": cursor, "completed_windows": cursor // 2048, "pending_frames": cursor % 2048}
+            stream_stats_ok = stream_stats_ok and engine.stream_stats() == expected_stats and reference.stream_stats() == expected_stats
+            if actual is None or expected is None:
+                float32_parity_ok = float32_parity_ok and actual is None and expected is None
+                continue
+            float32_frames_checked += 1
+            float32_max_magnitude_error = max(float32_max_magnitude_error, float(np.max(np.abs(actual.magnitudes_dbfs - expected.magnitudes_dbfs))))
+            float32_parity_ok = float32_parity_ok and (
+                np.allclose(actual.waveform, expected.waveform, rtol=0, atol=1e-7)
+                and np.allclose(actual.frequencies_hz, expected.frequencies_hz, rtol=0, atol=1e-9)
+                and np.allclose(actual.magnitudes_dbfs, expected.magnitudes_dbfs, rtol=0, atol=1e-6)
+                and abs(actual.rms_dbfs - expected.rms_dbfs) < 1e-9
+                and abs(actual.peak_dbfs - expected.peak_dbfs) < 1e-9
+                and abs(actual.spectral_centroid_hz - expected.spectral_centroid_hz) < 1e-6
+            )
+        tested_stats = engine.stream_stats()
+        engine.reset()
+        stream_stats_ok = stream_stats_ok and engine.stream_stats() == {"input_frames": 0, "completed_windows": 0, "pending_frames": 0}
+        pending = engine.push(np.zeros((2047, 2), dtype=np.float32))
+        stream_stats_ok = stream_stats_ok and engine.stream_stats() == {"input_frames": 2047, "completed_windows": 0, "pending_frames": 2047}
+        silent = engine.push(np.zeros((1, 2), dtype=np.float32))
+        stream_stats_ok = stream_stats_ok and engine.stream_stats() == {"input_frames": 2048, "completed_windows": 1, "pending_frames": 0}
         reset_ok = pending is None and silent is not None and bool(np.all(silent.magnitudes_dbfs == -120.0)) and silent.rms_dbfs == -120.0
+        abi_ok = backend != "cpp" or runtime.get("abi_version") == 2
         return {
             **runtime,
             "backend": engine.backend,
-            "smoke_ok": bool(parity_ok and reset_ok and frames_checked > 0),
+            "smoke_ok": bool(parity_ok and float32_parity_ok and stream_stats_ok and abi_ok and reset_ok and frames_checked > 0 and float32_frames_checked > 0),
             "parity_ok": bool(parity_ok) if backend == "cpp" else False,
             "max_magnitude_error_db": max_magnitude_error if backend == "cpp" else None,
             "frames_checked": frames_checked,
+            "float32_parity_ok": bool(float32_parity_ok and float32_frames_checked > 0) if backend == "cpp" else False,
+            "float32_smoke_ok": bool(float32_parity_ok and float32_frames_checked > 0),
+            "float32_frames_checked": float32_frames_checked,
+            "float32_max_magnitude_error_db": float32_max_magnitude_error if backend == "cpp" else None,
+            "stream_stats_ok": bool(stream_stats_ok),
+            "tested_stream_stats": tested_stats,
+            "expected_abi_version": 2,
             "partial_buffer_reset_ok": bool(reset_ok),
             "capture_device_tested": False,
         }
@@ -2492,14 +3137,16 @@ def run_self_test(output_path: str | Path) -> int:
             and english.get("reference_spectrum") == result["reference_spectrum"]
         )
         debug_sources_ok = all("def " in code_for_block(block["id"]) and "소스 위치를 찾지 못했습니다" not in code_for_block(block["id"]) for block in PIPELINE_BLOCKS)
+        stem_removal_source_ok = "def remove_stems_from_file(" in source_file_path("stem_removal.py").read_text(encoding="utf-8")
         separator_status = separator_runtime_status()
         native_dsp_status = _self_test_native_dsp()
         payload = {
-            "ok": len(result.get("recipes", [])) == 3 and debug_sources_ok and english.get("language") == "en" and bool(separator_status.get("available")) and reference_compare_ok and native_dsp_status["smoke_ok"],
+            "ok": len(result.get("recipes", [])) == 3 and debug_sources_ok and stem_removal_source_ok and english.get("language") == "en" and bool(separator_status.get("available")) and reference_compare_ok and native_dsp_status["smoke_ok"],
             "app_version": APP_VERSION,
             "ffmpeg_analysis": True,
             "developer_source_blocks": len(PIPELINE_BLOCKS),
             "developer_sources_ok": debug_sources_ok,
+            "stem_removal_source_ok": stem_removal_source_ok,
             "english_localization": english.get("language") == "en",
             "reference_compare_ok": reference_compare_ok,
             "reference_bands": len(result["reference_spectrum"]["bands"]),

@@ -17,10 +17,29 @@ FFmpeg build and re-run the tests. See `licenses/FFmpeg-GPL-3.0.txt` and
 
 # Native live DSP runtime
 
-`tonematch_dsp.dll` is generated from `native/tonematch_dsp.cpp` and its C ABI 1
+`tonematch_dsp.dll` is generated from `native/tonematch_dsp.cpp` and its C ABI 2
 header. Git tracks the source, not the binary. The portable developer ZIP ships
 the tested Windows x64 DLL both here and in the application's internal resources.
 Run `tools/build_native.py --zig <path-to-Zig-0.15.2-zig.exe>` to rebuild it.
 The release diagnostics record source/DLL SHA-256 hashes, compiler options,
 native-versus-NumPy parity and a local DSP benchmark. Runtime notices are in
 `licenses/native/`; ordinary portable EXE users do not need the compiler.
+
+v0.0.09 adds `tm_dsp_push_f32` alongside the float64 input path and reports engine
+accepted input frames, completed FFT windows and pending frames. The bridge
+requires ABI 2: older ABI-1 DLLs fail strict C++ selection and trigger NumPy fallback
+in automatic mode. Do not mix a new bridge with a DLL from an older release.
+The direct float32 path removes the compatible input's Python float64 upcast;
+it does not remove Python output copies, locks or SoundCard capture.
+
+# Shared stem-removal resources
+
+The v0.0.09 Stem removal workspace uses this same bundled FFmpeg for local
+segment decoding. `stem_removal.py` mixes retained `htdemucs_6s` estimates into
+one new 44.1 kHz stereo PCM16 WAV; it does not export individual stems.
+The model's YAML and safetensors are acquired on first AI use and kept in the
+Windows user's Hugging Face cache, shared with guitar isolation. Model weights,
+input media, mixed output, and temporary audio are not release resources and must
+not be added here or to the public archive. The build reference date is
+2026-09-16 KST; current release checks are recorded in `QA_REPORT_v0.0.09.json`
+and `BUILD_HISTORY.md` rather than inferred from the presence of these binaries.

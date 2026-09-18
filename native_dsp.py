@@ -14,10 +14,13 @@ import numpy as np
 from spectrum import SpectrumFrame, SpectrumSmoother, analyze_spectrum_frame
 
 
-NATIVE_ABI_VERSION = 1
+NATIVE_ABI_VERSION = 2
 NATIVE_LIBRARY_NAME = "tonematch_dsp.dll"
 MAX_FRAMES_PER_PUSH = 10_000_000
+MAX_STREAM_FRAMES = (1 << 64) - 1
 _DOUBLE_POINTER = ctypes.POINTER(ctypes.c_double)
+_FLOAT_POINTER = ctypes.POINTER(ctypes.c_float)
+_UINT64_POINTER = ctypes.POINTER(ctypes.c_uint64)
 
 
 class NativeDspError(RuntimeError):
@@ -80,8 +83,8 @@ def _configuration(
     return _Configuration(rate, channel_count, size, history, minimum, maximum)
 
 
-def _prepare_block(samples: np.ndarray, channels: int) -> np.ndarray:
-    """호출자 PCM을 검증하고 C ABI용 연속 float64 채널 배열로 준비한다."""
+def _prepare_block(samples: np.ndarray, channels: int, *, native_float32: bool = False) -> np.ndarray:
+    """PCM을 검증하고 정렬된 연속 배열을 준비하되 native float32는 변환 없이 보존한다."""
 
     try:
         source = np.asarray(samples)
@@ -99,7 +102,8 @@ def _prepare_block(samples: np.ndarray, channels: int) -> np.ndarray:
         raise ValueError("samples must contain real numeric PCM values")
     if source.shape[0] > MAX_FRAMES_PER_PUSH:
         raise ValueError(f"a PCM block must contain at most {MAX_FRAMES_PER_PUSH} frames")
-    return np.ascontiguousarray(source, dtype=np.float64)
+    dtype = np.float32 if native_float32 and source.dtype == np.dtype(np.float32) else np.float64
+    return np.require(source, dtype=dtype, requirements=["C", "A"])
 
 
 def _library_candidates() -> tuple[Path, ...]:
@@ -149,6 +153,11 @@ def _load_library() -> Any:
             _DOUBLE_POINTER, ctypes.c_uint32,
         ]
         library.tm_dsp_push.restype = ctypes.c_int32
+        library.tm_dsp_push_f32.argtypes = [_FLOAT_POINTER if index == 1 else value
+                                          for index, value in enumerate(library.tm_dsp_push.argtypes)]
+        library.tm_dsp_push_f32.restype = ctypes.c_int32
+        library.tm_dsp_stream_stats.argtypes = [ctypes.c_void_p, _UINT64_POINTER, ctypes.c_uint32]
+        library.tm_dsp_stream_stats.restype = ctypes.c_int32
     except AttributeError as exc:
         raise NativeDspError("Native DSP DLL is missing required ABI functions.") from exc
     return library
@@ -178,6 +187,8 @@ class PythonSpectrumEngine:
         self._closed = False
         self._pending = np.empty((0, channels), dtype=np.float64)
         self._smoother = SpectrumSmoother(history_size)
+        self._input_frames = 0
+        self._completed_windows = 0
 
     def _require_open(self) -> None:
         """닫힌 스트림을 다시 사용하는 호출을 명확한 오류로 거부한다."""
@@ -191,8 +202,12 @@ class PythonSpectrumEngine:
         with self._lock:
             self._require_open()
             block = _prepare_block(samples, self._config.channels)
+            if len(block) > MAX_STREAM_FRAMES - self._input_frames:
+                raise NativeDspError("Spectrum stream frame counter would overflow.")
             combined = np.concatenate((self._pending, block), axis=0) if len(self._pending) else block
             complete = len(combined) // self._config.fft_size
+            if complete > MAX_STREAM_FRAMES - self._completed_windows:
+                raise NativeDspError("Spectrum stream window counter would overflow.")
             result = None
             for index in range(complete):
                 start = index * self._config.fft_size
@@ -202,7 +217,17 @@ class PythonSpectrumEngine:
                 )
                 result = self._smoother.push(frame)
             self._pending = combined[complete * self._config.fft_size :].copy()
+            self._input_frames += len(block)
+            self._completed_windows += complete
             return result
+
+    def stream_stats(self) -> dict[str, int]:
+        """현재 스트림의 입력·완성 창·부분 창 개수를 독립 딕셔너리로 반환한다."""
+
+        with self._lock:
+            self._require_open()
+            return {"input_frames": self._input_frames, "completed_windows": self._completed_windows,
+                    "pending_frames": len(self._pending)}
 
     def reset(self) -> None:
         """부분 PCM과 모든 평활화 이력을 함께 비운다."""
@@ -211,6 +236,8 @@ class PythonSpectrumEngine:
             self._require_open()
             self._pending = np.empty((0, self._config.channels), dtype=np.float64)
             self._smoother.reset()
+            self._input_frames = 0
+            self._completed_windows = 0
 
     def close(self) -> None:
         """여러 번 호출해도 안전하게 버퍼를 비우고 엔진을 닫는다."""
@@ -264,6 +291,7 @@ class NativeSpectrumEngine:
             self._waveform = np.empty(config.fft_size, dtype=np.float64)
             self._magnitudes = np.empty(count, dtype=np.float64)
             self._statistics = np.empty(3, dtype=np.float64)
+            self._stream_statistics = np.empty(3, dtype=np.uint64)
         except Exception:
             self.close()
             raise
@@ -279,9 +307,12 @@ class NativeSpectrumEngine:
 
         with self._lock:
             self._require_open()
-            block = _prepare_block(samples, self._config.channels)
-            emitted = int(self._library.tm_dsp_push(
-                self._context, _double_pointer(block), len(block),
+            block = _prepare_block(samples, self._config.channels, native_float32=True)
+            is_float32 = block.dtype == np.dtype(np.float32)
+            push = self._library.tm_dsp_push_f32 if is_float32 else self._library.tm_dsp_push
+            pointer = block.ctypes.data_as(_FLOAT_POINTER) if is_float32 else _double_pointer(block)
+            emitted = int(push(
+                self._context, pointer, len(block),
                 _double_pointer(self._waveform), len(self._waveform),
                 _double_pointer(self._magnitudes), len(self._magnitudes),
                 _double_pointer(self._statistics), len(self._statistics),
@@ -299,6 +330,18 @@ class NativeSpectrumEngine:
                 rms_dbfs=float(self._statistics[0]), peak_dbfs=float(self._statistics[1]),
                 spectral_centroid_hz=float(self._statistics[2]),
             )
+
+    def stream_stats(self) -> dict[str, int]:
+        """같은 잠금 안에서 실제 C++ 입력·완성 창·부분 창 카운터를 조회한다."""
+
+        with self._lock:
+            self._require_open()
+            if self._library.tm_dsp_stream_stats(
+                self._context, self._stream_statistics.ctypes.data_as(_UINT64_POINTER), 3,
+            ) != 3:
+                raise NativeDspError("Native DSP could not read its stream counters.")
+            return dict(zip(("input_frames", "completed_windows", "pending_frames"),
+                            (int(value) for value in self._stream_statistics)))
 
     def reset(self) -> None:
         """C++의 부분 PCM과 평활화 이력을 하나의 잠금 안에서 초기화한다."""

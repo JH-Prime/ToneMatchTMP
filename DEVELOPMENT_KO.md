@@ -1,14 +1,63 @@
-# ToneMatch TMP 개발자 안내서 · 0.0.08
+# ToneMatch TMP 개발자 안내서 · 0.0.09
 
 이 문서는 구현 구조를 빠르게 이해하기 위한 한국어 요약입니다. 모든 함수의
 이름·원본 줄·docstring은 `FUNCTION_REFERENCE_KO.md`, 새 PC 재구성과 릴리스
 절차는 `DEVELOPER_HANDOFF_KO_EN.md`를 함께 보세요.
 
-현재 릴리스·빌드 기준일은 2026-09-10 KST입니다. v0.0.08은 실시간 PCM 누적·
-채널별 FFT·4프레임 평활화를 C++17 엔진으로 분리하며, 실제 백엔드와 NumPy 폴백을
-표시합니다. SoundCard 캡처·Python/Tk·AI·오프라인 톤/Reference/보이싱은 유지합니다.
+현재 릴리스·빌드 기준일은 2026-09-19 KST입니다. v0.0.09는 로컬 파일의 선택
+악기 제거 도구를 추가하고, v0.0.08의 C++17 실시간 PCM·FFT·평활화 엔진에
+C ABI 2 float32 직접 입력과 입력/창 진단을 추가합니다.
+실제 백엔드와 NumPy 폴백, DSP push ms·완성 창·잔여 frame을 표시합니다.
+SoundCard 캡처·Python/Tk·AI·오프라인 톤/Reference/보이싱은 유지합니다.
 v0.0.07의 코드 근거·원본 화성 참고·작은 화면 보완도 유지합니다. 실제 검증 완료 여부는
-`QA_REPORT_v0.0.08.json`과 `BUILD_HISTORY.md`에 기록하며 이 문서로 대신하지 않습니다.
+`QA_REPORT_v0.0.09.json`과 `BUILD_HISTORY.md`에 기록하며 이 문서로 대신하지 않습니다.
+이번 배포는 서명되지 않은 CPU 포터블 개발자 프리릴리스입니다. 2026-09-19 빌드는
+한·영 숨김 UI 회귀를 포함한 자동 테스트 214개(48.577초)를 경고를 오류로 취급해
+통과했고, compileall, 소스·패키지 EXE 자체 진단과 실제 ABI 2 float32/float64
+30개 창의 수치 비교도 통과했습니다. 2026-09-16 실제 CPU
+소스 검증에서는 Room 335의 31초 기타+피아노 제거, 2개 조각과 39회 단조 증가
+진행률, peak 정규화, 원본 보존 및 실제 추론 취소 후 출력·부분 파일 정리를 확인했습니다.
+패키지 GUI는 실행과 악기 제거 탭 열기까지만 확인했습니다. 전체 곡의 패키지 UI 검증은
+사용자 Escape 요청으로 중단하여 미실행이며, 패키지 GUI에서 제거를 실행하지 않았습니다.
+첫 모델 다운로드·네트워크 차단·CUDA·실제 캡처·청감 품질은 미검증입니다.
+게시 전에 최종 ZIP을 새로 검사해 manifest·소스·DLL·고지·SHA-256 일치를 확인합니다.
+
+## 악기 제거 처리 흐름과 저장 계약
+
+바깥쪽 `톤 분석`/`악기 제거` 작업 탭으로 두 기능을 구분합니다. 악기 제거는 로컬
+오디오·영상에서 `vocals`, `drums`, `bass`, `guitar`, `piano`, `other` 가운데
+제거할 1~5개를 선택하고 나머지를 새 WAV 하나로 합치는 독립 작업입니다.
+
+```text
+로컬 파일 + 시작/끝 + 제거할 1~5개 + 새 .wav 경로
+    → FFmpeg: 3초 이상·최대 20분, 44.1 kHz stereo PCM16 임시 입력
+    → separate_stem_chunks: 기존 htdemucs_6s 로더·캐시·연산 장치·진행 콜백
+    → 남길 stem의 float32 배열을 조각별 float64 합산 → 임시 float32 mix
+    → 전체 peak 검사 → 필요할 때만 전 구간 동일 gain으로 클리핑 방지
+    → 출력 폴더의 완성 .partial.wav(PCM16) → Windows 비덮어쓰기 rename으로 확정
+```
+
+- `stem_removal.remove_stems_from_file(...)`가 경로·선택·유한한 시간 값과 최소
+  길이를 검사합니다. 끝 `0`/빈칸은 나머지 구간을 뜻하며 20분에서 제한합니다.
+- 원본과 같은 경로 또는 이미 있는 출력은 거부합니다. Windows의 최종 `os.rename`은
+  처리 중 목적지 파일이 생겨도 덮어쓰지 않습니다. 다른 OS에서는 `os.link`를
+  사용하며, `os.replace`처럼 기존 파일을 덮어쓰는 동작으로 폴백하지 않습니다.
+- 합산 peak가 1을 넘으면 `0.999 / peak` 감쇠를 전체 구간에 적용하고, 그렇지
+  않으면 gain 1을 유지합니다. 출력은 44.1 kHz·2채널 PCM16LE WAV입니다.
+- 개별 stem 파일은 만들지 않습니다. 디코딩·합산 임시 파일과 부분 출력은 정상
+  완료·오류·취소 때 정리합니다. 중단한 작업의 재개/체크포인트는 제공하지 않습니다.
+- 모델 첫 다운로드는 네트워크를 사용하고 완료된 사용자 캐시는 톤 분석과 공유합니다.
+  사용자 음원·출력은 로컬에 머물며 모델 가중치는 Git·개발 ZIP에 넣지 않습니다.
+- 진행률은 처리 단계와 실제 모델/분리 콜백에서 갱신하고 경과 시간은 UI가 갱신합니다.
+  취소는 FFmpeg 폴링, 다운로드 콜백, Demucs 내부 블록 경계와 WAV 쓰기에서
+  확인하므로 실행 중인 추론 블록이나 네트워크 대기 때문에 반영이 지연될 수 있습니다.
+- 작업 중에는 톤 분석·녹음·실시간 모니터·하드웨어 검사·언어 재구성을 함께
+  실행하지 않습니다. UI worker는 결과를 큐로 전달하고 Tk 접근은 메인 스레드가 맡습니다.
+- 결과는 `tonematch-tmp-stem-removal/v1` 사전으로 제거/유지 파트, 실제 장치,
+  구간·형식·추론 시간·정규화 여부를 보존합니다. 톤 레시피 JSON 스키마와 별개입니다.
+- 피아노 추정은 모든 건반/신스 분류와 같지 않으며 `other`에도 건반이 남을 수
+  있습니다. 누출·소리 손실·위상/어택/잔향 변화·인공음이 가능하고 Logic Pro와
+  동일한 모델이나 품질을 보장하지 않습니다.
 
 ## 파일 분석·레시피 처리 시퀀스
 
@@ -81,7 +130,7 @@ v0.0.07의 코드 근거·원본 화성 참고·작은 화면 보완도 유지�
   블록이나 네트워크 대기를 즉시 강제 종료하지 않으므로 반영이 지연될 수 있습니다.
 - 모델 준비 예외 체인을 서버·네트워크, 캐시 권한·디스크, 메모리 부족, 기타
   모델·런타임으로 분류합니다. 모든 예외를 인터넷 미연결로 설명하지 않습니다.
-  현행 오디오·EXE 검증 결과는 `QA_REPORT_v0.0.08.json`과 `BUILD_HISTORY.md`를
+  현행 오디오·EXE 검증 결과는 `QA_REPORT_v0.0.09.json`과 `BUILD_HISTORY.md`를
   기준으로 하며 이 구현 설명 자체는 해당 검증의 성공 증거가 아닙니다.
 
 ## 실시간 스펙트럼 처리 시퀀스
@@ -91,7 +140,7 @@ v0.0.07의 코드 근거·원본 화성 참고·작은 화면 보완도 유지�
 ```text
 [선택한 WASAPI 오디오 입력 또는 PC 재생음 loopback]
        ↓ 44.1 kHz · 2채널 · 2,048-frame 블록(초당 약 21.5개)
-[Python/SoundCard 캡처 → native_dsp.py: C ABI 1 호환 확인]
+[Python/SoundCard 캡처 → native_dsp.py: C ABI 2 호환 확인 · float32 직접 입력]
        ↓ C++ 우선, 누락·비호환이면 NumPy 폴백 및 실제 백엔드 표시
 [고정 PCM 누적 → 완성된 FFT 단위 → 채널별 Hann FFT power 평균]
        ↓
@@ -101,7 +150,7 @@ v0.0.07의 코드 근거·원본 화성 참고·작은 화면 보완도 유지�
        ↓
 [용량 1 bounded 큐: 오래된 화면 프레임 교체]
        ↓ UI가 50 ms마다 poll(약 20 Hz)
-[Tk Canvas: 입력 파형 + 로그 주파수 스펙트럼 + 수치]
+[Tk Canvas: 파형 + 로그 스펙트럼 + 수치 / DSP push ms·완성 창·잔여 frame]
 ```
 
 블록 캡처 주기와 UI 그리기 주기를 분리했으므로 UI가 잠시 늦어져도 측정 프레임이
@@ -135,13 +184,14 @@ Reference 생성은 파일 분석 경로에, Current 갱신은 기존 실시간 
 
 | 파일 | 역할 |
 |---|---|
-| `app.py` | Tkinter 화면, 한·영 전환, 연산 장치·성능 진단, 분석·녹음·스펙트럼 작업 스레드, 수치 진행률·경과 시간, 콘솔 없는 출력 보호, Canvas 표시, 취소, 결과/보이싱 탭, 로그, 디버그 번들, 자체 진단 |
+| `app.py` | Tkinter 톤 분석/악기 제거 작업 탭, 한·영 전환, 연산 장치·성능 진단, 분석·제거·녹음·스펙트럼 작업 스레드, 수치 진행률·경과 시간, 콘솔 없는 출력 보호, Canvas 표시, 취소, 결과/보이싱 탭, 로그, 디버그 번들, 자체 진단 |
 | `engine.py` | FFmpeg 구간 변환, PCM 로딩, NumPy DSP, 기타 분리 호출, 코드 전용 원본 화성 참고 선택, 출력 경로별 Amp/Cab 조립, 템플릿 매칭과 결과 스키마 |
-| `separator.py` | Demucs `htdemucs_6s` 캐시 우선 명시 로더, 실제 다운로드·내부 블록 진행, 원인별 모델 오류, 자동/CPU/CUDA 선택·폴백, VRAM/추론 벤치마크, 30초 외부 조각, guitar stem WAV |
+| `separator.py` | Demucs `htdemucs_6s` 캐시 우선 명시 로더, 실제 다운로드·내부 블록 진행, 원인별 모델 오류, 자동/CPU/CUDA 선택·폴백, VRAM/추론 벤치마크, 30초 외부 조각, guitar stem WAV와 선택 stem 배열 소비 콜백 |
+| `stem_removal.py` | 제거/유지 파트·경로·시간 검증, 취소 가능한 FFmpeg 디코딩, 남길 stem 합산·전역 peak 정규화, 원자적 비덮어쓰기 PCM16 WAV 저장과 임시 파일 정리 |
 | `recorder.py` | SoundCard 기반 Windows WASAPI loopback/오디오 입력 열거, PCM16 녹음, 실시간 2,048-frame float32 블록 전달 |
 | `spectrum.py` | 입력 정규화, 채널별 FFT power, 20 Hz~20 kHz 스펙트럼·dBFS·중심 주파수 계산과 4프레임 평활화 |
-| `native_dsp.py` | 신뢰된 번들 DLL·ABI 확인, ctypes 타입·수명/잠금 관리, C++/NumPy 스트리밍 엔진 선택과 폴백 진단 |
-| `native/tonematch_dsp.cpp`, `.h` | C++17 C ABI 1 엔진, 사전 할당 PCM·Hann/FFT 작업 버퍼·평활화 이력, 채널별 파워·dBFS·중심 주파수 |
+| `native_dsp.py` | 신뢰된 번들 DLL·ABI 확인, float32/float64 입력 선택, ctypes 타입·수명/잠금 관리, C++/NumPy 선택과 엔진 처리 진단 |
+| `native/tonematch_dsp.cpp`, `.h` | C++17 C ABI 2 엔진, float32/float64 입력, 사전 할당 PCM·Hann/FFT·평활화 이력, 입력/완성 창/잔여 frame 카운터 |
 | `tools/build_native.py` | 명시적인 Zig 0.15.2 경로로 Windows x64 DSP DLL 빌드 |
 | `reference_compare.py` | 분석 PCM의 레벨 정규화 Reference 프로필, 6밴드 집계, 실시간 Current 보간과 `Δ(Current−Reference)` 계산 |
 | `voicing.py` | 채널별 스펙트럼, 독립 피치·잡음/배음 억제, 반복 근거·미확정 이벤트·진단, 제한된 코드 템플릿과 기타 소스의 보이싱 후보(실험) |
@@ -161,7 +211,7 @@ Reference 생성은 파일 분석 경로에, Current 갱신은 기존 실시간 
 - 풀믹스의 톤 특징·Reference·레시피는 44.1 kHz PCM에서 분리한 Demucs guitar stem의
   22.05 kHz 분석 버퍼만 사용합니다. 코드 전용 화성 참고는 원본의 같은 구간을 별도로
   읽을 수 있지만 톤 분석 버퍼를 교체하지 않습니다. 기타 단독 파일은 분리를 건너뜁니다.
-- 모델 가중치는 ZIP·Git에 넣지 않습니다. 첫 풀믹스 분석 때 Hugging Face
+- 모델 가중치는 ZIP·Git에 넣지 않습니다. 첫 풀믹스 분석 또는 악기 제거 때 Hugging Face
   사용자 캐시로 내려받습니다.
 - 혼합 WAV와 stem은 임시 폴더에서 삭제되며 중간 체크포인트는 없습니다.
 - YouTube 스트림을 다운로드하지 않습니다. 권한 있는 로컬 파일 또는 브라우저의
@@ -235,12 +285,21 @@ v0.0.04는 전체 앱을 C++로 재작성하지 않고 NumPy와 PyTorch가 이�
 v0.0.05~v0.0.07도 Python을 UI, 파일 처리, Demucs 실행, 레시피·리포트 조립,
 실시간 스펙트럼과 Reference Compare의 기준 구현으로 유지합니다.
 
-v0.0.08은 그중 실시간 PCM 누적·FFT·평활화를 C++17로 옮깁니다. C ABI 1은
-Python 버전별 확장 ABI에 의존하지 않는 `ctypes` 경계입니다. `native_dsp.py`는
+v0.0.08에서 실시간 PCM 누적·FFT·평활화를 C++17로 옮겼습니다. v0.0.09는
+float32 입력과 엔진 진단을 추가한 C ABI 2를 사용합니다. Python 버전별 확장 ABI에
+의존하지 않는 `ctypes` 경계이며 `native_dsp.py`는
 모듈 옆 번들 `resources/tonematch_dsp.dll`만 절대 경로로 로드하고 ABI를 확인합니다.
 `create_spectrum_engine(..., backend="auto")`는 C++ 우선이며 누락·비호환·지원하지
 않는 구성에는 NumPy로 폴백하고 이유를 제공합니다. 명시적 `backend="cpp"` 요청은
-실패를 숨기지 않습니다. 실제 백엔드 표시는 UI 스레드 이벤트로 전달합니다.
+실패를 숨기지 않습니다. 예전 ABI 1 DLL은 호환되지 않아 strict C++ 선택은 오류,
+자동 선택은 NumPy 폴백이 됩니다. 실제 백엔드 표시는 UI 스레드 이벤트로 전달합니다.
+
+정렬된 native-endian C-contiguous float32 배열은 `tm_dsp_push_f32`로 직접
+전달해 종전 Python float64 upcast 복사를 생략합니다. float64 `tm_dsp_push`는
+유지하며 다른 dtype·배치에는 정규화가 필요할 수 있습니다. 엔진이 수락한
+`input_frames`, 완성 FFT 단위의 `completed_windows`, 다음 창을 기다리는
+`pending_frames`를 조회합니다. reset은 이 카운터와 미완성 입력을 함께 지웁니다.
+UI의 DSP push ms는 처리 호출만 재며 캡처·AI·화면 그리기·왕복 오디오 지연이 아닙니다.
 
 네이티브 기본값은 FFT 2,048, 이력 4이며 생성 범위는 FFT 128~32,768의 2의 거듭제곱,
 샘플레이트 8~192 kHz, 채널 1~32, 이력 1~64입니다. 유한한 주파수 범위는
@@ -250,8 +309,9 @@ Python 버전별 확장 ABI에 의존하지 않는 `ctypes` 경계입니다. `na
 
 채널별 DC 제거·Hann FFT·채널 파워 평균과 최근 4프레임 평활화, RMS 파워 평균,
 Peak 창 최댓값, 최신 파형 계약을 기존 기준 구현과 수치 비교합니다. 엔진은 단일
-소유자가 사용하고 브리지는 push/reset/close를 잠금으로 보호합니다. Python 입력·출력
-복사와 잠금, SoundCard WASAPI 공유 모드 캡처가 남아 있어 lock-free 또는 하드 실시간
+소유자가 사용하고 브리지는 push/reset/close를 잠금으로 보호합니다. Python 출력
+복사와 필요한 입력 정규화·잠금, SoundCard WASAPI 공유 모드 캡처가 남아 있어
+전체 zero-copy, lock-free 또는 하드 실시간
 엔진이 아닙니다. C++ 장치 I/O·ASIO·WASAPI Exclusive는 후속 범위입니다. UI·AI·
 오프라인 톤/Reference/코드·레시피는 이번 전환 대상이 아니며, NumPy도 네이티브 FFT를
 쓰므로 속도 향상과 전체 곡 Demucs 가속을 가정하지 않습니다. 수치·성능 증거는 QA에
@@ -276,7 +336,7 @@ Peak 창 최댓값, 최신 파형 계약을 기존 기준 구현과 수치 비�
 & ..\.venv\Scripts\python.exe tools\build_native.py --zig C:\Tools\zig-0.15.2\zig.exe
 & ..\.venv\Scripts\python.exe -m compileall -q .
 & ..\.venv\Scripts\python.exe -m unittest discover -s tests -v
-& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.08.json
+& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.09.json
 & ..\.venv\Scripts\python.exe app.py
 ```
 
@@ -318,8 +378,8 @@ C++ 재빌드에는 [공식 Zig 0.15.2 Windows x64 ZIP](https://ziglang.org/down
 1. 재현 테스트를 추가하고 코드를 수정합니다.
 2. 모든 함수의 한국어 docstring과 사용자용 한·영 문자열을 유지합니다.
 3. `catalog.APP_VERSION`, 최신 `CHANGELOG`, `version_info.txt`, spec, 문서와
-   파일명을 다음 패치인 `0.0.09`로 정확히 한 단계 올립니다. 현행 `0.0.08`의
-   검증을 먼저 마치고 v0.0.07 이하의 역사 기록은 변경하지 않습니다.
+   파일명을 다음 패치인 `0.0.10`으로 정확히 한 단계 올립니다. 현행 `0.0.09`의
+   검증을 먼저 마치고 v0.0.08 이하의 역사 기록은 변경하지 않습니다.
 4. 함수 색인과 제3자 라이선스 목록을 다시 생성합니다.
 5. 단위 테스트, 소스 자체 진단, 실제 짧은 Demucs 분리, 패키지 자체 진단을
    통과시킵니다. C++ DLL이 실제 로드된 수치 비교·분할 입력·초기화/수명·오류 회귀와

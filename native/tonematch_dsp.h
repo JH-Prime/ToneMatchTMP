@@ -16,7 +16,7 @@ extern "C" {
 #define TM_DSP_NOEXCEPT
 #endif
 
-/* C ABI 버전을 반환한다. 이 헤더의 계약은 버전 1이다. */
+/* C ABI 버전을 반환한다. 이 헤더의 계약은 버전 2이다. */
 TM_DSP_API uint32_t tm_dsp_abi_version(void) TM_DSP_NOEXCEPT;
 
 /*
@@ -62,6 +62,22 @@ TM_DSP_API int tm_dsp_push(void *handle, const double *interleaved,
                          uint32_t waveform_capacity, double *magnitudes,
                          uint32_t magnitude_capacity, double *stats,
                          uint32_t stats_capacity) TM_DSP_NOEXCEPT;
+
+/* float32 PCM용 진입점이다. 입력 형식 외의 계약은 tm_dsp_push와 동일하다. */
+TM_DSP_API int tm_dsp_push_f32(void *handle, const float *interleaved,
+                             uint32_t frames, double *waveform,
+                             uint32_t waveform_capacity, double *magnitudes,
+                             uint32_t magnitude_capacity, double *stats,
+                             uint32_t stats_capacity) TM_DSP_NOEXCEPT;
+
+/*
+ * out[0:3]에 reset 이후 입력 프레임 수, 완성 FFT 창 수, 대기 프레임 수를 쓴다.
+ * 성공 3, NULL/용량 부족은 -1이다. 실패 시 상태와 출력 모두 보존한다.
+ * push는 uint64_t 누적 카운터 overflow도 -1로 거부하고 상태를 보존한다.
+ * 같은 핸들 호출의 직렬화와 출력 버퍼 비중첩 계약은 push와 같다.
+ */
+TM_DSP_API int tm_dsp_stream_stats(void *handle, uint64_t *out,
+                                 uint32_t capacity) TM_DSP_NOEXCEPT;
 
 #ifdef __cplusplus
 }
