@@ -8,18 +8,52 @@
 from __future__ import annotations
 
 
-APP_VERSION = "0.0.09"
+APP_VERSION = "0.0.10"
 TARGET_FIRMWARE = "1.8.58"
 MODEL_GUIDE_REVISION = "Rev. J (2026-07)"
-BUILD_DATE = "2026-09-19"
+BUILD_DATE = "2026-09-20"
 
 
 # 앱 내부의 변경 기록 화면과 배포 문서가 함께 사용하는 단일 원본이다.
 # 이후 패치는 0.0.02, 0.0.03, 0.0.04처럼 한 단계씩 올리고 최신 항목을 맨 위에 둔다.
 CHANGELOG: list[dict] = [
     {
-        "version": "0.0.09",
+        "version": "0.0.10",
         "date": BUILD_DATE,
+        "status": "공개 개발 프리뷰",
+        "status_en": "Public development preview",
+        "changes": [
+            "악기 제거에서 새 입력을 선택하면 이전 결과·진행률을 초기화해 잘못된 완료 표시 방지",
+            "출력 경로의 끊어진 심볼릭 링크도 기존 항목으로 처리해 기본 이름 선택과 비덮어쓰기 검증 보완",
+            "기타 분리의 잘린 WAV 입력을 거부하고 실패 시 중간 파일 정리",
+            "GUI 없이 실제 모델로 기타·피아노 제거와 취소·진행률·원본 보존을 점검하는 별도 CLI 진단 추가",
+            "진단용 출력 WAV는 정리하고 JSON에서 음원·출력 파일명과 모델 경로 제외",
+            "v0.0.09의 선택 악기 제거와 C ABI 2 float32·실시간 DSP 진단 유지",
+        ],
+        "changes_en": [
+            "Resets old stem-removal results and progress when selecting a new source",
+            "Treats dangling output symlinks as existing entries in default-name selection and no-overwrite validation",
+            "Rejects truncated WAV input during guitar isolation and cleans intermediate files on failure",
+            "Adds a separate headless CLI check using the real model for guitar/piano removal, cancellation, progress and source preservation",
+            "Cleans diagnostic WAV output and omits media/output filenames and model paths from the JSON report",
+            "Retains v0.0.09 selective stem removal and C ABI 2 float32/live-DSP diagnostics",
+        ],
+        "known_issues": [
+            "AI 분리의 악기 누출·빠진 소리·잔향·왜곡 가능성은 유지되며 분리 품질 개선 모델은 아님",
+            "별도 CLI 진단 통과는 전체 곡 수동 UI·청감 품질·첫 다운로드·오프라인·CUDA 검증을 뜻하지 않음",
+            "추론 중 취소는 현재 블록 또는 네트워크 대기 뒤 반영될 수 있으며 ETA는 제공하지 않음",
+            "C++ 장치 입출력·ASIO·독점 모드·하드 실시간·자동 기기 쓰기는 포함하지 않음",
+        ],
+        "known_issues_en": [
+            "AI bleed, missing sound, ambience changes and artifacts remain; this is not a new separation-quality model",
+            "A headless CLI pass does not validate manual full-song UI operation, listening quality, first download, offline mode or CUDA",
+            "Cancellation can wait for an inference block or network operation; no ETA is provided",
+            "No C++ device I/O, ASIO, exclusive mode, hard-real-time guarantees or automatic device writing",
+        ],
+    },
+    {
+        "version": "0.0.09",
+        "date": "2026-09-19",
         "status": "공개 개발 프리뷰",
         "status_en": "Public development preview",
         "changes": [

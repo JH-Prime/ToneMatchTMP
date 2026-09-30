@@ -378,11 +378,13 @@ def remove_stems_from_file(
     progress: Callable[[float, str], None] | None = None,
     cancel_requested: Callable[[], bool] | None = None,
     language: str = "ko",
+    require_cached_model: bool = False,
 ) -> dict[str, object]:
     """입력의 선택 stem을 제외한 나머지를 새 PCM16 stereo WAV로 안전하게 저장한다.
 
     출력 경로에 파일이 이미 있으면 덮어쓰지 않고 실패한다. 성공 직전까지는 같은
     폴더의 ``.partial.wav``만 사용하며 취소·오류 시 이를 제거한다.
+    require_cached_model 진단 모드는 모델 파일의 네트워크 다운로드를 허용하지 않는다.
     """
     started_at = time.perf_counter()
     removed = _normalize_removed_stems(removed_stems)
@@ -453,6 +455,7 @@ def remove_stems_from_file(
                     cancel_requested,
                     language,
                     compute_preference,
+                    **({"local_files_only": True} if require_cached_model else {}),
                 )
             except SeparationCancelled as exc:
                 raise StemRemovalCancelled(

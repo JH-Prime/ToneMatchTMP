@@ -6,7 +6,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$Version = "0.0.09"
+$Version = "0.0.10"
 $AppBaseName = "ToneMatchTMP-v$Version"
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $PythonExe = [System.IO.Path]::GetFullPath((Join-Path $ProjectDir "..\.venv\Scripts\python.exe"))
@@ -115,7 +115,7 @@ try {
 
     foreach ($Name in @(
         "app.py", "catalog.py", "debug_info.py", "devices.py", "engine.py",
-        "i18n.py", "native_dsp.py", "recorder.py", "reference_compare.py", "report.py", "separator.py", "spectrum.py", "stem_removal.py", "voicing.py"
+        "i18n.py", "native_dsp.py", "recorder.py", "reference_compare.py", "report.py", "separator.py", "spectrum.py", "stem_removal.py", "stem_diagnostics.py", "voicing.py"
     )) {
         Copy-Item -LiteralPath (Join-Path $ProjectDir $Name) -Destination $SourceRoot -Force
     }
@@ -189,7 +189,7 @@ try {
         throw "Packaged EXE self-test 실패 (exit $($SelfTestProcess.ExitCode))"
     }
     $SelfTest = Get-Content -Raw -LiteralPath $SelfTestPath | ConvertFrom-Json
-    if (-not $SelfTest.ok -or $SelfTest.app_version -ne $Version -or -not $SelfTest.stem_removal_source_ok -or -not $SelfTest.native_dsp.available -or -not $SelfTest.native_dsp.parity_ok -or $SelfTest.native_dsp.abi_version -ne 2 -or -not $SelfTest.native_dsp.float32_parity_ok -or -not $SelfTest.native_dsp.stream_stats_ok) {
+    if (-not $SelfTest.ok -or $SelfTest.app_version -ne $Version -or -not $SelfTest.stem_removal_source_ok -or -not $SelfTest.stem_diagnostics_source_ok -or -not $SelfTest.native_dsp.available -or -not $SelfTest.native_dsp.parity_ok -or $SelfTest.native_dsp.abi_version -ne 2 -or -not $SelfTest.native_dsp.float32_parity_ok -or -not $SelfTest.native_dsp.stream_stats_ok) {
         throw "패키지 자체 진단 결과가 올바르지 않습니다."
     }
     # 자체 진단 결과를 공유해도 로컬 사용자 폴더가 노출되지 않도록 캐시 경로를 일반화한다.

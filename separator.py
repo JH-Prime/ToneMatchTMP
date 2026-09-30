@@ -171,8 +171,10 @@ def _load_hf_separator_model(
     progress: Callable[[float, str], None] | None,
     cancel_requested: Callable[[], bool] | None,
     language: str,
+    *,
+    local_files_only: bool = False,
 ) -> Any:
-    """공식 safetensors 모델을 캐시 우선으로 준비하고 다운로드·로딩 단계를 구분한다."""
+    """공식 모델을 캐시 우선으로 준비하며 캐시 전용 실행에서는 네트워크 재시도를 금지한다."""
     from huggingface_hub import hf_hub_download
     from huggingface_hub.errors import LocalEntryNotFoundError
     from demucs.apply import BagOfModels
@@ -186,6 +188,8 @@ def _load_hf_separator_model(
         try:
             path = hf_hub_download(**options, local_files_only=True)
         except LocalEntryNotFoundError:
+            if local_files_only:
+                raise
             path = hf_hub_download(
                 **options,
                 tqdm_class=_download_progress_class(progress, cancel_requested, language, filename, start, end),
@@ -555,12 +559,15 @@ def separate_stem_chunks(
     cancel_requested: Callable[[], bool] | None = None,
     language: str = "ko",
     compute_preference: str = "auto",
+    *,
+    local_files_only: bool = False,
 ) -> StemSeparationInfo:
     """6-stem 모델을 한 번 실행하고 선택한 stem을 파일 없이 조각별 콜백에 전달한다.
 
     콜백에 전달되는 배열은 ``(2, frames)`` 형태의 float32이며 다음 콜백 전에도
     유효하다. 이 API는 stem 파일을 만들지 않으므로 호출자가 합성·통계 등 필요한
-    결과만 스트리밍으로 처리할 수 있다.
+    결과만 스트리밍으로 처리할 수 있다. ``local_files_only``가 참이면 모델 캐시가
+    불완전해도 다운로드를 시도하지 않는다.
     """
     source_path = Path(source_wav)
     if not source_path.is_file():
@@ -592,7 +599,9 @@ def separate_stem_chunks(
 
         def _load_model(self) -> None:
             """safetensors 모델을 주입하고 Demucs 입출력 형식을 초기화한다."""
-            self._model = _load_hf_separator_model(progress, cancel_requested, language)
+            self._model = _load_hf_separator_model(
+                progress, cancel_requested, language, local_files_only=local_files_only
+            )
             self._audio_channels = self._model.audio_channels
             self._samplerate = self._model.samplerate
 
@@ -815,6 +824,7 @@ def separate_guitar_wav(
             peak = 0.0
             sample_count = 0
             processed_chunks = 0
+            processed_frames = 0
             inference_total_seconds = 0.0
             _safe_cuda_reset_peak_memory(torch, resolved_device)
 
@@ -829,6 +839,10 @@ def separate_guitar_wav(
                         raw = source_handle.readframes(frames_per_chunk)
                         if not raw:
                             break
+                        if len(raw) % (sample_width * channels):
+                            raise SeparationError(
+                                "입력 PCM 데이터가 잘려 있습니다. / Input PCM data is truncated."
+                            )
                         chunk_frames = len(raw) // (sample_width * channels)
                         tracker.begin_chunk(separator.model, chunk_index, total_chunks, total_frames,
                                             chunk_index * frames_per_chunk, chunk_frames)
@@ -851,8 +865,13 @@ def separate_guitar_wav(
                         peak = max(peak, chunk_peak)
                         sample_count += chunk_samples
                         processed_chunks += 1
+                        processed_frames += chunk_frames
                         tracker.finish_chunk()
                         del mixture, stems, _origin
+                if processed_frames != total_frames:
+                    raise SeparationError(
+                        "입력 WAV의 실제 길이가 헤더와 다릅니다. / Input WAV length does not match its header."
+                    )
             except Exception:
                 destination_path.unlink(missing_ok=True)
                 raise

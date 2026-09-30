@@ -1,4 +1,4 @@
-# ToneMatch TMP 0.0.09 함수 설명서
+# ToneMatch TMP 0.0.10 함수 설명서
 
 이 문서는 배포 소스의 모든 함수와 한국어 docstring을 자동으로 모은 색인입니다.
 앱의 `개발자 옵션`에서는 처리 순서 블록을 클릭해 같은 함수의 실제 소스와 원본 줄 번호를 볼 수 있습니다.
@@ -101,47 +101,47 @@
 | 2248 | `ToneMatchApp._finish_stem_progress` | 완료·실패·취소 시 마지막 악기 제거 경과 시간을 고정한다. |
 | 2253 | `ToneMatchApp._change_stem_compute_backend` | 악기 제거 전용 가속 선택을 auto·cuda·cpu 코드로 보존한다. |
 | 2259 | `ToneMatchApp._default_stem_destination` | 원본 옆에서 기존 파일과 충돌하지 않는 새 WAV 기본 이름을 찾는다. |
-| 2270 | `ToneMatchApp._set_stem_source` | 명시적으로 선택한 입력과 충돌하지 않는 출력 기본값을 함께 채운다. |
-| 2276 | `ToneMatchApp._choose_stem_source` | 악기 제거 전용 로컬 오디오·영상 입력을 파일 선택기로 받는다. |
-| 2283 | `ToneMatchApp._use_analysis_source_for_stem` | 현재 톤 분석 입력이 실제 로컬 파일일 때 악기 제거 입력으로 복사한다. |
-| 2291 | `ToneMatchApp._choose_stem_destination` | 개별 stem이 아닌 최종 혼합 WAV의 새 저장 경로를 선택한다. |
-| 2305 | `ToneMatchApp._parse_stem_removal_inputs` | 악기 제거 입력·출력·시간·선택을 검증하고 코어 호출 인자로 바꾼다. |
-| 2355 | `ToneMatchApp._start_stem_removal` | 검증된 악기 제거 요청을 UI 밖의 작업 스레드에서 시작한다. |
-| 2391 | `ToneMatchApp._cancel_stem_removal` | 현재 AI 조각 경계에서 악기 제거를 멈추도록 취소 신호를 보낸다. |
-| 2399 | `ToneMatchApp._stem_removal_worker` | 코어 분리를 실행하고 Tk에서 처리할 진행·결과 이벤트만 큐에 넣는다. |
-| 2401 | `ToneMatchApp._stem_removal_worker.<local>.progress` | 코어 진행 콜백을 Tk 메인 스레드용 불변 이벤트로 복사한다. |
-| 2415 | `ToneMatchApp._show_stem_result` | 완료된 출력과 처리 요약을 표시하고 모든 공통 컨트롤을 복구한다. |
-| 2432 | `ToneMatchApp._show_stem_error` | 악기 제거 실패·취소를 구분해 표시하고 작업 전 컨트롤 상태로 돌아간다. |
-| 2444 | `ToneMatchApp._update_stem_availability` | 다른 모든 장시간 작업과 악기 제거 컨트롤을 상호 배타적으로 잠근다. |
-| 2464 | `ToneMatchApp._choose_audio` | 파일 선택 창에서 오디오 또는 영상 경로를 받아 입력 상태를 갱신한다. |
-| 2472 | `ToneMatchApp._open_reference` | 참고 URL을 기본 브라우저에서 열되 앱이 YouTube 음원을 추출하지 않는다. |
-| 2482 | `ToneMatchApp._parse_inputs` | 화면 문자열을 분석 요청으로 바꾸고 파일·시간·장치 조건을 검증한다. |
-| 2504 | `ToneMatchApp._start_analysis` | 검증된 요청을 별도 스레드에서 시작하고 취소·내보내기 상태를 설정한다. |
-| 2559 | `ToneMatchApp._cancel_analysis` | 다운로드 또는 Demucs 내부 처리 구간 경계에서 멈추도록 취소 신호를 보낸다. |
-| 2567 | `ToneMatchApp._analysis_worker` | 전체 기타 분석을 실행하고 결과 또는 오류를 메인 UI 큐에 전달한다. |
-| 2569 | `ToneMatchApp._analysis_worker.<local>.progress` | 엔진 콜백을 Tk 메인 스레드용 진행 이벤트로 변환한다. |
-| 2579 | `ToneMatchApp._drain_events` | 백그라운드 분석·녹음·스펙트럼 제어 이벤트를 Tk 메인 스레드에서 처리한다. |
-| 2637 | `ToneMatchApp._recording_completed` | 완료된 임시 녹음을 현재 분석 파일로 연결하고 버튼 상태를 복구한다. |
-| 2650 | `ToneMatchApp._recording_failed` | 녹음 실패 메시지와 상세 로그를 남기고 UI를 다시 사용할 수 있게 한다. |
-| 2660 | `ToneMatchApp._show_error` | 분석 실패 상태를 복구하고 사용자 메시지와 영구 개발 로그를 남긴다. |
-| 2674 | `ToneMatchApp._show_result` | 추천 체인 세 개, 기타 stem 진단과 상태를 현재 언어 화면에 표시한다. |
-| 2711 | `ToneMatchApp._render_recipe` | 한 추천 체인의 모델·순서·파라미터·이유를 읽기 쉬운 서식으로 그린다. |
-| 2737 | `ToneMatchApp._render_voicing` | 실험 보이싱 타임라인과 연주 후보를 별도 결과 탭에 표시한다. |
-| 2783 | `ToneMatchApp._format_time` | 초 단위 위치를 긴 곡에서도 읽기 쉬운 분:초 문자열로 바꾼다. |
-| 2789 | `ToneMatchApp._update_analysis_availability` | 장치 지원과 분석·녹음·스펙트럼 상태를 보고 공통 컨트롤을 갱신한다. |
-| 2806 | `ToneMatchApp._update_copy_availability` | 현재 탭에 복사할 표시 내용이 있고 작업 중이 아닐 때만 복사 버튼을 켠다. |
-| 2823 | `ToneMatchApp._default_export_name` | 입력 파일명을 안전한 기본 내보내기 파일명으로 바꾼다. |
-| 2829 | `ToneMatchApp._export_json` | 현재 전체 분석 데이터와 분리 진단을 UTF-8 JSON으로 저장한다. |
-| 2841 | `ToneMatchApp._export_html` | 현재 결과를 외부 자원이 없는 한·영 HTML 리포트로 저장하고 선택 시 연다. |
-| 2855 | `ToneMatchApp._mark_export` | 내보내기 단계를 순서도에 표시하고 상태와 영구 로그를 갱신한다. |
-| 2864 | `ToneMatchApp._copy_recipe` | 현재 선택한 결과·진단·개발자 탭의 표시 내용을 클립보드에 복사한다. |
-| 2924 | `ToneMatchApp._export_debug_bundle` | 다른 PC에서 진단·개발을 이어갈 소스, 로그, 이력, 환경 정보를 ZIP으로 묶는다. |
-| 2961 | `ToneMatchApp._on_close` | 모든 작업에 중지 신호를 보내고 임시 녹음을 정리한 뒤 창을 닫는다. |
-| 2974 | `ToneMatchApp._finish_close_after_stem_cleanup` | 악기 제거 작업이 임시 음원을 정리할 때까지 숨은 메인 루프를 유지한다. |
-| 2995 | `_write_self_test_audio` | 패키지 자체 진단에 사용할 재현 가능한 기타 유사 스테레오 WAV를 만든다. |
-| 3025 | `_self_test_native_dsp` | 실제 DLL 또는 명시적 대체 경로에서 합성 PCM 누적·위상·평활화·초기화를 검증한다. |
-| 3120 | `run_self_test` | 합성 기타로 오프라인 분석·한영 변환·개발자 소스와 런타임을 검사한다. |
-| 3166 | `main` | 자체 진단 인수를 처리하거나 한·영 데스크톱 GUI 이벤트 루프를 시작한다. |
+| 2270 | `ToneMatchApp._set_stem_source` | 유휴 상태에서 입력을 선택하면 이전 결과를 비우고 새 출력 기본값을 채운다. |
+| 2285 | `ToneMatchApp._choose_stem_source` | 악기 제거 전용 로컬 오디오·영상 입력을 파일 선택기로 받는다. |
+| 2292 | `ToneMatchApp._use_analysis_source_for_stem` | 현재 톤 분석 입력이 실제 로컬 파일일 때 악기 제거 입력으로 복사한다. |
+| 2300 | `ToneMatchApp._choose_stem_destination` | 개별 stem이 아닌 최종 혼합 WAV의 새 저장 경로를 선택한다. |
+| 2314 | `ToneMatchApp._parse_stem_removal_inputs` | 악기 제거 입력·출력·시간·선택을 검증하고 코어 호출 인자로 바꾼다. |
+| 2366 | `ToneMatchApp._start_stem_removal` | 검증된 악기 제거 요청을 UI 밖의 작업 스레드에서 시작한다. |
+| 2402 | `ToneMatchApp._cancel_stem_removal` | 현재 AI 조각 경계에서 악기 제거를 멈추도록 취소 신호를 보낸다. |
+| 2410 | `ToneMatchApp._stem_removal_worker` | 코어 분리를 실행하고 Tk에서 처리할 진행·결과 이벤트만 큐에 넣는다. |
+| 2412 | `ToneMatchApp._stem_removal_worker.<local>.progress` | 코어 진행 콜백을 Tk 메인 스레드용 불변 이벤트로 복사한다. |
+| 2426 | `ToneMatchApp._show_stem_result` | 완료된 출력과 처리 요약을 표시하고 모든 공통 컨트롤을 복구한다. |
+| 2443 | `ToneMatchApp._show_stem_error` | 악기 제거 실패·취소를 구분해 표시하고 작업 전 컨트롤 상태로 돌아간다. |
+| 2455 | `ToneMatchApp._update_stem_availability` | 다른 모든 장시간 작업과 악기 제거 컨트롤을 상호 배타적으로 잠근다. |
+| 2475 | `ToneMatchApp._choose_audio` | 파일 선택 창에서 오디오 또는 영상 경로를 받아 입력 상태를 갱신한다. |
+| 2483 | `ToneMatchApp._open_reference` | 참고 URL을 기본 브라우저에서 열되 앱이 YouTube 음원을 추출하지 않는다. |
+| 2493 | `ToneMatchApp._parse_inputs` | 화면 문자열을 분석 요청으로 바꾸고 파일·시간·장치 조건을 검증한다. |
+| 2515 | `ToneMatchApp._start_analysis` | 검증된 요청을 별도 스레드에서 시작하고 취소·내보내기 상태를 설정한다. |
+| 2570 | `ToneMatchApp._cancel_analysis` | 다운로드 또는 Demucs 내부 처리 구간 경계에서 멈추도록 취소 신호를 보낸다. |
+| 2578 | `ToneMatchApp._analysis_worker` | 전체 기타 분석을 실행하고 결과 또는 오류를 메인 UI 큐에 전달한다. |
+| 2580 | `ToneMatchApp._analysis_worker.<local>.progress` | 엔진 콜백을 Tk 메인 스레드용 진행 이벤트로 변환한다. |
+| 2590 | `ToneMatchApp._drain_events` | 백그라운드 분석·녹음·스펙트럼 제어 이벤트를 Tk 메인 스레드에서 처리한다. |
+| 2648 | `ToneMatchApp._recording_completed` | 완료된 임시 녹음을 현재 분석 파일로 연결하고 버튼 상태를 복구한다. |
+| 2661 | `ToneMatchApp._recording_failed` | 녹음 실패 메시지와 상세 로그를 남기고 UI를 다시 사용할 수 있게 한다. |
+| 2671 | `ToneMatchApp._show_error` | 분석 실패 상태를 복구하고 사용자 메시지와 영구 개발 로그를 남긴다. |
+| 2685 | `ToneMatchApp._show_result` | 추천 체인 세 개, 기타 stem 진단과 상태를 현재 언어 화면에 표시한다. |
+| 2722 | `ToneMatchApp._render_recipe` | 한 추천 체인의 모델·순서·파라미터·이유를 읽기 쉬운 서식으로 그린다. |
+| 2748 | `ToneMatchApp._render_voicing` | 실험 보이싱 타임라인과 연주 후보를 별도 결과 탭에 표시한다. |
+| 2794 | `ToneMatchApp._format_time` | 초 단위 위치를 긴 곡에서도 읽기 쉬운 분:초 문자열로 바꾼다. |
+| 2800 | `ToneMatchApp._update_analysis_availability` | 장치 지원과 분석·녹음·스펙트럼 상태를 보고 공통 컨트롤을 갱신한다. |
+| 2817 | `ToneMatchApp._update_copy_availability` | 현재 탭에 복사할 표시 내용이 있고 작업 중이 아닐 때만 복사 버튼을 켠다. |
+| 2834 | `ToneMatchApp._default_export_name` | 입력 파일명을 안전한 기본 내보내기 파일명으로 바꾼다. |
+| 2840 | `ToneMatchApp._export_json` | 현재 전체 분석 데이터와 분리 진단을 UTF-8 JSON으로 저장한다. |
+| 2852 | `ToneMatchApp._export_html` | 현재 결과를 외부 자원이 없는 한·영 HTML 리포트로 저장하고 선택 시 연다. |
+| 2866 | `ToneMatchApp._mark_export` | 내보내기 단계를 순서도에 표시하고 상태와 영구 로그를 갱신한다. |
+| 2875 | `ToneMatchApp._copy_recipe` | 현재 선택한 결과·진단·개발자 탭의 표시 내용을 클립보드에 복사한다. |
+| 2935 | `ToneMatchApp._export_debug_bundle` | 다른 PC에서 진단·개발을 이어갈 소스, 로그, 이력, 환경 정보를 ZIP으로 묶는다. |
+| 2972 | `ToneMatchApp._on_close` | 모든 작업에 중지 신호를 보내고 임시 녹음을 정리한 뒤 창을 닫는다. |
+| 2985 | `ToneMatchApp._finish_close_after_stem_cleanup` | 악기 제거 작업이 임시 음원을 정리할 때까지 숨은 메인 루프를 유지한다. |
+| 3006 | `_write_self_test_audio` | 패키지 자체 진단에 사용할 재현 가능한 기타 유사 스테레오 WAV를 만든다. |
+| 3036 | `_self_test_native_dsp` | 실제 DLL 또는 명시적 대체 경로에서 합성 PCM 누적·위상·평활화·초기화를 검증한다. |
+| 3131 | `run_self_test` | 합성 기타로 오프라인 분석·한영 변환·개발자 소스와 런타임을 검사한다. |
+| 3179 | `main` | 자체 진단 인수를 처리하거나 한·영 데스크톱 GUI 이벤트 루프를 시작한다. |
 
 ## `catalog.py`
 
@@ -302,32 +302,32 @@
 | 129 | `_download_progress_class.<local>.DownloadProgress.display` | 콘솔 그리기를 생략해 진행률 때문에 GUI 실행이 실패하지 않도록 한다. |
 | 133 | `_download_progress_class.<local>.DownloadProgress.update` | Hugging Face가 보고한 증가량만 반영하고 취소와 UI 알림을 처리한다. |
 | 141 | `_download_progress_class.<local>.DownloadProgress._report` | 알려진 파일 크기로만 백분율을 계산하고 총량이 없으면 바이트만 알린다. |
-| 170 | `_load_hf_separator_model` | 공식 safetensors 모델을 캐시 우선으로 준비하고 다운로드·로딩 단계를 구분한다. |
-| 182 | `_load_hf_separator_model.<local>.download` | 캐시 파일을 먼저 찾고 없을 때만 공식 저장소에서 진행률과 함께 받는다. |
-| 222 | `_model_error_key` | 예외 체인을 확인해 모델 준비 실패를 네트워크·캐시·메모리 원인으로 분류한다. |
-| 244 | `_SeparationProgress.__init__` | 실행 콜백과 아직 시작하지 않은 조각의 상태를 저장한다. |
-| 258 | `_SeparationProgress.begin_chunk` | 현재 모델의 실제 segment와 overlap으로 조각별 추론 블록 수를 계산한다. |
-| 274 | `_SeparationProgress.__call__` | 실제로 끝난 추론 블록만 누적하고 블록 시작·종료 시 취소 요청을 처리한다. |
-| 290 | `_SeparationProgress._report` | 모델 블록 완료 비율을 오디오 처리 초와 전체 단계 백분율로 알린다. |
-| 301 | `_SeparationProgress.finish_chunk` | 콜백이 없는 호환 분리기에서도 실제 조각 완료 후 진행률을 확정한다. |
-| 306 | `_normalize_compute_preference` | 사용자가 선택한 연산 장치 값을 검사하고 소문자 표준값으로 바꾼다. |
-| 317 | `_torch_cuda_is_available` | PyTorch가 현재 시스템에서 CUDA 추론을 실제로 사용할 수 있는지 안전하게 확인한다. |
-| 325 | `resolve_compute_device` | auto·cpu·cuda 설정을 실제 Demucs 실행 장치인 cpu 또는 cuda로 결정한다. |
-| 354 | `_cuda_runtime_details` | 개발자 진단에 필요한 CUDA 빌드와 첫 번째 GPU의 메모리·연산 정보를 수집한다. |
-| 394 | `separator_runtime_status` | 개발자 진단에 표시할 Demucs·PyTorch·CUDA 런타임 상태를 반환한다. |
-| 438 | `_safe_cuda_synchronize` | CUDA 비동기 작업의 정확한 시간 측정을 위해 동기화하되 진단 실패는 무시한다. |
-| 448 | `_safe_cuda_reset_peak_memory` | 이번 추론에 사용된 GPU 최대 메모리를 측정할 수 있도록 누적 통계를 초기화한다. |
-| 458 | `_safe_cuda_peak_memory` | CUDA 추론 중 최대 할당 메모리를 바이트 단위로 반환하고 조회 실패 시 None을 돌려준다. |
-| 468 | `_safe_cuda_empty_cache` | CUDA 실행 뒤 재사용 가능한 캐시를 안전하게 비워 다른 작업의 GPU 메모리를 확보한다. |
-| 478 | `_pcm16_chunk` | 16-bit PCM 바이트를 Demucs가 받는 채널 우선 float32 배열로 바꾼다. |
-| 491 | `_tensor_to_pcm16` | 분리된 PyTorch 텐서를 클리핑한 PCM과 레벨 통계로 변환한다. |
-| 504 | `_normalize_stem_names` | 요청 stem 목록을 모델의 고정 순서로 정규화하고 알 수 없는 이름을 거부한다. |
-| 525 | `_tensor_to_stereo_array` | Demucs 채널 우선 텐서를 수명이 독립적인 stereo float32 배열로 변환한다. |
-| 550 | `separate_stem_chunks` | 6-stem 모델을 한 번 실행하고 선택한 stem을 파일 없이 조각별 콜백에 전달한다. 콜백에 전달되는 배열은 ``(2, frames)`` 형태의 float32이며 다음 콜백 전에도 유효하다. 이 API는 stem 파일을 만들지 않으므로 호출자가 합성·통계 등 필요한 결과만 스트리밍으로 처리할 수 있다. |
-| 593 | `separate_stem_chunks.<local>.ProgressSeparator._load_model` | safetensors 모델을 주입하고 Demucs 입출력 형식을 초기화한다. |
-| 733 | `separate_guitar_wav` | 선택한 CPU·CUDA 장치로 44.1 kHz PCM에서 guitar stem WAV만 분리해 기록한다. |
-| 767 | `separate_guitar_wav.<local>.ProgressSeparator._load_model` | 검증된 safetensors 모델을 주입하고 Demucs API의 입력 형식을 초기화한다. |
-| 892 | `separation_info_dict` | 불변 진단 객체를 JSON 저장에 알맞은 일반 사전으로 바꾼다. |
+| 170 | `_load_hf_separator_model` | 공식 모델을 캐시 우선으로 준비하며 캐시 전용 실행에서는 네트워크 재시도를 금지한다. |
+| 184 | `_load_hf_separator_model.<local>.download` | 캐시 파일을 먼저 찾고 없을 때만 공식 저장소에서 진행률과 함께 받는다. |
+| 226 | `_model_error_key` | 예외 체인을 확인해 모델 준비 실패를 네트워크·캐시·메모리 원인으로 분류한다. |
+| 248 | `_SeparationProgress.__init__` | 실행 콜백과 아직 시작하지 않은 조각의 상태를 저장한다. |
+| 262 | `_SeparationProgress.begin_chunk` | 현재 모델의 실제 segment와 overlap으로 조각별 추론 블록 수를 계산한다. |
+| 278 | `_SeparationProgress.__call__` | 실제로 끝난 추론 블록만 누적하고 블록 시작·종료 시 취소 요청을 처리한다. |
+| 294 | `_SeparationProgress._report` | 모델 블록 완료 비율을 오디오 처리 초와 전체 단계 백분율로 알린다. |
+| 305 | `_SeparationProgress.finish_chunk` | 콜백이 없는 호환 분리기에서도 실제 조각 완료 후 진행률을 확정한다. |
+| 310 | `_normalize_compute_preference` | 사용자가 선택한 연산 장치 값을 검사하고 소문자 표준값으로 바꾼다. |
+| 321 | `_torch_cuda_is_available` | PyTorch가 현재 시스템에서 CUDA 추론을 실제로 사용할 수 있는지 안전하게 확인한다. |
+| 329 | `resolve_compute_device` | auto·cpu·cuda 설정을 실제 Demucs 실행 장치인 cpu 또는 cuda로 결정한다. |
+| 358 | `_cuda_runtime_details` | 개발자 진단에 필요한 CUDA 빌드와 첫 번째 GPU의 메모리·연산 정보를 수집한다. |
+| 398 | `separator_runtime_status` | 개발자 진단에 표시할 Demucs·PyTorch·CUDA 런타임 상태를 반환한다. |
+| 442 | `_safe_cuda_synchronize` | CUDA 비동기 작업의 정확한 시간 측정을 위해 동기화하되 진단 실패는 무시한다. |
+| 452 | `_safe_cuda_reset_peak_memory` | 이번 추론에 사용된 GPU 최대 메모리를 측정할 수 있도록 누적 통계를 초기화한다. |
+| 462 | `_safe_cuda_peak_memory` | CUDA 추론 중 최대 할당 메모리를 바이트 단위로 반환하고 조회 실패 시 None을 돌려준다. |
+| 472 | `_safe_cuda_empty_cache` | CUDA 실행 뒤 재사용 가능한 캐시를 안전하게 비워 다른 작업의 GPU 메모리를 확보한다. |
+| 482 | `_pcm16_chunk` | 16-bit PCM 바이트를 Demucs가 받는 채널 우선 float32 배열로 바꾼다. |
+| 495 | `_tensor_to_pcm16` | 분리된 PyTorch 텐서를 클리핑한 PCM과 레벨 통계로 변환한다. |
+| 508 | `_normalize_stem_names` | 요청 stem 목록을 모델의 고정 순서로 정규화하고 알 수 없는 이름을 거부한다. |
+| 529 | `_tensor_to_stereo_array` | Demucs 채널 우선 텐서를 수명이 독립적인 stereo float32 배열로 변환한다. |
+| 554 | `separate_stem_chunks` | 6-stem 모델을 한 번 실행하고 선택한 stem을 파일 없이 조각별 콜백에 전달한다. 콜백에 전달되는 배열은 ``(2, frames)`` 형태의 float32이며 다음 콜백 전에도 유효하다. 이 API는 stem 파일을 만들지 않으므로 호출자가 합성·통계 등 필요한 결과만 스트리밍으로 처리할 수 있다. ``local_files_only``가 참이면 모델 캐시가 불완전해도 다운로드를 시도하지 않는다. |
+| 600 | `separate_stem_chunks.<local>.ProgressSeparator._load_model` | safetensors 모델을 주입하고 Demucs 입출력 형식을 초기화한다. |
+| 742 | `separate_guitar_wav` | 선택한 CPU·CUDA 장치로 44.1 kHz PCM에서 guitar stem WAV만 분리해 기록한다. |
+| 776 | `separate_guitar_wav.<local>.ProgressSeparator._load_model` | 검증된 safetensors 모델을 주입하고 Demucs API의 입력 형식을 초기화한다. |
+| 911 | `separation_info_dict` | 불변 진단 객체를 JSON 저장에 알맞은 일반 사전으로 바꾼다. |
 
 ## `spectrum.py`
 
@@ -361,7 +361,18 @@
 | 189 | `_decode_input` | 로컬 FFmpeg를 폴링해 선택 구간을 취소 가능한 stereo PCM16으로 변환한다. |
 | 298 | `_write_pcm16_output` | 임시 float32 합산 결과를 취소 가능한 PCM16 stereo WAV로 변환한다. |
 | 344 | `_commit_new_output` | 같은 폴더의 완성 파일을 기존 이름을 덮어쓰지 않는 원자적 연산으로 확정한다. |
-| 371 | `remove_stems_from_file` | 입력의 선택 stem을 제외한 나머지를 새 PCM16 stereo WAV로 안전하게 저장한다. 출력 경로에 파일이 이미 있으면 덮어쓰지 않고 실패한다. 성공 직전까지는 같은 폴더의 ``.partial.wav``만 사용하며 취소·오류 시 이를 제거한다. |
+| 371 | `remove_stems_from_file` | 입력의 선택 stem을 제외한 나머지를 새 PCM16 stereo WAV로 안전하게 저장한다. 출력 경로에 파일이 이미 있으면 덮어쓰지 않고 실패한다. 성공 직전까지는 같은 폴더의 ``.partial.wav``만 사용하며 취소·오류 시 이를 제거한다. require_cached_model 진단 모드는 모델 파일의 네트워크 다운로드를 허용하지 않는다. |
+
+## `stem_diagnostics.py`
+
+| 줄 | 함수 | 설명 |
+|---:|---|---|
+| 21 | `_digest` | 원본 보존 비교용 해시를 메모리에서 계산하고 보고서에는 저장하지 않는다. |
+| 27 | `_inspect_wav` | WAV 전체의 프레임 수·형식·최대 레벨을 제한된 메모리로 검증한다. |
+| 49 | `run_stem_self_test` | 캐시된 CPU 모델로 기타·피아노 제거 또는 취소를 실행하고 경로 없는 JSON을 쓴다. seconds=0은 최대 20분의 전체 입력이다. 기존 JSON은 덮어쓰지 않으며 임시 WAV는 성공·오류·취소 모두 정리한다. 청감 품질이나 GUI 검증을 대신하지 않는다. |
+| 90 | `run_stem_self_test.<local>.write_report` | 명시적으로 새로 만든 진단 파일에 숫자 중심 상태만 갱신한다. |
+| 98 | `run_stem_self_test.<local>.progress` | 경로나 다운로드 메시지를 기록하지 않고 실제 진행값과 취소 조건을 수집한다. |
+| 162 | `stem_self_test_cli` | 명시적인 진단 인수만 처리하고 잘못된 인수에서는 GUI를 열지 않는다. |
 
 ## `voicing.py`
 
@@ -396,18 +407,18 @@
 | 32 | `DeveloperModeTests.test_version_and_latest_changelog_match` | 앱 버전은 두 자리 패치 규칙이며 최신 변경 기록과 같아야 한다. |
 | 38 | `DeveloperModeTests.test_pipeline_order_and_source_links_are_complete` | 블록 번호가 연속이고 각 클릭 대상에서 실제 코드가 추출되는지 검사한다. |
 | 49 | `DeveloperModeTests.test_every_function_has_korean_docstring` | 배포 소스의 모든 함수가 개발자에게 보이는 한글 설명을 갖는지 검사한다. |
-| 102 | `DeveloperModeTests.test_progress_maps_to_sequence_blocks` | 대표 진행률이 입력부터 결과까지 순서대로 해당 블록을 가리키는지 확인한다. |
-| 108 | `DeveloperModeTests.test_windowed_import_repairs_missing_standard_streams` | 콘솔 없는 실행 환경도 출력 가능한 스트림을 만들고 기존 스트림은 유지해야 한다. |
-| 134 | `DeveloperModeTests.test_analysis_progress_accepts_floats_without_regressing` | 실수 진행률은 표시되며 지연·잘못된 콜백에도 뒤로 가거나 범위를 벗어나지 않아야 한다. |
-| 167 | `DeveloperModeTests.test_analysis_timer_refreshes_and_stops_on_error_or_cancellation` | 콜백이 없어도 경과 시간만 갱신하고 오류·취소 이후에는 마지막 값이 유지돼야 한다. |
-| 207 | `DeveloperModeTests.test_analysis_completion_preserves_final_elapsed_time` | 완료 이벤트는 전체 진행률을 100%로 만들고 결과 화면에서도 소요 시간을 보존해야 한다. |
-| 244 | `DeveloperModeTests.test_analysis_progress_footer_stays_visible_when_options_scroll` | 최소 크기의 한·영 화면에서 긴 상태와 진행률이 입력 스크롤 밖에 고정돼야 한다. |
-| 314 | `DeveloperModeTests.test_initial_window_and_minimum_fit_the_usable_work_area` | 작업 표시줄과 제목 표시줄 여유를 뺀 화면보다 초기·최소 창이 커지면 안 된다. |
-| 333 | `DeveloperModeTests.test_small_scaled_layout_does_not_grow_after_result_or_long_status` | 작은 고배율 화면에서도 긴 결과·오류가 입력 영역과 고정 진행 영역을 밀어내지 않아야 한다. |
-| 397 | `DeveloperModeTests.test_input_scroll_clamps_after_content_becomes_shorter` | 입력 카드 내용이 줄면 예전 맨 아래 위치나 빈 스크롤 여백이 남지 않아야 한다. |
-| 425 | `DeveloperModeTests.test_debug_diagram_fits_and_displays_source` | 개발자 탭의 모든 블록이 화면 안에 들어오고 코드 내용이 표시되는지 확인한다. |
-| 443 | `DeveloperModeTests.test_live_spectrum_tab_renders_latest_frame_without_hardware` | 실제 장치 없이 합성 FFT 프레임이 탭 수치와 두 캔버스에 표시돼야 한다. |
-| 472 | `DeveloperModeTests.test_reference_compare_tab_renders_six_bands_without_hardware` | 숨긴 Tk 화면에서 기준 프로필과 합성 라이브 차이 여섯 대역을 표시해야 한다. |
+| 104 | `DeveloperModeTests.test_progress_maps_to_sequence_blocks` | 대표 진행률이 입력부터 결과까지 순서대로 해당 블록을 가리키는지 확인한다. |
+| 110 | `DeveloperModeTests.test_windowed_import_repairs_missing_standard_streams` | 콘솔 없는 실행 환경도 출력 가능한 스트림을 만들고 기존 스트림은 유지해야 한다. |
+| 136 | `DeveloperModeTests.test_analysis_progress_accepts_floats_without_regressing` | 실수 진행률은 표시되며 지연·잘못된 콜백에도 뒤로 가거나 범위를 벗어나지 않아야 한다. |
+| 169 | `DeveloperModeTests.test_analysis_timer_refreshes_and_stops_on_error_or_cancellation` | 콜백이 없어도 경과 시간만 갱신하고 오류·취소 이후에는 마지막 값이 유지돼야 한다. |
+| 209 | `DeveloperModeTests.test_analysis_completion_preserves_final_elapsed_time` | 완료 이벤트는 전체 진행률을 100%로 만들고 결과 화면에서도 소요 시간을 보존해야 한다. |
+| 246 | `DeveloperModeTests.test_analysis_progress_footer_stays_visible_when_options_scroll` | 최소 크기의 한·영 화면에서 긴 상태와 진행률이 입력 스크롤 밖에 고정돼야 한다. |
+| 316 | `DeveloperModeTests.test_initial_window_and_minimum_fit_the_usable_work_area` | 작업 표시줄과 제목 표시줄 여유를 뺀 화면보다 초기·최소 창이 커지면 안 된다. |
+| 335 | `DeveloperModeTests.test_small_scaled_layout_does_not_grow_after_result_or_long_status` | 작은 고배율 화면에서도 긴 결과·오류가 입력 영역과 고정 진행 영역을 밀어내지 않아야 한다. |
+| 399 | `DeveloperModeTests.test_input_scroll_clamps_after_content_becomes_shorter` | 입력 카드 내용이 줄면 예전 맨 아래 위치나 빈 스크롤 여백이 남지 않아야 한다. |
+| 427 | `DeveloperModeTests.test_debug_diagram_fits_and_displays_source` | 개발자 탭의 모든 블록이 화면 안에 들어오고 코드 내용이 표시되는지 확인한다. |
+| 445 | `DeveloperModeTests.test_live_spectrum_tab_renders_latest_frame_without_hardware` | 실제 장치 없이 합성 FFT 프레임이 탭 수치와 두 캔버스에 표시돼야 한다. |
+| 474 | `DeveloperModeTests.test_reference_compare_tab_renders_six_bands_without_hardware` | 숨긴 Tk 화면에서 기준 프로필과 합성 라이브 차이 여섯 대역을 표시해야 한다. |
 
 ## `tests/test_engine.py`
 
@@ -534,27 +545,32 @@
 | 240 | `SeparatorDeviceTests.test_runtime_status_reports_gpu_build_memory_and_resolution` | 개발자 진단이 CUDA 빌드·GPU·VRAM·연산 능력과 실제 장치를 모두 보여야 한다. |
 | 262 | `SeparatorDeviceTests.test_runtime_status_keeps_explicit_cuda_failure_visible` | 진단 화면에서는 명시적 CUDA 실패를 숨기지 않고 오류 설명으로 보존해야 한다. |
 | 277 | `SeparatorDeviceTests.test_cuda_separation_uses_inference_mode_and_reports_timings` | CUDA 분리가 추론 문맥·메모리 정리를 사용하고 결과 진단에 실행 시간을 남겨야 한다. |
-| 327 | `SeparatorMultiStemTests.test_selected_stems_are_streamed_as_independent_stereo_arrays` | 요청한 guitar·piano 배열과 6-stem 진단을 한 조각 콜백으로 반환해야 한다. |
-| 351 | `SeparatorMultiStemTests.test_model_missing_any_of_six_sources_is_rejected_before_inference` | htdemucs_6s라고 해도 필수 소스가 빠졌으면 부분 결과를 사용하지 않아야 한다. |
-| 362 | `SeparatorMultiStemTests.test_unknown_or_empty_stem_requests_are_rejected_without_model_loading` | 잘못된 요청은 모델 다운로드·초기화 전에 명확히 실패해야 한다. |
-| 373 | `SeparatorMultiStemTests.test_converted_stem_owns_its_samples_and_rejects_nonfinite_values` | 콜백이 보관한 배열은 원래 텐서 변경과 독립적이며 유효한 샘플만 포함한다. |
-| 383 | `SeparatorMultiStemTests.test_truncated_wav_is_rejected_instead_of_reporting_full_duration` | WAV 헤더가 실제 데이터보다 길면 일부 조각만 처리한 결과를 성공으로 보고하지 않는다. |
-| 395 | `SeparatorMultiStemTests.test_multichunk_tail_keeps_every_input_frame` | 마지막 짧은 조각도 버리거나 늘리지 않고 입력과 같은 길이로 전달해야 한다. |
-| 414 | `SeparatorProgressTests.test_windowless_download_progress_tracks_bytes_without_standard_streams` | stdout·stderr가 None인 GUI 환경에서도 실제 다운로드량이 표시되어야 한다. |
-| 426 | `SeparatorProgressTests.test_unknown_download_total_does_not_invent_percentage` | 총 파일 크기를 모를 때는 수신 바이트만 표시하고 단계값을 올리지 않아야 한다. |
-| 435 | `SeparatorProgressTests.test_download_cancellation_uses_supported_interrupt` | 다운로드 콜백 취소는 Hugging Face가 정리하는 KeyboardInterrupt로 전달되어야 한다. |
-| 442 | `SeparatorProgressTests.test_segment_events_update_inside_first_chunk` | 30초 조각 하나가 끝나기 전에도 내부 분할 완료마다 진행률이 증가해야 한다. |
-| 457 | `SeparatorProgressTests.test_cancel_between_internal_segments_removes_partial_file` | 내부 블록 완료 후 취소하면 다음 블록 전에 멈추고 미완성 stem을 제거해야 한다. |
-| 471 | `SeparatorProgressTests.test_cancel_before_model_import_leaves_output_absent` | 시작 전 취소 요청은 모델 다운로드나 출력 파일 생성 전에 처리되어야 한다. |
-| 482 | `SeparatorProgressTests.test_model_failure_preserves_type_and_does_not_claim_network_failure` | 일반 모델 초기화 오류의 원인을 그대로 남기고 인터넷 연결 문제로 단정하지 않아야 한다. |
-| 487 | `SeparatorProgressTests.test_model_failure_preserves_type_and_does_not_claim_network_failure.<local>.FailingSeparator.__init__` | 상속된 로딩 지점을 호출해 오류 변환 경로를 검증한다. |
-| 504 | `SeparatorProgressTests.test_model_error_classification_uses_exception_chain` | 상위 래퍼가 있어도 네트워크·캐시·메모리의 구체적인 예외 원인을 찾아야 한다. |
-| 514 | `SeparatorProgressTests.test_multimodel_progress_ignores_duplicates_and_waits_for_every_model` | 여러 모델의 겹침 블록은 중복 집계하지 않고 모든 모델 완료 후에만 끝나야 한다. |
-| 532 | `SeparatorProgressTests.test_hf_loader_uses_complete_cache_without_network_download` | 캐시가 완전하면 YAML·가중치를 네트워크 호출 없이 읽고 로딩 단계를 알려야 한다. |
-| 560 | `SeparatorProgressTests.test_hf_loader_downloads_missing_file_with_progress_class` | 가중치 캐시가 없을 때만 다운로드를 수행하고 공식 tqdm 확장 인자를 넘겨야 한다. |
-| 592 | `SeparatorProgressTests.test_hf_loader_preserves_network_failure_without_legacy_fallback` | HF 연결 실패가 legacy 다운로드의 stdout 예외로 덮이지 않고 그대로 전달되어야 한다. |
-| 609 | `SeparatorProgressTests.test_installed_demucs_api_accepts_progress_model_loader_override` | 설치된 실제 Demucs API에서 로더 주입·샘플레이트·콜백 인자가 호환되어야 한다. |
-| 618 | `SeparatorProgressTests.test_installed_demucs_api_accepts_progress_model_loader_override.<local>.mocked_inference` | 실제 API의 초기화 결과를 검증하고 모델 연산 없이 입력을 되돌린다. |
+| 327 | `SeparatorMultiStemTests.test_local_files_only_is_forwarded_to_model_loader` | 스트리밍 API의 캐시 전용 옵션이 실제 모델 로딩 지점까지 전달되어야 한다. |
+| 332 | `SeparatorMultiStemTests.test_local_files_only_is_forwarded_to_model_loader.<local>.LoadingSeparator.__init__` | 모델 로딩 뒤 테스트용 6-stem 입출력을 준비한다. |
+| 349 | `SeparatorMultiStemTests.test_selected_stems_are_streamed_as_independent_stereo_arrays` | 요청한 guitar·piano 배열과 6-stem 진단을 한 조각 콜백으로 반환해야 한다. |
+| 373 | `SeparatorMultiStemTests.test_model_missing_any_of_six_sources_is_rejected_before_inference` | htdemucs_6s라고 해도 필수 소스가 빠졌으면 부분 결과를 사용하지 않아야 한다. |
+| 384 | `SeparatorMultiStemTests.test_unknown_or_empty_stem_requests_are_rejected_without_model_loading` | 잘못된 요청은 모델 다운로드·초기화 전에 명확히 실패해야 한다. |
+| 395 | `SeparatorMultiStemTests.test_converted_stem_owns_its_samples_and_rejects_nonfinite_values` | 콜백이 보관한 배열은 원래 텐서 변경과 독립적이며 유효한 샘플만 포함한다. |
+| 405 | `SeparatorMultiStemTests.test_truncated_wav_is_rejected_instead_of_reporting_full_duration` | WAV 헤더가 실제 데이터보다 길면 일부 조각만 처리한 결과를 성공으로 보고하지 않는다. |
+| 417 | `SeparatorMultiStemTests.test_multichunk_tail_keeps_every_input_frame` | 마지막 짧은 조각도 버리거나 늘리지 않고 입력과 같은 길이로 전달해야 한다. |
+| 436 | `SeparatorProgressTests.test_truncated_guitar_input_is_rejected_and_partial_output_removed` | WAV 헤더보다 짧거나 프레임 중간이 잘린 입력은 성공 처리하지 않고 출력을 정리한다. |
+| 455 | `SeparatorProgressTests.test_guitar_multichunk_tail_preserves_all_frames` | 마지막 짧은 기타 조각도 정확한 길이로 저장하고 정상 완료 정보를 유지한다. |
+| 471 | `SeparatorProgressTests.test_windowless_download_progress_tracks_bytes_without_standard_streams` | stdout·stderr가 None인 GUI 환경에서도 실제 다운로드량이 표시되어야 한다. |
+| 483 | `SeparatorProgressTests.test_unknown_download_total_does_not_invent_percentage` | 총 파일 크기를 모를 때는 수신 바이트만 표시하고 단계값을 올리지 않아야 한다. |
+| 492 | `SeparatorProgressTests.test_download_cancellation_uses_supported_interrupt` | 다운로드 콜백 취소는 Hugging Face가 정리하는 KeyboardInterrupt로 전달되어야 한다. |
+| 499 | `SeparatorProgressTests.test_segment_events_update_inside_first_chunk` | 30초 조각 하나가 끝나기 전에도 내부 분할 완료마다 진행률이 증가해야 한다. |
+| 514 | `SeparatorProgressTests.test_cancel_between_internal_segments_removes_partial_file` | 내부 블록 완료 후 취소하면 다음 블록 전에 멈추고 미완성 stem을 제거해야 한다. |
+| 528 | `SeparatorProgressTests.test_cancel_before_model_import_leaves_output_absent` | 시작 전 취소 요청은 모델 다운로드나 출력 파일 생성 전에 처리되어야 한다. |
+| 539 | `SeparatorProgressTests.test_model_failure_preserves_type_and_does_not_claim_network_failure` | 일반 모델 초기화 오류의 원인을 그대로 남기고 인터넷 연결 문제로 단정하지 않아야 한다. |
+| 544 | `SeparatorProgressTests.test_model_failure_preserves_type_and_does_not_claim_network_failure.<local>.FailingSeparator.__init__` | 상속된 로딩 지점을 호출해 오류 변환 경로를 검증한다. |
+| 561 | `SeparatorProgressTests.test_model_error_classification_uses_exception_chain` | 상위 래퍼가 있어도 네트워크·캐시·메모리의 구체적인 예외 원인을 찾아야 한다. |
+| 571 | `SeparatorProgressTests.test_multimodel_progress_ignores_duplicates_and_waits_for_every_model` | 여러 모델의 겹침 블록은 중복 집계하지 않고 모든 모델 완료 후에만 끝나야 한다. |
+| 589 | `SeparatorProgressTests.test_hf_loader_uses_complete_cache_without_network_download` | 캐시가 완전하면 YAML·가중치를 네트워크 호출 없이 읽고 로딩 단계를 알려야 한다. |
+| 617 | `SeparatorProgressTests.test_hf_loader_downloads_missing_file_with_progress_class` | 가중치 캐시가 없을 때만 다운로드를 수행하고 공식 tqdm 확장 인자를 넘겨야 한다. |
+| 649 | `SeparatorProgressTests.test_hf_loader_cache_only_never_retries_missing_manifest_or_weights` | 캐시 전용 실행은 YAML 또는 가중치가 없을 때 네트워크 재시도 없이 실패해야 한다. |
+| 678 | `SeparatorProgressTests.test_hf_loader_preserves_network_failure_without_legacy_fallback` | HF 연결 실패가 legacy 다운로드의 stdout 예외로 덮이지 않고 그대로 전달되어야 한다. |
+| 695 | `SeparatorProgressTests.test_installed_demucs_api_accepts_progress_model_loader_override` | 설치된 실제 Demucs API에서 로더 주입·샘플레이트·콜백 인자가 호환되어야 한다. |
+| 704 | `SeparatorProgressTests.test_installed_demucs_api_accepts_progress_model_loader_override.<local>.mocked_inference` | 실제 API의 초기화 결과를 검증하고 모델 연산 없이 입력을 되돌린다. |
 
 ## `tests/test_spectrum.py`
 
@@ -615,17 +631,43 @@
 | 줄 | 함수 | 설명 |
 |---:|---|---|
 | 26 | `hidden_application` | 장치 검사·예약 콜백을 막은 숨은 최소 크기 앱을 테스트에 제공한다. |
-| 55 | `StemRemovalLayoutTests.test_every_stem_control_fits_canvas_width_in_both_languages` | 최소 창에서 파일 버튼·여섯 선택 항목·범위·가속 입력이 가로로 잘리지 않아야 한다. |
-| 107 | `StemRemovalLayoutTests.test_outer_workspace_keeps_existing_result_tabs_uncluttered_at_960x600` | 악기 제거는 상위 작업 탭에 두고 긴 폼은 내부 스크롤로 접근 가능해야 한다. |
-| 143 | `StemRemovalLayoutTests.test_language_rebuild_preserves_stem_form_result_and_selected_workspace` | 한영 전환이 경로·제거 선택·결과와 현재 악기 제거 탭을 잃지 않아야 한다. |
-| 190 | `StemRemovalValidationTests.test_validation_blocks_unsafe_paths_and_invalid_stem_counts` | 원본·기존 출력 덮어쓰기와 0개·6개 선택을 코어 호출 전에 거부해야 한다. |
-| 227 | `StemRemovalValidationTests.test_valid_request_clamps_explicit_range_to_twenty_minutes` | 유효한 새 WAV 요청은 안정적인 stem 코드와 최대 20분 범위로 전달돼야 한다. |
-| 252 | `StemRemovalWorkerTests.test_worker_only_queues_progress_and_main_thread_renders_result` | 모델 작업자는 Tk를 만지지 않고 메인 이벤트 처리 뒤에만 화면을 바꿔야 한다. |
-| 310 | `StemRemovalWorkerTests.test_start_cancel_and_every_other_long_task_are_mutually_exclusive` | 악기 제거와 분석·녹음·스펙트럼·하드웨어 검사가 동시에 시작되지 않아야 한다. |
-| 353 | `StemRemovalWorkerTests.test_cancel_event_is_silent_and_close_signals_stem_worker` | 사용자 취소는 오류 팝업을 띄우지 않고 창 닫기도 같은 취소 신호를 보내야 한다. |
-| 373 | `StemRemovalWorkerTests.test_finished_worker_stays_busy_until_ui_applies_terminal_event` | 완료 큐를 읽기 전 새 작업이 이전 결과에 덮이는 경쟁을 막아야 한다. |
-| 390 | `StemRemovalWorkerTests.test_close_waits_for_worker_cleanup_without_processing_late_ui_events` | 창을 숨긴 뒤 작업자의 임시 파일 정리가 끝나야 프로세스가 종료돼야 한다. |
-| 414 | `StemRemovalTranslationTests.test_core_stem_labels_and_safety_notices_are_bilingual` | 버튼·악기명·로컬 처리·실험 한계가 어느 언어에서도 키로 노출되면 안 된다. |
+| 55 | `StemRemovalLayoutTests.test_new_source_clears_previous_result_and_progress_in_both_languages` | 새 곡을 고르면 이전 곡의 완료 결과·진행률·경과 시간과 상태를 한영 모두 비운다. |
+| 103 | `StemRemovalLayoutTests.test_source_selection_cannot_reset_an_active_stem_worker` | 작업 중 직접 선택 콜백이 호출돼도 입력과 진행 상태를 바꾸지 않아야 한다. |
+| 123 | `StemRemovalLayoutTests.test_every_stem_control_fits_canvas_width_in_both_languages` | 최소 창에서 파일 버튼·여섯 선택 항목·범위·가속 입력이 가로로 잘리지 않아야 한다. |
+| 175 | `StemRemovalLayoutTests.test_outer_workspace_keeps_existing_result_tabs_uncluttered_at_960x600` | 악기 제거는 상위 작업 탭에 두고 긴 폼은 내부 스크롤로 접근 가능해야 한다. |
+| 211 | `StemRemovalLayoutTests.test_language_rebuild_preserves_stem_form_result_and_selected_workspace` | 한영 전환이 경로·제거 선택·결과와 현재 악기 제거 탭을 잃지 않아야 한다. |
+| 258 | `StemRemovalValidationTests.test_default_destination_avoids_dangling_path_entries` | 권한에 의존하지 않는 링크 모형으로 끊어진 링크도 기본 이름 충돌로 확인한다. |
+| 274 | `StemRemovalValidationTests.test_validation_rejects_dangling_output_entries_in_both_languages` | 출력 대상이 끊어진 링크인 경우에도 한영 검증이 작업 시작 전에 거부해야 한다. |
+| 295 | `StemRemovalValidationTests.test_validation_resolves_parent_without_following_output_entry` | 출력의 부모만 정규화하고 최종 항목을 따라가지 않는 검증 순서를 유지한다. |
+| 317 | `StemRemovalValidationTests.test_validation_blocks_unsafe_paths_and_invalid_stem_counts` | 원본·기존 출력 덮어쓰기와 0개·6개 선택을 코어 호출 전에 거부해야 한다. |
+| 354 | `StemRemovalValidationTests.test_valid_request_clamps_explicit_range_to_twenty_minutes` | 유효한 새 WAV 요청은 안정적인 stem 코드와 최대 20분 범위로 전달돼야 한다. |
+| 379 | `StemRemovalWorkerTests.test_worker_only_queues_progress_and_main_thread_renders_result` | 모델 작업자는 Tk를 만지지 않고 메인 이벤트 처리 뒤에만 화면을 바꿔야 한다. |
+| 437 | `StemRemovalWorkerTests.test_start_cancel_and_every_other_long_task_are_mutually_exclusive` | 악기 제거와 분석·녹음·스펙트럼·하드웨어 검사가 동시에 시작되지 않아야 한다. |
+| 480 | `StemRemovalWorkerTests.test_cancel_event_is_silent_and_close_signals_stem_worker` | 사용자 취소는 오류 팝업을 띄우지 않고 창 닫기도 같은 취소 신호를 보내야 한다. |
+| 500 | `StemRemovalWorkerTests.test_finished_worker_stays_busy_until_ui_applies_terminal_event` | 완료 큐를 읽기 전 새 작업이 이전 결과에 덮이는 경쟁을 막아야 한다. |
+| 517 | `StemRemovalWorkerTests.test_close_waits_for_worker_cleanup_without_processing_late_ui_events` | 창을 숨긴 뒤 작업자의 임시 파일 정리가 끝나야 프로세스가 종료돼야 한다. |
+| 541 | `StemRemovalTranslationTests.test_core_stem_labels_and_safety_notices_are_bilingual` | 버튼·악기명·로컬 처리·실험 한계가 어느 언어에서도 키로 노출되면 안 된다. |
+
+## `tests/test_stem_diagnostics.py`
+
+| 줄 | 함수 | 설명 |
+|---:|---|---|
+| 23 | `fake_removal` | 실제 모델 없이 진행률·취소·유효한 3초 WAV를 진단 함수에 제공한다. |
+| 45 | `StemDiagnosticsTests.setUp` | 각 테스트에 새 입력·보고서 경로와 캐시된 가상 런타임을 준비한다. |
+| 59 | `StemDiagnosticsTests.report` | 생성된 JSON 진단을 읽어 검증할 수 있게 반환한다. |
+| 63 | `StemDiagnosticsTests.test_success_checks_pcm_and_cleans_temporary_audio` | 정상 출력 전체 길이·피크·진행률을 검증하고 테스트 WAV는 지워야 한다. |
+| 84 | `StemDiagnosticsTests.test_expected_cancel_is_verified_and_no_audio_remains` | 요청한 실제 진행 경계에서 취소되면 출력이 없고 성공한 취소 진단이어야 한다. |
+| 94 | `StemDiagnosticsTests.test_existing_report_and_source_are_not_overwritten` | 기존 JSON과 입력을 보고서 경로로 지정해도 내용이 바뀌지 않아야 한다. |
+| 104 | `StemDiagnosticsTests.test_invalid_ranges_do_not_start_or_create_report` | 유한하지 않은 시간·취소율과 허용 범위 밖 입력은 진단 시작 전에 거부한다. |
+| 112 | `StemDiagnosticsTests.test_missing_cache_does_not_download_or_start_inference` | 캐시가 없는 진단은 모델 다운로드를 시도하지 않고 필요한 조건을 기록한다. |
+| 120 | `StemDiagnosticsTests.test_error_message_never_leaks_private_paths` | 실패 예외 메시지의 개인 경로를 기록하지 않고 오류 타입과 정리 여부만 남긴다. |
+| 130 | `StemDiagnosticsTests.test_progress_regression_cannot_pass` | 유효한 WAV가 만들어져도 진행률이 역행하면 진단이 실패해야 한다. |
+| 132 | `StemDiagnosticsTests.test_progress_regression_cannot_pass.<local>.regress` | 초기 진행을 먼저 보내 정상 경로의 0퍼센트가 역행하도록 만든다. |
+| 140 | `StemDiagnosticsTests.test_truncated_wav_output_cannot_pass` | 헤더는 정상이지만 실제 PCM이 잘린 결과는 실패하고 임시 출력도 정리한다. |
+| 142 | `StemDiagnosticsTests.test_truncated_wav_output_cannot_pass.<local>.truncate` | 정상 가상 결과의 마지막 PCM 프레임을 제거한다. |
+| 154 | `StemDiagnosticsTests.test_unrequested_cancellation_is_not_success` | 정상 완료 진단에서 뜻하지 않은 취소가 나면 성공으로 표시하지 않는다. |
+| 160 | `StemDiagnosticsTests.test_cli_options_route_without_gui` | 실행 파일 진입점에서 진단 인수를 전달할 때 Tk 창을 만들지 않아야 한다. |
+| 171 | `StemDiagnosticsTests.test_incomplete_cli_options_do_not_open_gui` | 필수 인수가 빠진 진단 호출도 GUI로 잘못 전환하지 않는다. |
 
 ## `tests/test_native_dsp.py`
 
@@ -785,10 +827,10 @@
 
 | 줄 | 함수 | 설명 |
 |---:|---|---|
-| 44 | `_function_rows` | 한 소스 파일에서 함수 줄 번호·정규 이름·설명을 소스 순으로 모은다. |
-| 49 | `_function_rows.<local>.walk` | 클래스와 중첩 함수의 이름 경로를 유지하며 AST 본문을 순회한다. |
-| 64 | `generate` | 모든 배포 모듈의 함수 설명을 버전이 적힌 단일 문서로 저장한다. |
-| 88 | `main` | 현재 프로젝트 기준 함수 색인을 기본 파일명으로 생성한다. |
+| 46 | `_function_rows` | 한 소스 파일에서 함수 줄 번호·정규 이름·설명을 소스 순으로 모은다. |
+| 51 | `_function_rows.<local>.walk` | 클래스와 중첩 함수의 이름 경로를 유지하며 AST 본문을 순회한다. |
+| 66 | `generate` | 모든 배포 모듈의 함수 설명을 버전이 적힌 단일 문서로 저장한다. |
+| 90 | `main` | 현재 프로젝트 기준 함수 색인을 기본 파일명으로 생성한다. |
 
 ## `tools/write_manifest.py`
 
@@ -800,4 +842,4 @@
 
 ---
 
-총 함수 수: **639**
+총 함수 수: **671**

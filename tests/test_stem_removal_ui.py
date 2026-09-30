@@ -10,7 +10,7 @@ import tkinter as tk
 import unittest
 from contextlib import contextmanager
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 
 MODULE_DIR = Path(__file__).resolve().parents[1]
@@ -51,6 +51,74 @@ def hidden_application(data_root: Path, width: int = 960, height: int = 600):
 
 class StemRemovalLayoutTests(unittest.TestCase):
     """새 작업 탭이 기본값·한영 상태·최소 창 접근성을 지키는지 검사한다."""
+
+    def test_new_source_clears_previous_result_and_progress_in_both_languages(self) -> None:
+        """새 곡을 고르면 이전 곡의 완료 결과·진행률·경과 시간과 상태를 한영 모두 비운다."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root_path = Path(temporary)
+            with hidden_application(root_path) as (root, application):
+                for language in ("ko", "en"):
+                    with self.subTest(language=language):
+                        application.language_var.set(LANGUAGE_LABELS[language])
+                        application._change_language()
+                        application.stem_result = {
+                            "output_path": str(root_path / "previous-output.wav"),
+                            "removed_stems": ["guitar"],
+                            "kept_stems": ["vocals", "drums", "bass", "piano", "other"],
+                            "duration_seconds": 42.5,
+                            "inference_total_seconds": 7.25,
+                            "resolved_device": "cpu",
+                        }
+                        application._render_stem_summary()
+                        application.stem_started_at = 100.0
+                        application.stem_elapsed_seconds = 85.0
+                        application.stem_progress_percent = 100.0
+                        application.stem_progress_var.set(100.0)
+                        application._set_stem_status("status.stem_complete", file="previous-output.wav")
+                        next_source = str(root_path / "next-song.mp3")
+
+                        application._set_stem_source(next_source)
+                        application._refresh_stem_localization()
+
+                        self.assertEqual(application.stem_source_var.get(), next_source)
+                        self.assertEqual(
+                            application.stem_destination_var.get(),
+                            str(root_path / "next-song_ToneMatchTMP-removed.wav"),
+                        )
+                        self.assertIsNone(application.stem_result)
+                        self.assertIsNone(application.stem_started_at)
+                        self.assertEqual(application.stem_elapsed_seconds, 0.0)
+                        self.assertEqual(application.stem_progress_percent, 0.0)
+                        self.assertEqual(application.stem_progress_var.get(), 0.0)
+                        self.assertEqual(application.stem_summary_var.get(), tr("ui.stem_result_empty", language))
+                        self.assertEqual(
+                            application.stem_progress_detail_var.get(),
+                            tr("progress.stem_overall", language, percent=0.0, elapsed="00:00"),
+                        )
+                        self.assertEqual(application.stem_status_key, "status.stem_ready")
+                        self.assertEqual(application.stem_status_values, {})
+                        self.assertEqual(application.stem_status_var.get(), tr("status.stem_ready", language))
+                        self.assertEqual(root.state(), "withdrawn")
+
+    def test_source_selection_cannot_reset_an_active_stem_worker(self) -> None:
+        """작업 중 직접 선택 콜백이 호출돼도 입력과 진행 상태를 바꾸지 않아야 한다."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root_path = Path(temporary)
+            with hidden_application(root_path) as (_root, application):
+                application.stem_source_var.set(str(root_path / "current.mp3"))
+                application.stem_destination_var.set(str(root_path / "current-output.wav"))
+                application.stem_worker = Mock()
+                application.stem_progress_percent = 35.0
+                application.stem_progress_var.set(35.0)
+                application._set_stem_status("status.stem_preparing")
+
+                application._set_stem_source(str(root_path / "next.mp3"))
+
+                self.assertEqual(application.stem_source_var.get(), str(root_path / "current.mp3"))
+                self.assertEqual(application.stem_destination_var.get(), str(root_path / "current-output.wav"))
+                self.assertEqual(application.stem_progress_percent, 35.0)
+                self.assertEqual(application.stem_progress_var.get(), 35.0)
+                self.assertEqual(application.stem_status_key, "status.stem_preparing")
 
     def test_every_stem_control_fits_canvas_width_in_both_languages(self) -> None:
         """최소 창에서 파일 버튼·여섯 선택 항목·범위·가속 입력이 가로로 잘리지 않아야 한다."""
@@ -186,6 +254,65 @@ class StemRemovalLayoutTests(unittest.TestCase):
 
 class StemRemovalValidationTests(unittest.TestCase):
     """원본 보호, 새 WAV, 시간 범위와 1~5개 제거 규칙을 GUI 경계에서 검사한다."""
+
+    def test_default_destination_avoids_dangling_path_entries(self) -> None:
+        """권한에 의존하지 않는 링크 모형으로 끊어진 링크도 기본 이름 충돌로 확인한다."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root_path = Path(temporary)
+            source = root_path / "song.mp3"
+            candidates = [
+                root_path / "song_ToneMatchTMP-removed.wav",
+                root_path / "song_ToneMatchTMP-removed-2.wav",
+                root_path / "song_ToneMatchTMP-removed-3.wav",
+            ]
+            self.assertTrue(all(not candidate.exists() for candidate in candidates))
+            with patch("app.os.path.lexists", side_effect=[True, True, False]) as lexists:
+                destination = ToneMatchApp._default_stem_destination(str(source))
+            self.assertEqual(destination, str(candidates[-1]))
+            self.assertEqual(lexists.call_args_list, [call(candidate) for candidate in candidates])
+
+    def test_validation_rejects_dangling_output_entries_in_both_languages(self) -> None:
+        """출력 대상이 끊어진 링크인 경우에도 한영 검증이 작업 시작 전에 거부해야 한다."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root_path = Path(temporary)
+            source = root_path / "source.mp3"
+            source.write_bytes(b"test")
+            destination = root_path / "dangling-output.wav"
+            with hidden_application(root_path) as (_root, application):
+                application.stem_source_var.set(str(source))
+                application.stem_destination_var.set(str(destination))
+                application.stem_remove_vars["guitar"].set(True)
+                self.assertFalse(destination.exists())
+                for language in ("ko", "en"):
+                    with self.subTest(language=language):
+                        application.language_var.set(LANGUAGE_LABELS[language])
+                        application._change_language()
+                        with patch("app.os.path.lexists", return_value=True) as lexists:
+                            with self.assertRaisesRegex(StemRemovalError, tr("error.stem_output_exists", language)):
+                                application._parse_stem_removal_inputs()
+                        lexists.assert_called_once_with(destination)
+
+    def test_validation_resolves_parent_without_following_output_entry(self) -> None:
+        """출력의 부모만 정규화하고 최종 항목을 따라가지 않는 검증 순서를 유지한다."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root_path = Path(temporary)
+            source = root_path / "source.mp3"
+            source.write_bytes(b"test")
+            destination = root_path / "output.wav"
+            resolve = Path.resolve
+
+            def resolve_without_leaf(path: Path, *args: object, **kwargs: object) -> Path:
+                """출력 최종 항목의 정규화 시도를 실패시켜 링크 추적 회귀를 검출한다."""
+                self.assertNotEqual(path, destination)
+                return resolve(path, *args, **kwargs)
+
+            with hidden_application(root_path) as (_root, application):
+                application.stem_source_var.set(str(source))
+                application.stem_destination_var.set(str(destination))
+                application.stem_remove_vars["guitar"].set(True)
+                with patch.object(Path, "resolve", autospec=True, side_effect=resolve_without_leaf):
+                    request = application._parse_stem_removal_inputs()
+                self.assertEqual(request["destination"], str(destination))
 
     def test_validation_blocks_unsafe_paths_and_invalid_stem_counts(self) -> None:
         """원본·기존 출력 덮어쓰기와 0개·6개 선택을 코어 호출 전에 거부해야 한다."""

@@ -34,12 +34,18 @@ it does not remove Python output copies, locks or SoundCard capture.
 
 # Shared stem-removal resources
 
-The v0.0.09 Stem removal workspace uses this same bundled FFmpeg for local
+The Stem removal workspace introduced in v0.0.09 uses this same bundled FFmpeg for local
 segment decoding. `stem_removal.py` mixes retained `htdemucs_6s` estimates into
 one new 44.1 kHz stereo PCM16 WAV; it does not export individual stems.
 The model's YAML and safetensors are acquired on first AI use and kept in the
 Windows user's Hugging Face cache, shared with guitar isolation. Model weights,
 input media, mixed output, and temporary audio are not release resources and must
 not be added here or to the public archive. The build reference date is
-2026-09-16 KST; current release checks are recorded in `QA_REPORT_v0.0.09.json`
+2026-09-20 KST; current release checks are recorded in `QA_REPORT_v0.0.10.json`
 and `BUILD_HISTORY.md` rather than inferred from the presence of these binaries.
+
+v0.0.10 adds a CPU-only headless stem diagnostic in `stem_diagnostics.py`. It
+uses only a complete local model cache and refuses missing/incomplete cache
+without downloading. Diagnostic WAV output is temporary and deleted; its JSON
+omits source/output filenames, source hashes and model paths. Neither test media
+nor private model caches belong in this directory or release artifacts.

@@ -324,6 +324,28 @@ class SeparatorDeviceTests(unittest.TestCase):
 class SeparatorMultiStemTests(unittest.TestCase):
     """한 번의 Demucs 실행이 선택 stem 조각만 파일 없이 전달하는지 검증한다."""
 
+    def test_local_files_only_is_forwarded_to_model_loader(self) -> None:
+        """스트리밍 API의 캐시 전용 옵션이 실제 모델 로딩 지점까지 전달되어야 한다."""
+        class LoadingSeparator(_FakeSixStemSeparator):
+            """실제 Demucs처럼 상속한 모델 로딩 지점을 호출하는 가상 분리기다."""
+
+            def __init__(self, **options: object) -> None:
+                """모델 로딩 뒤 테스트용 6-stem 입출력을 준비한다."""
+                self._load_model()
+                super().__init__(**options)
+
+        model = types.SimpleNamespace(audio_channels=2, samplerate=separator.SEPARATOR_SAMPLE_RATE)
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "source.wav"
+            _write_test_wav(source)
+            with (patch.dict(sys.modules, _fake_separation_modules(LoadingSeparator)),
+                  patch.object(separator, "separator_model_is_cached", return_value=True),
+                  patch.object(separator, "_load_hf_separator_model", return_value=model) as loader):
+                separator.separate_stem_chunks(
+                    source, ["guitar"], lambda _stems: None, local_files_only=True
+                )
+            loader.assert_called_once_with(None, None, "ko", local_files_only=True)
+
     def test_selected_stems_are_streamed_as_independent_stereo_arrays(self) -> None:
         """요청한 guitar·piano 배열과 6-stem 진단을 한 조각 콜백으로 반환해야 한다."""
         received: list[dict[str, np.ndarray]] = []
@@ -410,6 +432,41 @@ class SeparatorMultiStemTests(unittest.TestCase):
 
 class SeparatorProgressTests(unittest.TestCase):
     """실제 다운로드·추론 이벤트만 반영하고 실패·취소의 원인을 보존하는지 검증한다."""
+
+    def test_truncated_guitar_input_is_rejected_and_partial_output_removed(self) -> None:
+        """WAV 헤더보다 짧거나 프레임 중간이 잘린 입력은 성공 처리하지 않고 출력을 정리한다."""
+        for missing_bytes in (400, 1):
+            with self.subTest(missing_bytes=missing_bytes), tempfile.TemporaryDirectory() as directory:
+                source = Path(directory) / "truncated.wav"
+                destination = Path(directory) / "guitar.wav"
+                _write_test_wav(source)
+                source.write_bytes(source.read_bytes()[:-missing_bytes])
+                events: list[float] = []
+                with (patch.dict(sys.modules, _fake_separation_modules()),
+                      patch.object(separator, "separator_model_is_cached", return_value=True)):
+                    with self.assertRaises(separator.SeparationError):
+                        separator.separate_guitar_wav(
+                            source, destination,
+                            progress=lambda value, _message: events.append(value),
+                        )
+                self.assertFalse(destination.exists())
+                self.assertNotIn(68, events)
+
+    def test_guitar_multichunk_tail_preserves_all_frames(self) -> None:
+        """마지막 짧은 기타 조각도 정확한 길이로 저장하고 정상 완료 정보를 유지한다."""
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "source.wav"
+            destination = Path(directory) / "guitar.wav"
+            _write_test_wav(source, frames=5_000)
+            with (patch.dict(sys.modules, _fake_separation_modules()),
+                  patch.object(separator, "separator_model_is_cached", return_value=True),
+                  patch.object(separator, "SEPARATION_CHUNK_SECONDS", 0.05)):
+                info = separator.separate_guitar_wav(source, destination)
+            with wave.open(str(destination), "rb") as output:
+                self.assertEqual(output.getnframes(), 5_000)
+                self.assertEqual(output.getnchannels(), 2)
+            self.assertEqual(info.processed_chunks, 3)
+            self.assertAlmostEqual(info.source_duration_seconds, 5_000 / 44_100)
 
     def test_windowless_download_progress_tracks_bytes_without_standard_streams(self) -> None:
         """stdout·stderr가 None인 GUI 환경에서도 실제 다운로드량이 표시되어야 한다."""
@@ -588,6 +645,35 @@ class SeparatorProgressTests(unittest.TestCase):
                 separator._load_hf_separator_model(lambda value, message: events.append(value), None, "en")
         self.assertEqual(download.call_count, 3)
         self.assertEqual(events, [18, 23, 23])
+
+    def test_hf_loader_cache_only_never_retries_missing_manifest_or_weights(self) -> None:
+        """캐시 전용 실행은 YAML 또는 가중치가 없을 때 네트워크 재시도 없이 실패해야 한다."""
+        import huggingface_hub
+        from huggingface_hub.errors import LocalEntryNotFoundError
+
+        fake_apply = types.ModuleType("demucs.apply")
+        fake_hf = types.ModuleType("demucs.hf")
+        fake_apply.BagOfModels = object
+        fake_hf.load_safetensors_model = object
+        for missing_filename in ("htdemucs_6s.yaml", "model123.safetensors"):
+            with self.subTest(missing_filename=missing_filename), tempfile.TemporaryDirectory() as directory:
+                yaml_path = Path(directory) / "htdemucs_6s.yaml"
+                yaml_path.write_text("models: ['model123']\n", encoding="utf-8")
+                original = LocalEntryNotFoundError("not cached")
+
+                def cached_download(**options: object) -> str:
+                    """캐시 조회만 허용하고 선택한 누락 파일의 원래 예외를 전달한다."""
+                    self.assertTrue(options.get("local_files_only"))
+                    if options["filename"] == missing_filename:
+                        raise original
+                    return str(yaml_path)
+
+                with (patch.dict(sys.modules, {"demucs.apply": fake_apply, "demucs.hf": fake_hf}),
+                      patch.object(huggingface_hub, "hf_hub_download", side_effect=cached_download) as download):
+                    with self.assertRaises(LocalEntryNotFoundError) as caught:
+                        separator._load_hf_separator_model(None, None, "en", local_files_only=True)
+                self.assertIs(caught.exception, original)
+                self.assertEqual(download.call_count, 1 if missing_filename.endswith(".yaml") else 2)
 
     def test_hf_loader_preserves_network_failure_without_legacy_fallback(self) -> None:
         """HF 연결 실패가 legacy 다운로드의 stdout 예외로 덮이지 않고 그대로 전달되어야 한다."""

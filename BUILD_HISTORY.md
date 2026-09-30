@@ -8,6 +8,7 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 | 버전 | 상태 | 범위 |
 |---|---|---|
+| `0.0.10` | 서명되지 않은 CPU 포터블 개발자 프리릴리스 | 악기 제거 상태·경로 보호, 잘린 WAV 거부, CPU·로컬 캐시 전용 실제 모델 CLI 진단 |
 | `0.0.09` | 서명되지 않은 CPU 포터블 개발자 프리릴리스 | 선택 악기 제거 도구와 C ABI 2 float32 직접 입력·실시간 DSP 진단 |
 | `0.0.08` | 포터블 개발 프리뷰 빌드·검증 완료 | C++17 실시간 PCM·FFT·평활화 엔진, ABI 브리지와 NumPy 폴백 |
 | `0.0.07` | 포터블 개발 프리뷰 빌드·검증 완료 | 코드 근거·원본 화성 참고·반응형 분석 UI |
@@ -17,6 +18,87 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 | `0.0.03` | 포터블 개발 프리뷰 빌드 완료 | 포터블 개발 ZIP, 한·영 handoff, 로그·빌드 이력, NumPy 코드/보이싱 분석(실험) |
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
+
+## 0.0.10 — Stem-removal reliability and headless model diagnostics
+
+- 작업일 / Work dates: `2026-09-20–30 KST`; frozen build reference date: `2026-09-20 KST`
+- 최종 릴리스 검증일 / Final release verification date: `2026-09-30 KST`
+- 상태 / Status: `UNSIGNED CPU PORTABLE DEVELOPER PRERELEASE — validation limits below`
+- 기반 / Based on: v0.0.09 selective stem removal and native DSP ABI 2
+
+### 이 버전에 속하는 변경 / Changes owned by this version
+
+- 새 악기 제거 입력을 선택하면 이전 결과·진행률·경과 상태를 초기화
+- 기본 출력 이름 선택·UI 실행 전 검증에서 끊어진 심볼릭 링크도 이미 존재하는
+  항목으로 보호해 저장 계층의 비덮어쓰기 계약과 일치
+- 기타 분리에서 WAV 헤더보다 짧은 PCM payload를 거부하고 실패 시 중간 파일 정리
+- `stem_diagnostics.py`와 별도 `--stem-self-test-source PATH`,
+  `--stem-self-test-output JSON` CLI로 GUI 없이 실제 CPU 모델의 기타+피아노
+  제거·진행률·원본 보존·출력 형식·정리를 검사
+- `--stem-self-test-seconds 0`은 전체 음원(최대 20분), 선택적
+  `--stem-self-test-cancel-at PERCENT`는 실제 보고 진행률에서 취소 요청
+- 완전한 로컬 모델 캐시만 허용하며 없거나 불완전하면 다운로드 없이 실패
+- 진단용 WAV는 검사 뒤 삭제; `tonematch-stem-self-test/v1` JSON은
+  파일명·소스 해시·모델 경로를 제외하고 기존 JSON은 덮어쓰지 않음
+- 기존 악기 제거·C ABI 2 float32·실시간 DSP 표시·톤/Reference/코드 분석 계약 유지
+
+### 검증 경계 / Verification boundary
+
+GUI 없는 실제 모델 진단과 수동 UI·청감 검증은 구분합니다. 새 모델 또는 분리 품질
+개선이 아니며 AI 누출·빠진 소리·잔향·왜곡은 여전히 발생할 수 있습니다.
+기존 v0.0.09 테스트·음원·성능 결과는 아래 역사 섹션에만 보존하며 새 통과로
+간주하지 않습니다. 음원·출력·모델 가중치·원시 로그는 로컬에 남고 배포하지 않습니다.
+
+The headless diagnostic uses the real CPU model from a complete local cache.
+It does not establish manual GUI quality, listening quality, first-download,
+network-disabled application use, CUDA hardware or live-capture behavior.
+Cancellation can be delayed by an active inference block. No new separation
+model, C++ device-I/O migration or hard-real-time guarantee is introduced.
+
+### 릴리스 게이트 결과 / Release gate result
+
+- [x] 전체 자동 테스트·compileall — `PASS`: 소스 검사와 최종 빌드 검사 모두
+  234개 통과; 최종 빌드 테스트 `68.497 s`, `-W error`
+- [x] 실제 ABI 2 float32/float64 비교·진단·벤치마크 — `PASS`: 30개 창,
+  양 경로 parity·stream stats·reset 통과; 최대 spectrum 차이
+  `2.1316282072803006e-14 dB`
+- [x] 실제 CPU 모델 소스 제거·취소 진단 — `PASS`: 아래 측정 범위 참조
+- [x] 소스·최종 EXE 일반 자체 진단 — `PASS`
+- [x] 최종 EXE 실제 모델 전체 곡 제거·취소 진단 — `PASS`: 아래 측정 범위 참조
+- [x] 새 ZIP manifest·소스·DLL·고지·해시·개인 데이터 제외 검사 — `PASS`:
+  `2026-09-30` 새 압축 해제에서 4,485개 manifest 항목과 46개 소스 입력의 일치,
+  실제 ABI 2 DLL과 고지, 사용자 음원·모델 가중치·개인 경로 제외,
+  새 압축 해제 EXE 자체 진단을 확인했습니다. 이 완료 기록을 반영한 ZIP도
+  동일 검사에 다시 통과한 뒤 게시합니다.
+- [ ] 전체 곡 수동 GUI·청감 품질·첫 모델 다운로드·네트워크 차단 실행·CUDA·
+  실제 마이크/loopback 캡처·코드 서명 — `NOT RUN`
+
+### 이번 버전의 실제 측정 / Measurements from this version
+
+- 소스 실제 모델 검사: 31초, 2조각, 진행률 39회; 총 `30.8685812 s`,
+  추론 `24.9144687 s`. 다른 테스트가 동시에 실행된 부하 조건입니다.
+- 소스 취소: 31초 범위에서 진행률 60% 기준으로 요청, 관측
+  `61.1268387%`, 총 `16.3702098 s`; 원본 보존·중간 파일 정리·출력 부재 통과.
+- 최종 패키지 EXE 전체 곡: `252.6098866 s`, 9조각, 단조 증가 진행률 238회와
+  최종 100%; `11,140,096 frames`, 44,100 Hz stereo PCM16, 출력 peak `32,734`.
+  총 `140.8733689 s`, 추론 `134.4898491 s`; 합산 peak `1.0892139507`에
+  전 구간 동일 gain `0.9171751788`을 적용했습니다. 기타+피아노 제거를
+  실제 CPU 모델로 수행했고 원본 보존과 임시 파일 정리를 확인했습니다.
+- 최종 패키지 취소: 31초 범위에서 60% 기준으로 요청, 관측 `61.1268387%`,
+  총 `11.9191346 s`; 출력·임시 파일 부재와 원본 보존 통과.
+- 위 모델 검사는 완전한 기존 로컬 캐시만 사용했습니다. 다운로드가 없었다는
+  사실은 OS 네트워크를 차단해 검증했다는 뜻이 아닙니다. 청감 품질을 평가하지
+  않았으며 입력·출력 오디오는 배포에 포함하지 않습니다.
+- 이 빌드의 DSP push 벤치마크: C++ float32 `0.1557 ms`, NumPy `0.6892 ms`
+  (비율 `4.42646`), 같은 DLL의 float64 변환 대조군 `0.1622 ms`.
+  캡처·UI·AI·오프라인 분석 시간은 제외합니다. 네이티브 소스와 DLL은 v0.0.09와
+  같으므로 새 C++ 구현이나 버전 간 속도 개선의 근거가 아닙니다.
+
+### 최종 산출물 기록 / Final artifact record
+
+완료된 검사 결과는 `QA_REPORT_v0.0.10.json`에 기록합니다.
+ZIP 최종 해시는 `ToneMatchTMP-v0.0.10-SHA256SUMS.txt`, 내부 파일별 크기·해시는
+`MANIFEST.json`이 기준이며 새 압축 해제 검사를 통과한 바이트만 게시합니다.
 
 ## 0.0.09 — Selective stem removal and native DSP ABI 2
 

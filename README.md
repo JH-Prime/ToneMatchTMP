@@ -1,39 +1,37 @@
-# ToneMatch TMP 0.0.09
+# ToneMatch TMP 0.0.10
 
 ToneMatch TMP is an unofficial, pre-release Windows desktop tool that analyzes a
 local audio/video file or Windows playback capture, isolates the guitar stem,
 and recommends three starting-point tone chains for Fender Tone Master Pro.
-It also provides an experimental chord/voicing timeline. Version 0.0.09 adds a
-separate local Stem removal tool and extends the C++17 live-DSP engine through
-C ABI 2. The tool can remove one to five selected Demucs `htdemucs_6s` parts—
-vocals, drums, bass, guitar, piano, or other—and mix the remaining stems into a
-new WAV. The monitor uses direct float32 input and displays the actual C++ or
-NumPy backend, DSP push time, completed FFT windows and pending frames. Existing
-tone/Reference/chord analysis and SoundCard capture remain available. The
-release/build reference date is 2026-09-19 KST. Version 0.0.07's
-chord evidence and small-window fixes are retained. Verified
-test and package outcomes are recorded in `QA_REPORT_v0.0.09.json` and
-`BUILD_HISTORY.md`; this feature summary is not proof that a release gate passed.
+It also provides an experimental chord/voicing timeline. Version 0.0.10 is a
+stem-removal reliability update: selecting a new source clears stale results and
+progress, dangling output links cannot be mistaken for unused filenames, and
+guitar isolation rejects truncated WAV input with cleanup. A new headless
+diagnostic runs the real local model without opening the GUI and produces a
+path-redacted JSON report while deleting its temporary audio output.
+The v0.0.09 selective Stem removal tool and C ABI 2 float32/live-DSP diagnostics
+remain available. The frozen build date is 2026-09-20 KST; final release
+verification is dated 2026-09-30 KST.
+Verified test and package outcomes are recorded in `QA_REPORT_v0.0.10.json`
+and `BUILD_HISTORY.md`; a feature description is not a passed release gate.
 
 한국어 설치·사용 안내는 [README_KO.md](README_KO.md)를 먼저 읽어 주세요.
 
-## v0.0.09 validation status
+## v0.0.10 validation status
 
 This is an unsigned CPU portable developer prerelease.
-The 2026-09-19 build passed all 214 tests with warnings treated as errors,
-including hidden Korean/English UI regressions, compileall, source and packaged
-EXE self-tests, and 30 actual ABI-2 float32/float64 parity windows.
-On 2026-09-16, the source app removed guitar and piano from 31 seconds of the
-supplied Room 335 file on CPU across two chunks. All 39 progress updates were
-monotonic, peak normalization was exercised, and the source remained unchanged.
-A separate real-inference cancellation left no output or partial files.
-The packaged GUI was launched and its Stem removal tab opened, but no removal
-was run there. The planned full-song packaged UI check was stopped by the user's
-Escape request and was not performed. First model download, network-disabled
-operation, CUDA hardware, live capture and listening quality were not tested for
-this release. Publication requires a fresh ZIP integrity and source-consistency
-check; detailed evidence is in the QA report and `BUILD_HISTORY.md`.
-Measurements from v0.0.08 apply only to that release.
+All 234 automated tests passed with warnings treated as errors, as did
+compileall and source/packaged EXE self-tests. Real-model CPU headless checks
+passed for source removal/cancellation and packaged full-song removal plus
+cancellation. The packaged 252.61-second sample completed in 140.87 seconds,
+with 238 monotonic progress updates, source preservation and temporary-file
+cleanup. These are local cached-model measurements, not a listening assessment
+or a speedup claim. Publication requires a fresh final ZIP integrity check;
+`QA_REPORT_v0.0.10.json` and `BUILD_HISTORY.md` record exact scope and results.
+The v0.0.09 results remain historical and are not reused as v0.0.10 evidence.
+Headless model checks do not substitute for manual full-song GUI operation,
+listening-quality assessment, first-download, network-disabled, CUDA or actual
+capture testing. AI leakage and artifacts remain expected limitations.
 
 ## Current scope
 
@@ -46,6 +44,9 @@ Measurements from v0.0.08 apply only to that release.
   and writes one new 44.1 kHz stereo PCM16 WAV
 - Stem-removal progress, elapsed time and cancellation, with no source or
   existing-destination overwrite and cleanup of decoded/mix/partial temporary files
+- New-source reset of stem-removal results/progress and dangling-link-safe destination checks
+- Truncated-WAV rejection and cleanup in guitar isolation
+- A separate real-model headless stem diagnostic with temporary-audio cleanup and path-redacted JSON
 - Visible stage-weighted analysis percentage and elapsed time, with actual model
   download bytes/file percentage and completed Demucs-block audio duration
 - Auto/CPU/CUDA compute preference with GPU, VRAM, inference-time, and real-time-factor diagnostics
@@ -198,9 +199,29 @@ py -3.12 -m venv ..\.venv
 & ..\.venv\Scripts\python.exe -m pip install -r requirements.txt
 & ..\.venv\Scripts\python.exe tools\build_native.py --zig C:\Tools\zig-0.15.2\zig.exe
 & ..\.venv\Scripts\python.exe -m unittest discover -s tests -v
-& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.09.json
+& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.10.json
 & ..\.venv\Scripts\python.exe app.py
 ```
+
+The optional real-model stem diagnostic does not open a GUI. It removes guitar
+and piano into a private temporary WAV, verifies output/progress/source
+preservation, deletes the audio output, and writes a `tonematch-stem-self-test/v1`
+JSON report without source/destination filenames, source hashes or model-cache
+paths. It uses only an already complete local model cache; missing or incomplete cache
+fails without a download. The diagnostic is CPU-only. The default `0` duration
+means the full source subject to the normal 20-minute cap. Use a new JSON path.
+
+```powershell
+& ..\.venv\Scripts\python.exe app.py --stem-self-test-source C:\Audio\sample.mp3 --stem-self-test-output .\stem-check-v0.0.10.json
+& ..\.venv\Scripts\python.exe app.py --stem-self-test-source C:\Audio\sample.mp3 --stem-self-test-output .\stem-cancel-v0.0.10.json --stem-self-test-seconds 31 --stem-self-test-cancel-at 35
+```
+
+For the packaged build, replace `python.exe app.py` with
+`.\ToneMatchTMP-v0.0.10.exe` and the same flags. The cancellation threshold
+requests cancellation at a reported percentage, not at a guaranteed elapsed
+time; in-flight inference or network work can delay it. These are optional,
+potentially CPU-intensive diagnostics, not the ordinary lightweight
+`--self-test-output` check.
 
 Portable EXE users do not need a compiler. For a source/native rebuild, use the
 pinned [official Zig 0.15.2 Windows x64 archive](https://ziglang.org/download/0.15.2/zig-x86_64-windows-0.15.2.zip)

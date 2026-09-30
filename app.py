@@ -1,4 +1,4 @@
-"""ToneMatch TMP v0.0.09 데스크톱 애플리케이션.
+"""ToneMatch TMP v0.0.10 데스크톱 애플리케이션.
 
 로컬 오디오·영상 또는 Windows PC 재생음 녹음을 받아 AI로 guitar stem만
 분리하고, Tone Master Pro에 수동 적용할 설명 가능한 톤 체인을 추천한다.
@@ -2262,15 +2262,24 @@ class ToneMatchApp:
         base = source_path.with_name(f"{source_path.stem}_ToneMatchTMP-removed.wav")
         candidate = base
         index = 2
-        while candidate.exists():
+        while os.path.lexists(candidate):
             candidate = base.with_name(f"{base.stem}-{index}{base.suffix}")
             index += 1
         return str(candidate)
 
     def _set_stem_source(self, path: str) -> None:
-        """명시적으로 선택한 입력과 충돌하지 않는 출력 기본값을 함께 채운다."""
+        """유휴 상태에서 입력을 선택하면 이전 결과를 비우고 새 출력 기본값을 채운다."""
+        if self._stem_is_running():
+            return
         self.stem_source_var.set(path)
         self.stem_destination_var.set(self._default_stem_destination(path))
+        self.stem_result = None
+        self.stem_started_at = None
+        self.stem_elapsed_seconds = 0.0
+        self.stem_progress_percent = 0.0
+        self.stem_progress_var.set(0.0)
+        self._render_stem_summary()
+        self._refresh_stem_progress()
         self._set_stem_status("status.stem_ready")
 
     def _choose_stem_source(self) -> None:
@@ -2315,10 +2324,12 @@ class ToneMatchApp:
             raise StemRemovalError(tr("error.stem_output_wav", self.language))
         if not destination.parent.is_dir():
             raise StemRemovalError(tr("error.stem_output_folder", self.language))
+        # 마지막 항목은 따라가지 않아 끊어진 심볼릭 링크도 기존 출력으로 거부한다.
+        destination = destination.parent.resolve() / destination.name
         source = Path(source_text)
-        if str(source.resolve()).casefold() == str(destination.resolve()).casefold():
+        if str(source.resolve()).casefold() == str(destination).casefold():
             raise StemRemovalError(tr("error.stem_same_file", self.language))
-        if destination.exists():
+        if os.path.lexists(destination):
             raise StemRemovalError(tr("error.stem_output_exists", self.language))
 
         try:
@@ -3138,15 +3149,17 @@ def run_self_test(output_path: str | Path) -> int:
         )
         debug_sources_ok = all("def " in code_for_block(block["id"]) and "소스 위치를 찾지 못했습니다" not in code_for_block(block["id"]) for block in PIPELINE_BLOCKS)
         stem_removal_source_ok = "def remove_stems_from_file(" in source_file_path("stem_removal.py").read_text(encoding="utf-8")
+        stem_diagnostics_source_ok = "def run_stem_self_test(" in source_file_path("stem_diagnostics.py").read_text(encoding="utf-8")
         separator_status = separator_runtime_status()
         native_dsp_status = _self_test_native_dsp()
         payload = {
-            "ok": len(result.get("recipes", [])) == 3 and debug_sources_ok and stem_removal_source_ok and english.get("language") == "en" and bool(separator_status.get("available")) and reference_compare_ok and native_dsp_status["smoke_ok"],
+            "ok": len(result.get("recipes", [])) == 3 and debug_sources_ok and stem_removal_source_ok and stem_diagnostics_source_ok and english.get("language") == "en" and bool(separator_status.get("available")) and reference_compare_ok and native_dsp_status["smoke_ok"],
             "app_version": APP_VERSION,
             "ffmpeg_analysis": True,
             "developer_source_blocks": len(PIPELINE_BLOCKS),
             "developer_sources_ok": debug_sources_ok,
             "stem_removal_source_ok": stem_removal_source_ok,
+            "stem_diagnostics_source_ok": stem_diagnostics_source_ok,
             "english_localization": english.get("language") == "en",
             "reference_compare_ok": reference_compare_ok,
             "reference_bands": len(result["reference_spectrum"]["bands"]),
@@ -3166,6 +3179,9 @@ def run_self_test(output_path: str | Path) -> int:
 def main() -> int:
     """자체 진단 인수를 처리하거나 한·영 데스크톱 GUI 이벤트 루프를 시작한다."""
     multiprocessing.freeze_support()
+    if any(argument.startswith("--stem-self-test-") for argument in sys.argv[1:]):
+        from stem_diagnostics import stem_self_test_cli
+        return stem_self_test_cli(sys.argv[1:])
     if "--self-test-output" in sys.argv:
         try:
             index = sys.argv.index("--self-test-output")
