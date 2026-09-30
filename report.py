@@ -209,6 +209,7 @@ def save_html(result: dict, path: str | Path) -> None:
     warnings = "".join(f"<li>{html.escape(item)}</li>" for item in result["warnings"])
     steps = "".join(f"<li>{html.escape(item)}</li>" for item in result["application_steps"])
     reference_link = _reference_link(source.get("reference_url"))
+    reference_row = f"<tr><th>{_rt('url', language)}</th><td>{reference_link}</td></tr>" if reference_link else ""
     feature_bars = "".join(
         _feature_bar(label, features[key])
         for label, key in [
@@ -242,7 +243,16 @@ def save_html(result: dict, path: str | Path) -> None:
     voicing_rows = []
     for event in voicing_analysis.get("events", []):
         unknown = event.get("chord_type", "unknown") == "unknown"
-        notes = "—" if unknown else pitch_class_names(event.get("pitch_classes", ())) or "—"
+        evidence = event.get("evidence") or {}
+        observed = evidence.get("observed_pitch_classes", event.get("pitch_classes", ()))
+        notes = "—" if unknown else pitch_class_names(observed) or "—"
+        notes_html = html.escape(notes)
+        if not unknown and "observed_pitch_classes" not in evidence:
+            notes_html = f"{html.escape(tr('ui.voicing_template_notes', language))}: {notes_html}"
+        if not unknown and "observed_pitch_classes" in evidence:
+            required = pitch_class_names(evidence.get("required_pitch_classes", event.get("pitch_classes", ()))) or "—"
+            notes_html = (f"{html.escape(tr('ui.voicing_observed_notes', language))}: {notes_html}<br>"
+                          f"{html.escape(tr('ui.voicing_template_notes', language))}: {html.escape(required)}")
         if unknown:
             profile = "—"
         elif mixed_harmony:
@@ -262,13 +272,34 @@ def save_html(result: dict, path: str | Path) -> None:
         symbol = "?" if unknown else str(event["symbol"])
         if mixed_harmony:
             symbol = symbol.split("/", 1)[0]
-        confidence = "—" if unknown else f"{int(round(event['confidence'] * 100))}%"
+        confidence = "—"
+        if not unknown:
+            try:
+                value = float(event.get("confidence", 0.0))
+            except (TypeError, ValueError):
+                value = math.nan
+            if math.isfinite(value):
+                confidence = f"{int(round(max(0.0, min(1.0, value)) * 100))}/100"
+            confidence = f"{html.escape(tr('ui.voicing_confidence', language))} {confidence}"
+        evidence_lines = []
+        if not unknown:
+            if evidence.get("ambiguous"):
+                evidence_lines.append(tr("ui.voicing_ambiguous", language))
+            alternatives = [str(item.get("symbol", "?")) for item in event.get("alternatives", ())[:3]]
+            if mixed_harmony:
+                alternatives = [symbol.split("/", 1)[0] for symbol in alternatives]
+            if alternatives:
+                evidence_lines.append(tr("ui.voicing_alternatives", language) + ": " + ", ".join(alternatives))
+            if "supported_window_count" in evidence and "analyzed_window_count" in evidence:
+                evidence_lines.append(tr("ui.voicing_window_support", language,
+                                         supported=evidence["supported_window_count"], total=evidence["analyzed_window_count"]))
+        evidence_html = "".join(f"<br>{html.escape(line)}" for line in evidence_lines)
         unknown_label = f"<br>{html.escape(tr('ui.voicing_unknown', language))}" if unknown else ""
         voicing_rows.append(
             "<tr>"
             f"<td>{event['start_seconds'] + voicing_offset:.1f}s–{event['end_seconds'] + voicing_offset:.1f}s</td>"
-            f"<td><b>{html.escape(symbol)}</b><br>{confidence}{unknown_label}</td>"
-            f"<td>{html.escape(notes)}</td><td>{html.escape(profile)}</td><td>{shapes or '—'}</td>"
+            f"<td><b>{html.escape(symbol)}</b><br>{confidence}{unknown_label}{evidence_html}</td>"
+            f"<td>{notes_html}</td><td>{html.escape(profile)}</td><td>{shapes or '—'}</td>"
             "</tr>"
         )
     voicing_body = "".join(voicing_rows) or f"<tr><td colspan='5'>{html.escape(tr('ui.voicing_empty', language))}</td></tr>"
@@ -294,7 +325,7 @@ table{{width:100%;border-collapse:collapse}} th,td{{padding:7px 9px;border-botto
 <body><main class="wrap">
 <header><div><div class="eyebrow">Unofficial Tone Recipe</div><h1>ToneMatch TMP</h1><p>{_rt('subtitle', language)}</p></div><div class="meta">{_rt('firmware', language)} {html.escape(result['target_firmware'])}<br>{html.escape(result['model_guide'])}</div></header>
 <div class="grid">
-  <section class="card"><h2>{_rt('source', language)}</h2><table><tr><th>{_rt('file', language)}</th><td>{html.escape(source['file_name'])}</td></tr><tr><th>{_rt('range', language)}</th><td>{source['start_seconds']:.1f}s – {source['end_seconds']:.1f}s</td></tr><tr><th>{_rt('url', language)}</th><td>{reference_link or _rt('none', language)}</td></tr><tr><th>{_rt('input', language)}</th><td>{html.escape(result['input_profile']['pickup_label'])}</td></tr><tr><th>{_rt('output', language)}</th><td>{html.escape(result['input_profile']['output_mode_label'])}</td></tr><tr><th>{_rt('isolation', language)}</th><td>{html.escape(isolation_text)}</td></tr></table></section>
+  <section class="card"><h2>{_rt('source', language)}</h2><table><tr><th>{_rt('file', language)}</th><td>{html.escape(source['file_name'])}</td></tr><tr><th>{_rt('range', language)}</th><td>{source['start_seconds']:.1f}s – {source['end_seconds']:.1f}s</td></tr>{reference_row}<tr><th>{_rt('input', language)}</th><td>{html.escape(result['input_profile']['pickup_label'])}</td></tr><tr><th>{_rt('output', language)}</th><td>{html.escape(result['input_profile']['output_mode_label'])}</td></tr><tr><th>{_rt('isolation', language)}</th><td>{html.escape(isolation_text)}</td></tr></table></section>
   <section class="card"><h2>{_rt('fingerprint', language)}</h2>{feature_bars}</section>
 </div>
 {reference_compare_html}

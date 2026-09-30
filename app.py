@@ -1,4 +1,4 @@
-"""ToneMatch TMP v0.0.10 데스크톱 애플리케이션.
+"""ToneMatch TMP v0.0.11 데스크톱 애플리케이션.
 
 로컬 오디오·영상 또는 Windows PC 재생음 녹음을 받아 AI로 guitar stem만
 분리하고, Tone Master Pro에 수동 적용할 설명 가능한 톤 체인을 추천한다.
@@ -237,7 +237,6 @@ class ToneMatchApp:
         self.stem_compute_backend_code = self.compute_backend_code
 
         self.file_var = tk.StringVar()
-        self.url_var = tk.StringVar()
         self.start_var = tk.StringVar(value="0")
         self.end_var = tk.StringVar(value="0")
         self.record_limit_var = tk.StringVar(value="360")
@@ -492,15 +491,8 @@ class ToneMatchApp:
         self.record_notice.grid(row=4, column=0, columnspan=2, sticky="w", pady=(5, 0))
         self.record_only_widgets = [self.capture_combo, self.refresh_devices_button, self.record_limit_entry, self.record_button]
 
-        self._field_label(left, tr("ui.youtube_reference", self.language), 6, 0)
-        url_row = ttk.Frame(left, style="Panel.TFrame")
-        url_row.grid(row=7, column=0, sticky="ew")
-        url_row.columnconfigure(0, weight=1)
-        ttk.Entry(url_row, textvariable=self.url_var).grid(row=0, column=0, sticky="ew", padx=(0, 6))
-        ttk.Button(url_row, text=tr("ui.open_browser", self.language), command=self._open_reference).grid(row=0, column=1)
-
         segment = ttk.Frame(left, style="Panel.TFrame")
-        segment.grid(row=8, column=0, sticky="ew")
+        segment.grid(row=6, column=0, sticky="ew")
         segment.columnconfigure((0, 1), weight=1)
         self._field_label(segment, tr("ui.start_seconds", self.language), 0, 0)
         self._field_label(segment, tr("ui.end_seconds", self.language), 0, 1)
@@ -509,9 +501,9 @@ class ToneMatchApp:
         self.end_entry = ttk.Entry(segment, textvariable=self.end_var, width=12)
         self.end_entry.grid(row=1, column=1, sticky="ew", padx=(4, 0))
 
-        ttk.Label(left, text=tr("ui.tone_section", self.language), style="CardTitle.TLabel").grid(row=9, column=0, sticky="w", pady=(10, 0))
+        ttk.Label(left, text=tr("ui.tone_section", self.language), style="CardTitle.TLabel").grid(row=7, column=0, sticky="w", pady=(10, 0))
         options = ttk.Frame(left, style="Panel.TFrame")
-        options.grid(row=10, column=0, sticky="ew")
+        options.grid(row=8, column=0, sticky="ew")
         options.columnconfigure((0, 1), weight=1)
         self._field_label(options, tr("ui.pickup", self.language), 0, 0)
         self._field_label(options, tr("ui.mix", self.language), 0, 1)
@@ -550,7 +542,7 @@ class ToneMatchApp:
         self._refresh_status_text()
 
         note = tk.Label(left, text=tr("ui.tip", self.language), bg="#0d171f", fg=COLORS["muted"], justify="left", anchor="w", wraplength=375, padx=10, pady=8, font=(self.ui_font, 8))
-        note.grid(row=12, column=0, sticky="ew", pady=(9, 0))
+        note.grid(row=10, column=0, sticky="ew", pady=(9, 0))
 
         right = self._panel(shell, row=1, column=1, sticky="nsew")
         right.columnconfigure(0, weight=1)
@@ -2480,16 +2472,6 @@ class ToneMatchApp:
             self.file_var.set(path)
             self.status_var.set(tr("status.ready", self.language))
 
-    def _open_reference(self) -> None:
-        """참고 URL을 기본 브라우저에서 열되 앱이 YouTube 음원을 추출하지 않는다."""
-        value = self.url_var.get().strip()
-        if not value:
-            messagebox.showinfo(APP_NAME, tr("dialog.enter_url", self.language))
-            return
-        if not value.lower().startswith(("https://", "http://")):
-            value = "https://" + value
-        webbrowser.open(value)
-
     def _parse_inputs(self) -> tuple[str, float, float]:
         """화면 문자열을 분석 요청으로 바꾸고 파일·시간·장치 조건을 검증한다."""
         if not is_supported_device(self.device_id):
@@ -2558,7 +2540,6 @@ class ToneMatchApp:
             "pickup": self.pickup_code,
             "mix_mode": self.mix_code,
             "output_mode": self.output_code,
-            "reference_url": self.url_var.get().strip(),
             "device_id": self.device_id,
             "language": self.language,
             "compute_backend": self.compute_backend_code,
@@ -2746,7 +2727,7 @@ class ToneMatchApp:
         widget.see("1.0")
 
     def _render_voicing(self, analysis: dict) -> None:
-        """실험 보이싱 타임라인과 연주 후보를 별도 결과 탭에 표시한다."""
+        """코드·보이싱 타임라인의 근거와 대안 해석 및 연주 후보를 구분해 표시한다."""
         result = getattr(self, "result", None) or {}
         analysis = dict(analysis)
         analysis.setdefault("source_start_seconds", result.get("source", {}).get("start_seconds", 0.0))
@@ -2770,14 +2751,36 @@ class ToneMatchApp:
             if event.get("chord_type", "unknown") == "unknown":
                 widget.insert("end", f"{start}–{end}   {tr('ui.voicing_unknown', self.language)}\n", "warning")
                 continue
-            confidence = int(round(float(event["confidence"]) * 100))
+            try:
+                confidence = float(event.get("confidence", 0.0))
+            except (TypeError, ValueError):
+                confidence = math.nan
+            score = f"{max(0, min(100, round(confidence * 100)))}/100" if math.isfinite(confidence) else "—"
             symbol = str(event["symbol"]).split("/")[0] if is_mix else event["symbol"]
-            widget.insert("end", f"{start}–{end}   {symbol}   {confidence}%\n", "event")
-            notes = pitch_class_names(event.get("pitch_classes", ())) or "—"
+            widget.insert("end", f"{start}–{end}   {symbol}   {tr('ui.voicing_confidence', self.language)} {score}\n", "event")
+            evidence = event.get("evidence") or {}
+            notes = pitch_class_names(evidence.get("observed_pitch_classes", event.get("pitch_classes", ()))) or "—"
             register = tr(f"voicing.register.{event.get('register', 'unknown')}", self.language)
             spacing = tr(f"voicing.spacing.{event.get('spacing', 'unknown')}", self.language)
             inversion = tr(f"voicing.inversion.{event.get('inversion', 'unknown')}", self.language)
-            widget.insert("end", f"{tr('ui.voicing_notes', self.language)} · {notes}\n", "detail")
+            notes_label = "ui.voicing_observed_notes" if "observed_pitch_classes" in evidence else "ui.voicing_template_notes"
+            widget.insert("end", f"{tr(notes_label, self.language)} · {notes}\n", "detail")
+            if "observed_pitch_classes" in evidence and evidence.get("required_pitch_classes"):
+                required = pitch_class_names(evidence["required_pitch_classes"])
+                widget.insert("end", f"{tr('ui.voicing_template_notes', self.language)} · {required}\n", "detail")
+            if evidence.get("analyzed_window_count", 0) > 0:
+                support = tr("ui.voicing_window_support", self.language, supported=evidence.get("supported_window_count", 0), total=evidence["analyzed_window_count"])
+                widget.insert("end", support + "\n", "detail")
+            alternatives = []
+            for candidate in event.get("alternatives", ()):
+                alternative = str(candidate.get("symbol", ""))
+                alternative = alternative.split("/")[0] if is_mix else alternative
+                if alternative and alternative != symbol and alternative not in alternatives:
+                    alternatives.append(alternative)
+            if alternatives:
+                widget.insert("end", f"{tr('ui.voicing_alternatives', self.language)} · {', '.join(alternatives)}\n", "detail")
+            if evidence.get("ambiguous"):
+                widget.insert("end", tr("ui.voicing_ambiguous", self.language) + "\n", "warning")
             profile = tr("ui.voicing_mix_profile", self.language) if is_mix else f"{register} · {spacing} · {inversion}"
             widget.insert("end", f"{tr('ui.voicing_profile', self.language)} · {profile}\n", "detail")
             shapes = event.get("candidate_shapes", [])
@@ -3128,6 +3131,28 @@ def _self_test_native_dsp() -> dict:
         engine.close()
 
 
+def _self_test_voicing() -> dict:
+    """동결 EXE의 확장화음·모호성 근거와 단음 거부를 모델 다운로드 없이 확인한다."""
+    from voicing import CHORD_INTERVALS, analyze_voicings
+    rate = 22_050
+    axis = np.arange(rate * 2, dtype=np.float64) / rate
+
+    def analyze_notes(notes: tuple[int, ...]):
+        """작은 합성 신호를 실제 코드 분석기에 전달한다."""
+        mono = sum(np.sin(2 * np.pi * 440.0 * 2 ** ((note - 69) / 12) * axis) for note in notes) * 0.1
+        return analyze_voicings(np.column_stack((mono, -mono)), rate)
+
+    ninth = analyze_notes((48, 52, 55, 58, 62))
+    sixth = analyze_notes((48, 52, 55, 57))
+    single = analyze_notes((48,))
+    ninth_ok = bool(ninth.events) and all(e.root_pc == 0 and e.chord_type == "9" and e.evidence.get("observed_pitch_classes") for e in ninth.events)
+    ambiguity_ok = bool(sixth.events) and all(e.evidence.get("ambiguous") and any(a["chord_type"] == "min7" for a in e.alternatives) for e in sixth.events)
+    single_ok = single.tonal_coverage == 0 and all(e.chord_type == "unknown" for e in single.events)
+    return {"ok": bool(ninth_ok and ambiguity_ok and single_ok), "template_count": len(CHORD_INTERVALS),
+            "ninth_and_evidence_ok": bool(ninth_ok), "ambiguity_ok": bool(ambiguity_ok),
+            "single_note_rejected": bool(single_ok), "real_song_accuracy_measured": False}
+
+
 def run_self_test(output_path: str | Path) -> int:
     """합성 기타로 오프라인 분석·한영 변환·개발자 소스와 런타임을 검사한다."""
     destination = Path(output_path).resolve()
@@ -3152,8 +3177,10 @@ def run_self_test(output_path: str | Path) -> int:
         stem_diagnostics_source_ok = "def run_stem_self_test(" in source_file_path("stem_diagnostics.py").read_text(encoding="utf-8")
         separator_status = separator_runtime_status()
         native_dsp_status = _self_test_native_dsp()
+        chord_voicing_status = _self_test_voicing()
         payload = {
-            "ok": len(result.get("recipes", [])) == 3 and debug_sources_ok and stem_removal_source_ok and stem_diagnostics_source_ok and english.get("language") == "en" and bool(separator_status.get("available")) and reference_compare_ok and native_dsp_status["smoke_ok"],
+            "ok": len(result.get("recipes", [])) == 3 and debug_sources_ok and stem_removal_source_ok and stem_diagnostics_source_ok and english.get("language") == "en" and bool(separator_status.get("available")) and reference_compare_ok and native_dsp_status["smoke_ok"] and chord_voicing_status["ok"],
+            "chord_voicing": chord_voicing_status,
             "app_version": APP_VERSION,
             "ffmpeg_analysis": True,
             "developer_source_blocks": len(PIPELINE_BLOCKS),

@@ -8,6 +8,7 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 | 버전 | 상태 | 범위 |
 |---|---|---|
+| `0.0.11` | 서명되지 않은 CPU 포터블 개발자 프리릴리스 | 20종 코드 템플릿·모호성·구성음 근거·역위 보존, 참고용 YouTube UI 제거 |
 | `0.0.10` | 서명되지 않은 CPU 포터블 개발자 프리릴리스 | 악기 제거 상태·경로 보호, 잘린 WAV 거부, CPU·로컬 캐시 전용 실제 모델 CLI 진단 |
 | `0.0.09` | 서명되지 않은 CPU 포터블 개발자 프리릴리스 | 선택 악기 제거 도구와 C ABI 2 float32 직접 입력·실시간 DSP 진단 |
 | `0.0.08` | 포터블 개발 프리뷰 빌드·검증 완료 | C++17 실시간 PCM·FFT·평활화 엔진, ABI 브리지와 NumPy 폴백 |
@@ -18,6 +19,51 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 | `0.0.03` | 포터블 개발 프리뷰 빌드 완료 | 포터블 개발 ZIP, 한·영 handoff, 로그·빌드 이력, NumPy 코드/보이싱 분석(실험) |
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
+
+## 0.0.11 — Extended chord evidence and input cleanup
+
+- 동결 빌드일 / Frozen build date: `2026-09-30 KST`
+- 최종 릴리스 검증일 / Final release verification: `2026-10-01 KST`
+- 상태 / Status: `UNSIGNED CPU PORTABLE DEVELOPER PRERELEASE`
+- 범위 / Scope: 9→20 chord qualities, coverage/complexity scoring, ambiguous alternatives,
+  observed vs template tones, preserved bass-change intervals, and removal of the reference-only YouTube controls.
+
+### 검증 / Verification
+
+- 251 automated tests passed with `-W error` in 66.031 seconds; compileall passed.
+- Source and packaged EXE self-tests passed: C9 and observed evidence, C6/Am7 ambiguity,
+  single-note rejection, Reference Compare, developer source and actual C++ ABI 2 parity.
+- Fixed synthetic comparison: 480 cases (20 qualities × 12 roots × 2 textures),
+  expected primary label matches v0.0.10 **186/480** → v0.0.11 **480/480**;
+  all 36 single-note/nonchord/noise controls rejected in both versions. This is **not real-song accuracy**.
+- Actual Room 335, 252.61 seconds: comparison-inclusive source run 139.417 seconds,
+  75 monotonic progress updates to 100%, source unchanged, local model cache only.
+  Weak guitar (-63.246 dBFS) selected original-mix harmony. Support is **68/421 windows (16.15%)**,
+  with 43 known and 33 unknown events. Many intervals remain unknown. No ground-truth accuracy claim.
+- Final EXE real-model stem removal: 252.6099 seconds / 11,140,096 frames, nine chunks,
+  123.557 seconds elapsed, 238 monotonic progress updates to 100%, no model download.
+  Output checked as stereo 44.1 kHz PCM16; normalization gain 0.91717518; source preserved,
+  temporary/partial audio cleaned. These timings do not establish a speedup or listening quality.
+- Final EXE cancellation: 31-second selection, requested at 60%, observed at 61.12684%,
+  11.370 seconds elapsed; cancelled output absent, source unchanged and temporary/partial files cleaned.
+- Fresh-extract checks verify every manifest entry, matching source/devsource, native DLL/imports/licenses,
+  a new EXE self-test, and absence of user audio/model weights/private paths in public build logs.
+  Final documentation is repackaged and checked again before publication.
+
+### 산출물 / Artifacts
+
+- EXE: `ToneMatchTMP-v0.0.11.exe`, 39,526,707 bytes
+- EXE SHA-256: `44EF7D901B29F2253A0D65E095E8D5159F874FFDEB51470029EA23AC7503392F`
+- Native DLL: 350,720 bytes, ABI 2; SHA-256 `F4D129C73AB015799780B2281909CBB0B793F640655D531E52D851A769854EE5`
+- ZIP: `ToneMatchTMP-v0.0.11-Windows-x64-Portable-Dev.zip`; final archive hash is in the
+  external `ToneMatchTMP-v0.0.11-SHA256SUMS.txt` release asset, avoiding a self-containing hash.
+- Package includes privacy-safe synthetic/real-input chord checks and packaged stem completion/cancellation JSON.
+- Reproduce the comparative synthetic check from a Git checkout containing tag `v0.0.10` with
+  `python tools/benchmark_voicing.py --output NEW.json`; the portable source copy alone has no Git history.
+
+Manual GUI/listening, physical capture, first model download, OS-network-blocked operation,
+CUDA and signing remain unverified. Chord evidence scores are not calibrated probabilities;
+candidate shapes do not identify performed strings/frets. No automatic YouTube extraction was added.
 
 ## 0.0.10 — Stem-removal reliability and headless model diagnostics
 

@@ -8,18 +8,46 @@
 from __future__ import annotations
 
 
-APP_VERSION = "0.0.10"
+APP_VERSION = "0.0.11"
 TARGET_FIRMWARE = "1.8.58"
 MODEL_GUIDE_REVISION = "Rev. J (2026-07)"
-BUILD_DATE = "2026-09-20"
+BUILD_DATE = "2026-09-30"
 
 
 # 앱 내부의 변경 기록 화면과 배포 문서가 함께 사용하는 단일 원본이다.
 # 이후 패치는 0.0.02, 0.0.03, 0.0.04처럼 한 단계씩 올리고 최신 항목을 맨 위에 둔다.
 CHANGELOG: list[dict] = [
     {
-        "version": "0.0.10",
+        "version": "0.0.11",
         "date": BUILD_DATE,
+        "status": "공개 개발 프리뷰",
+        "status_en": "Public development preview",
+        "changes": [
+            "코드·보이싱의 화음 후보와 관측 근거를 보완하고 모호한 후보를 구분해 표시",
+            "코드 근거 점수를 정답률과 구분하며 실제 기타 줄·프렛을 확정하지 않는 안내 유지",
+            "분석 입력으로 연결되지 않던 YouTube 참고 URL 칸과 브라우저 열기 버튼 제거",
+            "권한 있는 로컬 파일·녹음 입력, 선택 악기 제거와 C ABI 2 실시간 DSP 유지",
+        ],
+        "changes_en": [
+            "Improves chord/voicing candidates and observed evidence, displaying ambiguous alternatives separately",
+            "Distinguishes chord evidence scores from accuracy and retains the boundary against claiming detected strings/frets",
+            "Removes the reference-only YouTube URL field and browser shortcut that were not analysis inputs",
+            "Retains authorized local-file/recording input, selective stem removal and C ABI 2 live DSP",
+        ],
+        "known_issues": [
+            "복잡한 믹스·왜곡·분리 누출에서 코드 후보가 틀릴 수 있으며 실제 곡의 정답률이나 확정 타브를 보증하지 않음",
+            "YouTube 링크의 자동 추출·분석은 지원하지 않으며 저작권 허가와 플랫폼 이용 조건은 별개",
+            "AI 분리 품질·실제 장치 캡처·CUDA·청감과 코드 서명 검증은 자동 회귀 테스트와 구분",
+        ],
+        "known_issues_en": [
+            "Dense mixes, distortion and separation bleed can produce wrong candidates; no real-song accuracy or detected-tablature guarantee",
+            "Automatic YouTube extraction/analysis is not supported; copyright permission and platform conditions are separate",
+            "Separation quality, physical capture, CUDA, listening and code-signing validation are separate from automated regression tests",
+        ],
+    },
+    {
+        "version": "0.0.10",
+        "date": "2026-09-20",
         "status": "공개 개발 프리뷰",
         "status_en": "Public development preview",
         "changes": [

@@ -222,6 +222,17 @@ class ChordSourcePolicyTests(unittest.TestCase):
             self.assertIsNone(event["bass_pc"])
             self.assertNotIn("/", event["symbol"])
 
+    def test_mix_fallback_alternative_labels_do_not_claim_guitar_bass(self) -> None:
+        """대안 코드에도 믹스의 베이스를 기타 역위로 표시하지 않고 근거 정보는 보존한다."""
+        candidate = _voicing_payload(0.7)
+        candidate["events"][1]["alternatives"] = [{"symbol": "Am7/C", "root_pc": 9, "chord_type": "min7", "score_delta": 0.01}]
+        candidate["events"][1]["evidence"] = {"ambiguous": True, "observed_pitch_classes": (0, 4, 7, 9)}
+        result, _, _ = self._run_sources(_voicing_payload(0.02, 1), candidate)
+        event = result["events"][1]
+        self.assertEqual(event["alternatives"][0]["symbol"], "Am7")
+        self.assertEqual(event["evidence"], candidate["events"][1]["evidence"])
+        self.assertEqual(candidate["events"][1]["alternatives"][0]["symbol"], "Am7/C")
+
     def test_near_silent_guitar_triggers_fallback_even_with_coverage(self) -> None:
         """낮은 음량 stem의 그럴듯한 코드 비율만으로 원본 참고 분석을 막지 않는다."""
         quiet = self.guitar * 0.001
@@ -676,6 +687,34 @@ class EngineAnalysisTests(unittest.TestCase):
                         self.assertIn("test-shape", html_text)
                         self.assertIn("E A D G B e =", html_text)
                         self.assertIn("<b>C/E</b>", html_text)
+
+    def test_chord_evidence_exports_are_explicit_escaped_and_not_probabilities(self) -> None:
+        """검출음·해석음·대안·근거 점수를 한영 HTML과 JSON에 확률 오해 없이 보존한다."""
+        baseline = self._analyze_result(self.base)
+        for language in ("ko", "en"):
+            result = engine.relocalize_result(baseline, language)
+            result["chord_voicing"] = _voicing_payload(0.7)
+            event = result["chord_voicing"]["events"][1]
+            event["alternatives"] = [{"root_pc": 9, "chord_type": "min7", "symbol": '<Am & "7">', "score_delta": 0.01}]
+            event["evidence"] = {"ambiguous": True, "observed_pitch_classes": [0, 4, 7, 9],
+                                 "required_pitch_classes": [0, 4, 7], "supported_window_count": 3, "analyzed_window_count": 4}
+            before = copy.deepcopy(result)
+            with tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / "evidence.html"
+                json_path = Path(directory) / "evidence.json"
+                report.save_html(result, path)
+                engine.save_json(result, json_path)
+                document = path.read_text(encoding="utf-8")
+                restored = json.loads(json_path.read_text(encoding="utf-8"))
+            self.assertIn(report.tr("ui.voicing_confidence", language) + " 80/100", document)
+            self.assertIn(report.tr("ui.voicing_observed_notes", language), document)
+            self.assertIn(report.tr("ui.voicing_template_notes", language), document)
+            self.assertIn(report.html.escape(report.tr("ui.voicing_ambiguous", language)), document)
+            self.assertIn("&lt;Am &amp; &quot;7&quot;&gt;", document)
+            self.assertNotIn('<Am & "7">', document)
+            self.assertEqual(restored["chord_voicing"]["events"][1]["evidence"], event["evidence"])
+            self.assertEqual(result, before)
+            self.assertNotIn(f"<th>{report._rt('url', language)}</th>", document)
 
     def test_chord_context_and_event_labels_are_html_escaped(self) -> None:
         """코드 진단 문구와 후보 운지에 포함된 특수문자가 HTML로 실행되지 않는다."""

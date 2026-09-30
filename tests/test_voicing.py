@@ -1,4 +1,4 @@
-"""실험 코드 보이싱 분석기의 결정론적 회귀 테스트."""
+"""코드·보이싱 분석기의 결정론적 정확도·불확실성 회귀 테스트."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ MODULE_DIR = Path(__file__).resolve().parents[1]
 if str(MODULE_DIR) not in sys.path:
     sys.path.insert(0, str(MODULE_DIR))
 
-from voicing import _smooth_labels, analyze_voicings, candidate_guitar_shapes, voicing_analysis_dict  # noqa: E402
+from voicing import CHORD_INTERVALS, _smooth_labels, analyze_voicings, candidate_guitar_shapes, voicing_analysis_dict  # noqa: E402
 
 
 SAMPLE_RATE = 22_050
@@ -56,6 +56,20 @@ def _synth_picked_chord(midi_notes: tuple[int, ...], arpeggio: bool) -> np.ndarr
 class VoicingAnalysisTests(unittest.TestCase):
     """명확한 합성 코드가 보수적인 코드·역위 결과를 내는지 확인한다."""
 
+    def test_temporal_alternatives_obey_the_same_minimum_evidence_gate(self) -> None:
+        """시간 평활화에 제공하는 대안도 대표 코드와 같은 최소 근거 점수를 통과해야 한다."""
+        from voicing import _classify_window, _guitar_midi_frequencies
+        rng = np.random.default_rng(11034)
+        pitches = np.zeros(len(_guitar_midi_frequencies()[0]))
+        accepted = 0
+        for _ in range(256):
+            chroma = rng.dirichlet(np.ones(12) * 0.6)
+            result = _classify_window(chroma, pitches, pitches, 0.1)
+            for candidate in result.get("_candidates", ()):
+                accepted += 1
+                self.assertGreaterEqual(candidate["confidence"], 0.34)
+        self.assertGreater(accepted, 0)
+
     def test_major_minor_and_power_chords(self) -> None:
         """C, Am, E5의 코드 유형과 근음이 예상값으로 판정되어야 한다."""
         cases = [
@@ -90,6 +104,95 @@ class VoicingAnalysisTests(unittest.TestCase):
                 event = max(analysis.events, key=lambda item: item.confidence)
                 self.assertEqual((event.root_pc, event.chord_type), (root_pc, chord_type))
                 self.assertGreaterEqual(event.confidence, 0.34)
+
+    def test_extended_chords_preserve_all_heard_tones(self) -> None:
+        """분명히 들리는 6·9·감7·반감7·서스펜디드 음을 더 작은 코드로 버리지 않는다."""
+        cases = [
+            ((48, 52, 55, 57), 0, "6"), ((48, 51, 55, 57), 0, "min6"),
+            ((47, 50, 53, 57), 11, "min7b5"), ((48, 51, 54, 57), 0, "dim7"),
+            ((48, 52, 56), 0, "aug"), ((48, 52, 55, 62), 0, "add9"),
+            ((48, 51, 55, 62), 0, "minadd9"), ((48, 52, 55, 58, 62), 0, "9"),
+            ((48, 52, 55, 59, 62), 0, "maj9"), ((48, 51, 55, 58, 62), 0, "min9"),
+            ((48, 53, 55, 58), 0, "7sus4"),
+        ]
+        for notes, root, quality in cases:
+            with self.subTest(quality=quality):
+                analysis = analyze_voicings(_synth_chord(notes), SAMPLE_RATE)
+                self.assertTrue(all((event.root_pc, event.chord_type) == (root, quality) for event in analysis.events))
+                self.assertEqual(analysis.tonal_coverage, 1.0)
+
+    def test_all_templates_transpose_across_twelve_roots(self) -> None:
+        """20종 코드의 12개 근음 합성 입력 모두가 단순 전조에 같은 판정을 유지한다."""
+        self.assertEqual(len(CHORD_INTERVALS), 20)
+        for quality, intervals in CHORD_INTERVALS.items():
+            for root in range(12):
+                notes = tuple(48 + root + (14 if interval == 2 and quality != "sus2" else interval) for interval in intervals)
+                with self.subTest(root=root, quality=quality):
+                    analysis = analyze_voicings(_synth_chord(notes, 1.5), SAMPLE_RATE)
+                    self.assertTrue(all((event.root_pc, event.chord_type) == (root, quality) for event in analysis.events))
+
+    def test_extended_picked_chords_keep_their_extensions(self) -> None:
+        """스트럼과 아르페지오에서도 반복해서 들리는 9음과 반감7을 보존한다."""
+        for notes, root, quality in (((48, 52, 55, 58, 62), 0, "9"), ((47, 50, 53, 57), 11, "min7b5")):
+            for arpeggio in (False, True):
+                with self.subTest(quality=quality, arpeggio=arpeggio):
+                    analysis = analyze_voicings(_synth_picked_chord(notes, arpeggio), SAMPLE_RATE)
+                    known = [event for event in analysis.events if event.chord_type != "unknown"]
+                    self.assertTrue(known)
+                    self.assertTrue(all((event.root_pc, event.chord_type) == (root, quality) for event in known))
+
+    def test_identical_pitch_sets_expose_other_harmonic_interpretations(self) -> None:
+        """C6·Am7과 감7·증화음의 동음 구성 해석을 하나의 확정 답처럼 숨기지 않는다."""
+        cases = [((48, 52, 55, 57), "6", {(9, "min7")}),
+                 ((48, 51, 54, 57), "dim7", {(3, "dim7"), (6, "dim7"), (9, "dim7")}),
+                 ((48, 52, 56), "aug", {(4, "aug"), (8, "aug")})]
+        for notes, quality, expected in cases:
+            with self.subTest(quality=quality):
+                analysis = analyze_voicings(_synth_chord(notes), SAMPLE_RATE)
+                for event in analysis.events:
+                    self.assertEqual(event.chord_type, quality)
+                    self.assertEqual({(item["root_pc"], item["chord_type"]) for item in event.alternatives}, expected)
+                    self.assertTrue(event.evidence["ambiguous"])
+                    self.assertLess(event.confidence, 0.70)
+                    self.assertLessEqual(len(event.alternatives), 3)
+                    self.assertTrue(all(item["score_delta"] <= 0.040 for item in event.alternatives))
+
+    def test_absent_extension_and_missing_root_are_not_invented(self) -> None:
+        """7화음에 9음을 추가하거나 근음 없는 음집합에 들리지 않은 C를 만들어내지 않는다."""
+        for notes in ((48, 52, 55, 58), (52, 55, 58, 62)):
+            with self.subTest(notes=notes):
+                analysis = analyze_voicings(_synth_chord(notes), SAMPLE_RATE)
+                observed = {note % 12 for note in notes}
+                for event in analysis.events:
+                    if event.chord_type == "unknown":
+                        continue
+                    self.assertNotEqual((event.root_pc, event.chord_type), (0, "9"))
+                    self.assertTrue(set(event.pitch_classes).issubset(observed))
+                    for other in event.alternatives:
+                        required = {(other["root_pc"] + interval) % 12 for interval in CHORD_INTERVALS[other["chord_type"]]}
+                        self.assertTrue(required.issubset(observed))
+
+    def test_same_chord_with_new_bass_keeps_separate_inversion_events(self) -> None:
+        """C에서 C/E로 바뀌는 실제 베이스 변화는 같은 코드 이름 때문에 합쳐지지 않는다."""
+        source = np.concatenate((_synth_chord((48, 52, 55)), _synth_chord((40, 48, 52, 55))))
+        analysis = analyze_voicings(source, SAMPLE_RATE)
+        known = [event for event in analysis.events if event.chord_type != "unknown"]
+        self.assertEqual(known[0].symbol, "C")
+        self.assertEqual(known[-1].symbol, "C/E")
+        self.assertLess(known[0].start_seconds, known[-1].start_seconds)
+
+    def test_event_evidence_is_serializable_and_has_local_window_support(self) -> None:
+        """표시 근거는 실제 관측음·템플릿 음·창 개수를 포함하고 확률 주장 없이 직렬화된다."""
+        analysis = analyze_voicings(_synth_chord((48, 52, 55, 62)), SAMPLE_RATE)
+        self.assertEqual(sum(event.evidence["supported_window_count"] for event in analysis.events), analysis.diagnostics["reliable_frame_count"])
+        for event in voicing_analysis_dict(analysis)["events"]:
+            evidence = event["evidence"]
+            self.assertTrue(set(evidence["required_pitch_classes"]).issubset(evidence["observed_pitch_classes"]))
+            self.assertEqual(evidence["supported_window_count"], evidence["analyzed_window_count"])
+            self.assertGreaterEqual(evidence["explained_energy"], 0.60)
+            self.assertLessEqual(evidence["explained_energy"], 1.0)
+            self.assertEqual(event["alternatives"], ())
+        self.assertEqual(analysis.diagnostics["score_semantics"], "heuristic_evidence_not_accuracy_probability")
 
     def test_weak_clean_chords_keep_pitch_identity(self) -> None:
         """작지만 잡음과 구분되는 같은 화음은 음량 정규화 없이 같은 이름을 유지해야 한다."""
@@ -253,6 +356,9 @@ class VoicingAnalysisTests(unittest.TestCase):
                 for event in limited.events:
                     if event.chord_type != "unknown":
                         self.assertIn((event.start_seconds, event.end_seconds, event.symbol), known_bounds)
+                    else:
+                        self.assertEqual(event.alternatives, ())
+                        self.assertEqual(event.evidence, {})
                 self.assertTrue(any(event.chord_type == "unknown" and event.start_seconds <= 4.0 <= event.end_seconds for event in limited.events))
 
     def test_candidate_shapes_are_explicitly_not_detected(self) -> None:

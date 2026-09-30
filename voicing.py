@@ -25,6 +25,17 @@ CHORD_INTERVALS: dict[str, tuple[int, ...]] = {
     "7": (0, 4, 7, 10),
     "maj7": (0, 4, 7, 11),
     "min7": (0, 3, 7, 10),
+    "6": (0, 4, 7, 9),
+    "min6": (0, 3, 7, 9),
+    "min7b5": (0, 3, 6, 10),
+    "dim7": (0, 3, 6, 9),
+    "aug": (0, 4, 8),
+    "add9": (0, 4, 7, 2),
+    "minadd9": (0, 3, 7, 2),
+    "9": (0, 4, 7, 10, 2),
+    "maj9": (0, 4, 7, 11, 2),
+    "min9": (0, 3, 7, 10, 2),
+    "7sus4": (0, 5, 7, 10),
 }
 CHORD_SUFFIX = {
     "power5": "5",
@@ -36,6 +47,17 @@ CHORD_SUFFIX = {
     "7": "7",
     "maj7": "maj7",
     "min7": "m7",
+    "6": "6",
+    "min6": "m6",
+    "min7b5": "m7♭5",
+    "dim7": "dim7",
+    "aug": "aug",
+    "add9": "add9",
+    "minadd9": "m(add9)",
+    "9": "9",
+    "maj9": "maj9",
+    "min9": "m9",
+    "7sus4": "7sus4",
     "unknown": "?",
 }
 
@@ -56,6 +78,8 @@ class VoicingEvent:
     spacing: str
     confidence: float
     candidate_shapes: tuple[dict, ...]
+    alternatives: tuple[dict, ...] = ()
+    evidence: dict = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -192,22 +216,16 @@ def _score_chord(chroma: np.ndarray, root: int, chord_type: str) -> float:
     included = np.array([(root + interval) % 12 for interval in intervals], dtype=int)
     if np.any(chroma[included] < max(float(np.max(chroma)) * 0.12, 1e-12)):
         return -1.0
-    weights = np.array([1.0, 0.88, 0.72, 0.62][: len(included)], dtype=np.float64)
-    present = float(np.dot(chroma[included], weights) / np.sum(weights))
+    coverage = float(np.sum(chroma[included]))
     outside_mask = np.ones(12, dtype=bool)
     outside_mask[included] = False
     if chord_type == "power5" and float(np.sum(chroma[outside_mask])) > 0.18:
         return -1.0
-    outside = float(np.sum(np.sort(chroma[outside_mask])[-3:]))
-    score = present - 0.16 * outside
-    # 7th는 실제 7음이 충분히 들릴 때만 3화음보다 높은 점수를 받는다.
-    if len(intervals) == 4:
-        seventh = float(chroma[(root + intervals[-1]) % 12])
-        score += 0.25 * seventh - 0.018
-    if chord_type == "power5":
-        third_energy = max(float(chroma[(root + 3) % 12]), float(chroma[(root + 4) % 12]))
-        score += 0.025 if third_energy < 0.55 * max(float(chroma[root]), 1e-9) else -0.045
-    return score
+    # 평균 음 에너지로 비교하면 같은 입력에서 5음 코드가 3화음보다 불리해진다.
+    # 전체 설명력에서 음 개수 비용을 빼서 실재하는 확장음은 보존하되 매우 약한
+    # 잔여 피크 하나만으로 더 복잡한 이름을 선택하지 않는다.
+    outside = float(np.sum(chroma[outside_mask]))
+    return coverage - 0.35 * outside - 0.045 * max(0, len(intervals) - 2)
 
 
 def _infer_bass_pc(midi: np.ndarray, fundamentals: np.ndarray) -> int | None:
@@ -289,65 +307,61 @@ def _classify_window(chroma: np.ndarray, salience: np.ndarray, fundamentals: np.
     """한 분석창을 코드, 베이스/역위, 음역, 간격과 신뢰도로 분류한다."""
     midi, _frequencies = _guitar_midi_frequencies()
     if rms < 1e-5 or float(np.max(chroma)) < 0.10 or int(np.count_nonzero(chroma >= float(np.max(chroma)) * 0.12)) < 2:
-        return {"root_pc": None, "chord_type": "unknown", "symbol": "?", "bass_pc": None, "inversion": "unknown", "pitch_classes": (), "register": "unknown", "spacing": "unknown", "confidence": 0.0}
+        return _unknown_window({})
+    bass_pc = _infer_bass_pc(midi, fundamentals)
     candidates = sorted(
-        ((_score_chord(chroma, root, chord_type), root, chord_type) for root in range(12) for chord_type in CHORD_INTERVALS),
+        ((_score_chord(chroma, root, chord_type) + (0.018 if root == bass_pc else 0.0), root, chord_type)
+         for root in range(12) for chord_type in CHORD_INTERVALS),
         reverse=True,
     )
     best_score, root, chord_type = candidates[0]
     if best_score < 0:
-        return {"root_pc": None, "chord_type": "unknown", "symbol": "?", "bass_pc": None, "inversion": "unknown", "pitch_classes": (), "register": "unknown", "spacing": "unknown", "confidence": 0.0}
-    # 거부한 템플릿의 -1 센티널은 경쟁 점수가 아니다. 이를 차감하면 대안이
-    # 없는 두 음만으로도 100%가 되므로 유효 점수의 하한인 0에서 비교한다.
+        return _unknown_window({})
     runner_score = max(0.0, candidates[1][0])
     intervals = CHORD_INTERVALS[chord_type]
     coverage = float(np.sum(chroma[[(root + interval) % 12 for interval in intervals]]))
-    # 대안이 적은 템플릿의 큰 수치 차이도 확률적 확신은 아니므로 기여를 제한한다.
     margin = min(0.15, max(0.0, best_score - runner_score))
     confidence = float(np.clip(0.18 + 1.7 * margin + 0.70 * max(0.0, coverage - 0.38), 0.0, 1.0))
-    pitch_classes, register, spacing = _voicing_profile(midi, salience)
-    bass_pc = _infer_bass_pc(midi, fundamentals)
+    _pitch_classes, register, spacing = _voicing_profile(midi, salience)
     if confidence < 0.34 or coverage < 0.60:
         return _unknown_window({})
-    else:
-        root_value = int(root)
-        symbol = NOTE_NAMES[root] + CHORD_SUFFIX[chord_type]
-        chord_pcs = {(root + interval) % 12 for interval in intervals}
-        if bass_pc == root:
-            inversion = "root"
-        elif bass_pc in chord_pcs:
-            inversion = "inversion"
+    observed = tuple(int(pc) for pc in np.flatnonzero(chroma >= float(np.max(chroma)) * 0.12))
+    evidenced = []
+    # 같은 구성음인 C6/Am7, 감7 전위 등은 베이스 선호로 정렬하되 다른 해석을
+    # 숨기지 않는다. 모든 후보는 현재 창에 필요한 음들이 직접 존재해야 한다.
+    for score, candidate_root, candidate_type in candidates:
+        if score < max(0.0, best_score - 0.040):
+            break
+        candidate_pcs = tuple((candidate_root + interval) % 12 for interval in CHORD_INTERVALS[candidate_type])
+        candidate_coverage = float(np.sum(chroma[list(candidate_pcs)]))
+        if candidate_coverage < 0.60:
+            continue
+        candidate_confidence = min(confidence, 0.18 + 1.7 * min(0.15, max(0.0, score - runner_score))
+                                   + 0.70 * max(0.0, candidate_coverage - 0.38))
+        if candidate_confidence < 0.34:
+            continue
+        inversion = "root" if bass_pc == candidate_root else "inversion" if bass_pc in candidate_pcs else "uncertain"
+        symbol = NOTE_NAMES[candidate_root] + CHORD_SUFFIX[candidate_type]
+        if inversion == "inversion":
             symbol += f"/{NOTE_NAMES[bass_pc]}"
-        else:
-            inversion = "uncertain"
-        # 표시 구성음은 고조파로 생긴 여분 pitch class가 아니라 채택한 코드 템플릿을 따른다.
-        pitch_classes = tuple((root + interval) % 12 for interval in intervals)
-    result = {"root_pc": root_value, "chord_type": chord_type, "symbol": symbol, "bass_pc": bass_pc, "inversion": inversion, "pitch_classes": pitch_classes, "register": register, "spacing": spacing, "confidence": confidence}
-    # 이 창 자체에 모든 구성음과 충분한 설명력이 있는 근접 후보만 시간 문맥에
-    # 제공한다. 이웃 코드의 음을 빌려 오거나 무음에 새 코드를 채우지 않는다.
-    alternatives = []
-    if chord_type != "unknown":
-        for score, candidate_root, candidate_type in candidates:
-            if score < max(0.0, best_score - 0.035):
-                break
-            candidate_pcs = tuple((candidate_root + interval) % 12 for interval in CHORD_INTERVALS[candidate_type])
-            candidate_coverage = float(np.sum(chroma[list(candidate_pcs)]))
-            if candidate_coverage < 0.60:
-                continue
-            candidate = dict(result)
-            candidate["root_pc"] = candidate_root
-            candidate["chord_type"] = candidate_type
-            candidate["pitch_classes"] = candidate_pcs
-            candidate["symbol"] = NOTE_NAMES[candidate_root] + CHORD_SUFFIX[candidate_type]
-            candidate["inversion"] = "root" if bass_pc == candidate_root else "inversion" if bass_pc in candidate_pcs else "uncertain"
-            if candidate["inversion"] == "inversion":
-                candidate["symbol"] += f"/{NOTE_NAMES[bass_pc]}"
-            candidate["confidence"] = min(confidence, float(np.clip(0.18 + 1.7 * min(0.15, max(0.0, score - runner_score)) + 0.70 * max(0.0, candidate_coverage - 0.38), 0.0, 1.0)))
-            if candidate["confidence"] < 0.34:
-                continue
-            candidate["_score"] = score
-            alternatives.append(candidate)
-    result["_candidates"] = alternatives
+        evidenced.append({"root_pc": candidate_root, "chord_type": candidate_type, "symbol": symbol,
+                          "bass_pc": bass_pc, "inversion": inversion, "pitch_classes": candidate_pcs,
+                          "register": register, "spacing": spacing,
+                          "confidence": candidate_confidence,
+                          "_score": score,
+                          "evidence": {"explained_energy": round(candidate_coverage, 4),
+                                       "template_margin": round(max(0.0, score - runner_score), 4),
+                                       "observed_pitch_classes": observed,
+                                       "required_pitch_classes": candidate_pcs}})
+    for candidate in evidenced:
+        alternative_rows = tuple({"root_pc": other["root_pc"], "chord_type": other["chord_type"],
+                                  "symbol": other["symbol"],
+                                  "score_delta": round(float(candidate["_score"] - other["_score"]), 4)}
+                                 for other in evidenced if other is not candidate)[:3]
+        candidate["alternatives"] = alternative_rows
+        candidate["evidence"]["ambiguous"] = bool(alternative_rows)
+    result = dict(evidenced[0])
+    result["_candidates"] = evidenced
     return result
 
 
@@ -355,7 +369,7 @@ def _unknown_window(window: dict) -> dict:
     """원래 시간 좌표만 보존하고 근거가 불충분한 창의 모든 코드 주장을 지운다."""
     return {"root_pc": None, "chord_type": "unknown", "symbol": "?", "bass_pc": None,
             "inversion": "unknown", "pitch_classes": (), "register": "unknown",
-            "spacing": "unknown", "confidence": 0.0,
+            "spacing": "unknown", "confidence": 0.0, "alternatives": (), "evidence": {},
             "_start_seconds": window.get("_start_seconds", 0.0)}
 
 
@@ -409,7 +423,10 @@ def _merge_events(windows: list[dict], hop_seconds: float, window_seconds: float
     start_index = 0
     for index in range(1, len(windows) + 1):
         previous = windows[index - 1]
-        boundary = index == len(windows) or (windows[index]["root_pc"], windows[index]["chord_type"]) != (previous["root_pc"], previous["chord_type"])
+        # 같은 코드라도 실제 베이스가 바뀌면 역위 구간을 합쳐 지우지 않는다.
+        boundary = index == len(windows) or (
+            windows[index]["root_pc"], windows[index]["chord_type"], windows[index].get("bass_pc")
+        ) != (previous["root_pc"], previous["chord_type"], previous.get("bass_pc"))
         if not boundary:
             continue
         groups.append(windows[start_index:index])
@@ -419,6 +436,19 @@ def _merge_events(windows: list[dict], hop_seconds: float, window_seconds: float
     for group_index, group in enumerate(groups):
         representative = max(group, key=lambda item: item["confidence"])
         confidence = float(np.mean([item["confidence"] for item in group]))
+        evidence = dict(representative.get("evidence", {}))
+        alternatives_by_label: dict[tuple, dict] = {}
+        if representative["chord_type"] != "unknown":
+            for item in group:
+                for alternative in item.get("alternatives", ()):
+                    alternatives_by_label.setdefault((alternative["root_pc"], alternative["chord_type"]), alternative)
+            evidence.update(
+                explained_energy=round(float(np.mean([item.get("evidence", {}).get("explained_energy", 0.0) for item in group])), 4),
+                template_margin=round(float(np.mean([item.get("evidence", {}).get("template_margin", 0.0) for item in group])), 4),
+                ambiguous=bool(alternatives_by_label),
+                supported_window_count=len(group),
+                analyzed_window_count=len(group),
+            )
         # 인접한 겹침 창 중심의 중간점을 코드 전환점으로 삼아 이벤트가 겹치거나
         # 마지막 비정규 창 때문에 뒤로 밀리지 않게 한다.
         if group_index == 0:
@@ -451,6 +481,8 @@ def _merge_events(windows: list[dict], hop_seconds: float, window_seconds: float
                 spacing=representative["spacing"],
                 confidence=round(confidence, 4),
                 candidate_shapes=candidate_guitar_shapes(representative["root_pc"], representative["chord_type"]),
+                alternatives=tuple(alternatives_by_label.values())[:3],
+                evidence=evidence,
             )
         )
     return events
@@ -470,7 +502,7 @@ def _limit_timeline_events(events: list[VoicingEvent], max_events: int) -> list[
                 continue
             unknown = replace(event, root_pc=None, chord_type="unknown", symbol="?", bass_pc=None,
                               inversion="unknown", pitch_classes=(), register="unknown", spacing="unknown",
-                              confidence=0.0, candidate_shapes=())
+                              confidence=0.0, candidate_shapes=(), alternatives=(), evidence={})
             if timeline and timeline[-1].chord_type == "unknown":
                 timeline[-1] = replace(timeline[-1], end_seconds=unknown.end_seconds)
             else:
@@ -557,6 +589,9 @@ def analyze_voicings(
         "events_truncated": event_count_before_limit > max_events,
         "temporal_policy": "local_evidence_candidates_with_adjacent_window_support",
         "timeline_limit_policy": "omitted_candidates_become_unknown_without_time_gaps",
+        "chord_template_count": len(CHORD_INTERVALS),
+        "ambiguous_event_count": sum(bool(event.evidence.get("ambiguous")) for event in events),
+        "score_semantics": "heuristic_evidence_not_accuracy_probability",
     }
     limitations = (
         "exact_string_fret_not_identifiable_from_audio",
@@ -566,10 +601,11 @@ def analyze_voicings(
         "confidence_is_template_margin_not_statistical_accuracy",
         "harmonically_overlapping_notes_and_missing_fundamentals_can_remain_unknown",
         "isolated_short_chords_without_repeated_evidence_remain_unknown",
+        "identical_pitch_class_sets_can_have_multiple_valid_chord_names",
     )
     return VoicingAnalysis(
         schema="tonematch-voicing/v1",
-        method="NumPy phase-safe independent-pitch chroma + locally evidenced temporal chord templates",
+        method="NumPy phase-safe independent-pitch chroma + coverage-weighted extended chord templates with explicit alternatives",
         window_seconds=window_seconds,
         hop_seconds=hop_seconds,
         event_count=len(events),

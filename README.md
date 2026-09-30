@@ -1,36 +1,31 @@
-# ToneMatch TMP 0.0.10
+# ToneMatch TMP 0.0.11
 
 ToneMatch TMP is an unofficial, pre-release Windows desktop tool that analyzes a
-local audio/video file or Windows playback capture, isolates the guitar stem,
-and recommends three starting-point tone chains for Fender Tone Master Pro.
-It also provides an experimental chord/voicing timeline. Version 0.0.10 is a
-stem-removal reliability update: selecting a new source clears stale results and
-progress, dangling output links cannot be mistaken for unused filenames, and
-guitar isolation rejects truncated WAV input with cleanup. A new headless
-diagnostic runs the real local model without opening the GUI and produces a
-path-redacted JSON report while deleting its temporary audio output.
-The v0.0.09 selective Stem removal tool and C ABI 2 float32/live-DSP diagnostics
-remain available. The frozen build date is 2026-09-20 KST; final release
-verification is dated 2026-09-30 KST.
-Verified test and package outcomes are recorded in `QA_REPORT_v0.0.10.json`
-and `BUILD_HISTORY.md`; a feature description is not a passed release gate.
+local audio/video file or authorized Windows playback capture, isolates the guitar
+stem, and recommends three starting-point tone chains for Fender Tone Master Pro.
+Version 0.0.11 improves chord/voicing candidate evaluation and evidence display.
+Ambiguous harmony remains a candidate, not a guaranteed transcription or detected
+guitar fingering. The reference-only YouTube field and browser button are removed:
+they did not provide the requested URL-to-audio analysis workflow.
+Selective Stem removal, real-model headless diagnostics and C ABI 2 live DSP remain.
+The build reference date is 2026-09-30 KST. Verified test and package outcomes belong
+in `QA_REPORT_v0.0.11.json` and `BUILD_HISTORY.md`; feature descriptions are not
+passed release gates.
 
 한국어 설치·사용 안내는 [README_KO.md](README_KO.md)를 먼저 읽어 주세요.
 
-## v0.0.10 validation status
+## v0.0.11 validation status
 
 This is an unsigned CPU portable developer prerelease.
-All 234 automated tests passed with warnings treated as errors, as did
-compileall and source/packaged EXE self-tests. Real-model CPU headless checks
-passed for source removal/cancellation and packaged full-song removal plus
-cancellation. The packaged 252.61-second sample completed in 140.87 seconds,
-with 238 monotonic progress updates, source preservation and temporary-file
-cleanup. These are local cached-model measurements, not a listening assessment
-or a speedup claim. Publication requires a fresh final ZIP integrity check;
-`QA_REPORT_v0.0.10.json` and `BUILD_HISTORY.md` record exact scope and results.
-The v0.0.09 results remain historical and are not reused as v0.0.10 evidence.
-Headless model checks do not substitute for manual full-song GUI operation,
-listening-quality assessment, first-download, network-disabled, CUDA or actual
+The September 30 build passed 251 automated tests with warnings treated as errors,
+compileall, source/packaged chord and native-DSP self-tests, and actual cached-CPU
+full-song stem removal/cancellation. Fresh-extract integrity was checked on
+October 1. See `QA_REPORT_v0.0.11.json` and `BUILD_HISTORY.md` for exact scope;
+older release measurements are historical, not evidence for this build.
+Synthetic chord fixtures check specified cases, not accuracy on arbitrary songs.
+Room 335 results without an independently verified, time-aligned chord annotation
+do not establish transcription accuracy. Hidden-window and headless checks do not
+substitute for manual UI, listening, first-download, network-disabled, CUDA or actual
 capture testing. AI leakage and artifacts remain expected limitations.
 
 ## Current scope
@@ -63,7 +58,7 @@ capture testing. AI leakage and artifacts remain expected limitations.
   guitar stem, compared against Current live input as Reference, Current, and delta
   (Current minus Reference) across six stable frequency bands
 - Three ordered TMP recipes with output-route-specific Amp/Cab rules, plus JSON, HTML, and clipboard output
-- Experimental chord/pitch-class timeline with source labels, original-file times,
+- Chord/voicing analysis timeline with source labels, original-file times,
   unknown intervals and evidence diagnostics; guitar-source results may include
   bass/inversion, register, spacing and playable-candidate cues
 - Optional original-mix harmony reference when separated guitar evidence is weak,
@@ -76,11 +71,18 @@ capture testing. AI leakage and artifacts remain expected limitations.
 
 ## Important boundaries
 
-This app does not download or extract YouTube streams. Use a local file you may
-analyze, or capture audio that is normally playing on your PC. It does not write
-presets to Tone Master Pro and does not claim to recover the original rig, exact
-DSP, or physical guitar fingering. Candidate shapes are suggestions, not detected
-tablature.
+There is no YouTube URL input or downloader in this version. Use an authorized local
+file, including your own upload obtained through a service-provided download, or
+record audio only where recording and analysis are permitted. Permission from a
+copyright holder does not by itself settle a platform's access/download conditions.
+YouTube's [Terms of Service](https://www.youtube.com/static?template=terms) and
+[API developer policies](https://developers.google.com/youtube/terms/developer-policies)
+restrict downloading and audio separation outside their authorized routes; the
+app does not assume a general URL extraction entitlement or bypass restrictions.
+The recording feature is a general local input, not a YouTube-download workaround.
+The app does not write presets to Tone Master Pro or claim to recover the original
+rig, exact DSP, or physical guitar fingering. Candidate shapes are suggestions,
+not detected tablature.
 
 Open the outer `Stem removal` workspace tab for a Logic-like workflow; it does not claim Apple
 Logic Pro model or quality parity. Choose a local audio/video source, a new `.wav`
@@ -132,7 +134,22 @@ Repeated support is required for stable candidates; missing evidence remains
 unknown instead of being filled with an invented chord. Source-relative offsets,
 active/reliable frame counts and signal level help explain empty or partial
 results, but drums, single-note parts, dense mixes and separation artifacts can
-still defeat the experimental estimator.
+still defeat the estimator. Evidence scores and alternative candidates describe
+observed support, not a calibrated probability that a chord is correct.
+
+Version 0.0.11 expands 9 chord qualities to 20, adding 6, m6, m7b5, dim7, aug,
+add9, madd9, 9, maj9, m9 and 7sus4. Coverage-based scoring avoids favoring smaller
+subsets over supported extensions. Shared pitch-class sets such as C6/Am7 show
+alternative readings. Observed pitch-class candidates and template tones are
+separate; a changing bass splits inversion events for guitar inputs.
+
+A fixed 480-case synthetic comparison (20 qualities × 12 roots × 2 textures)
+matched the expected primary label in 480 cases, versus 186 in v0.0.10. Both
+rejected all 36 single-note/nonchord/noise controls. This is not 100% accuracy on
+real songs. The complete Room 335 smoke test selected original-mix harmony due
+to a weak separated guitar, with support in only 68/421 windows (16.15%). Many
+intervals remain unknown. That coverage is not accuracy, and no independent,
+time-aligned ground truth was available to validate real-song transcription.
 
 The portable EXE ships with the CPU runtime for broad Windows compatibility.
 CUDA is available only after installing the separate source-development CUDA
@@ -159,9 +176,10 @@ live Current/delta values remain in the session and can be copied from the tab.
 
 This comparison is not a statistical accuracy score or a match probability. It
 does not yet provide live Brightness, Body, Gain, Compression, Ambience, or Match
-percent meters, automatically derive EQ/TMP settings, or write a preset. Reference
-URLs remain browser shortcuts and source records only. The monitor is WASAPI shared
-mode through Python/SoundCard; it is not a C++ device-I/O callback, ASIO, WASAPI
+percent meters, automatically derive EQ/TMP settings, or write a preset.
+Legacy exported reference-URL metadata remains readable for compatibility; it is
+not an input or a network fetch. The monitor is WASAPI shared mode through
+Python/SoundCard; it is not a C++ device-I/O callback, ASIO, WASAPI
 Exclusive, or a hard-real-time audio path.
 
 `native_dsp.py` loads only the bundled `resources/tonematch_dsp.dll`, checks ABI 2,
@@ -199,7 +217,7 @@ py -3.12 -m venv ..\.venv
 & ..\.venv\Scripts\python.exe -m pip install -r requirements.txt
 & ..\.venv\Scripts\python.exe tools\build_native.py --zig C:\Tools\zig-0.15.2\zig.exe
 & ..\.venv\Scripts\python.exe -m unittest discover -s tests -v
-& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.10.json
+& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.11.json
 & ..\.venv\Scripts\python.exe app.py
 ```
 
@@ -212,12 +230,12 @@ fails without a download. The diagnostic is CPU-only. The default `0` duration
 means the full source subject to the normal 20-minute cap. Use a new JSON path.
 
 ```powershell
-& ..\.venv\Scripts\python.exe app.py --stem-self-test-source C:\Audio\sample.mp3 --stem-self-test-output .\stem-check-v0.0.10.json
-& ..\.venv\Scripts\python.exe app.py --stem-self-test-source C:\Audio\sample.mp3 --stem-self-test-output .\stem-cancel-v0.0.10.json --stem-self-test-seconds 31 --stem-self-test-cancel-at 35
+& ..\.venv\Scripts\python.exe app.py --stem-self-test-source C:\Audio\sample.mp3 --stem-self-test-output .\stem-check-v0.0.11.json
+& ..\.venv\Scripts\python.exe app.py --stem-self-test-source C:\Audio\sample.mp3 --stem-self-test-output .\stem-cancel-v0.0.11.json --stem-self-test-seconds 31 --stem-self-test-cancel-at 35
 ```
 
 For the packaged build, replace `python.exe app.py` with
-`.\ToneMatchTMP-v0.0.10.exe` and the same flags. The cancellation threshold
+`.\ToneMatchTMP-v0.0.11.exe` and the same flags. The cancellation threshold
 requests cancellation at a reported percentage, not at a guaranteed elapsed
 time; in-flight inference or network work can delay it. These are optional,
 potentially CPU-intensive diagnostics, not the ordinary lightweight

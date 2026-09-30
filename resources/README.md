@@ -41,7 +41,7 @@ The model's YAML and safetensors are acquired on first AI use and kept in the
 Windows user's Hugging Face cache, shared with guitar isolation. Model weights,
 input media, mixed output, and temporary audio are not release resources and must
 not be added here or to the public archive. The build reference date is
-2026-09-20 KST; current release checks are recorded in `QA_REPORT_v0.0.10.json`
+2026-09-30 KST; current release checks are recorded in `QA_REPORT_v0.0.11.json`
 and `BUILD_HISTORY.md` rather than inferred from the presence of these binaries.
 
 v0.0.10 adds a CPU-only headless stem diagnostic in `stem_diagnostics.py`. It
@@ -49,3 +49,7 @@ uses only a complete local model cache and refuses missing/incomplete cache
 without downloading. Diagnostic WAV output is temporary and deleted; its JSON
 omits source/output filenames, source hashes and model paths. Neither test media
 nor private model caches belong in this directory or release artifacts.
+
+The v0.0.11 chord/evidence and input-UI update does not introduce a YouTube
+extractor, new separation weights or a new native ABI. Verify this build's actual
+artifacts separately; an unchanged binary is not evidence of completed release tests.

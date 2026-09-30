@@ -1,0 +1,441 @@
+{
+  "schema": "tonematch-qa/v1",
+  "app_version": "0.0.11",
+  "build_date": "2026-09-30",
+  "tested_at": "2026-09-30",
+  "status": "passed",
+  "release_channel": "unsigned CPU portable developer prerelease",
+  "platform": "Windows x64 / Python 3.12.14 / CPU portable",
+  "status_scope": "September 30 source/build and actual cached-CPU model checks passed. October 1 fresh-extract verification checks unchanged binary inputs, all files and a fresh EXE self-test. Final documentation is reverified after repackaging before publication. No real-song transcription accuracy claim.",
+  "checks": {
+    "compileall": "passed",
+    "unit_tests": {
+      "status": "passed",
+      "count": 251,
+      "elapsed_seconds": 66.031,
+      "warnings_as_errors": true,
+      "native_tests_skipped": 0
+    },
+    "source_self_test": {
+      "ok": true,
+      "chord_voicing": {
+        "ok": true,
+        "template_count": 20,
+        "ninth_and_evidence_ok": true,
+        "ambiguity_ok": true,
+        "single_note_rejected": true,
+        "real_song_accuracy_measured": false
+      },
+      "reference_compare_ok": true,
+      "developer_sources_ok": true
+    },
+    "native_dsp": {
+      "ok": true,
+      "runtime": {
+        "available": true,
+        "backend": "cpp",
+        "abi_version": 2,
+        "library": "tonematch_dsp.dll",
+        "error": null
+      },
+      "completed_windows": 30,
+      "max_absolute_errors": {
+        "waveform": 0,
+        "frequency_hz": 0,
+        "spectrum_db": 2.1316282072803006e-14,
+        "rms_db": 2.842170943040401e-14,
+        "peak_db": 0,
+        "centroid_hz": 1.2732925824820995e-11
+      },
+      "input_cases": [
+        {
+          "input_dtype": "float32",
+          "completed_windows": 15,
+          "max_absolute_errors": {
+            "waveform": 0,
+            "frequency_hz": 0,
+            "spectrum_db": 2.1316282072803006e-14,
+            "rms_db": 2.842170943040401e-14,
+            "peak_db": 0,
+            "centroid_hz": 1.2732925824820995e-11
+          },
+          "stream_stats_ok": true,
+          "reset_stats_ok": true
+        },
+        {
+          "input_dtype": "float64",
+          "completed_windows": 15,
+          "max_absolute_errors": {
+            "waveform": 0,
+            "frequency_hz": 0,
+            "spectrum_db": 2.1316282072803006e-14,
+            "rms_db": 1.2434497875801753e-14,
+            "peak_db": 0,
+            "centroid_hz": 1.0913936421275139e-11
+          },
+          "stream_stats_ok": true,
+          "reset_stats_ok": true
+        }
+      ],
+      "float32_parity_ok": true,
+      "stream_stats_ok": true,
+      "benchmark": {
+        "scope": "Synthetic PCM push including Python bridge, FFT and smoothing; excludes capture, GUI, AI and offline analysis",
+        "python": "3.12.14",
+        "numpy": "2.2.6",
+        "platform": "Windows",
+        "architecture": "AMD64",
+        "rate_hz": 44100,
+        "channels": 2,
+        "fft_size": 2048,
+        "history_size": 4,
+        "input_dtype": "float32",
+        "warmup_per_round": 32,
+        "rounds": 5,
+        "iterations_per_round": 512,
+        "block_duration_ms": 46.439909297052154,
+        "measurements": {
+          "cpp": {
+            "median_ms": 0.1624,
+            "p95_ms": 0.26680499999999996,
+            "p99_ms": 0.29908199999999996,
+            "max_ms": 0.6015
+          },
+          "numpy": {
+            "median_ms": 0.6841,
+            "p95_ms": 1.066315,
+            "p99_ms": 1.2711989999999995,
+            "max_ms": 1.4327
+          },
+          "cpp_float64_input": {
+            "median_ms": 0.1658,
+            "p95_ms": 0.2906,
+            "p99_ms": 0.32789699999999977,
+            "max_ms": 0.7333
+          }
+        },
+        "median_speedup_numpy_over_cpp": 4.212438423645321,
+        "float64_control_scope": "Same ABI 2 DLL, with float32-to-float64 input allocation inside the timer; not a v0.0.08 binary comparison",
+        "avoided_float64_input_allocation_bytes_per_push": 32768,
+        "order": "Rotating and alternating all three paths; warmup for each path in every round"
+      }
+    },
+    "synthetic_chord_comparison": {
+      "schema": "tonematch-synthetic-voicing-benchmark/v1",
+      "baseline_ref": "v0.0.10",
+      "scope": "Deterministic root-position synthetic chords only; NOT measured real-song or fingering accuracy. Equal pitch-class sets can have several valid names. Expected-present-anywhere is not a top-label accuracy measure.",
+      "case_count": 480,
+      "negative_control_count": 36,
+      "sample_rate": 22050,
+      "elapsed_seconds": 42.195,
+      "totals": {
+        "baseline": {
+          "exact_primary_cases": 186,
+          "expected_present_anywhere_cases": 186,
+          "negative_controls_rejected": 36,
+          "per_quality_exact": {
+            "6": 0,
+            "7": 24,
+            "9": 0,
+            "power5": 24,
+            "major": 24,
+            "minor": 24,
+            "sus2": 9,
+            "sus4": 9,
+            "dim": 24,
+            "maj7": 24,
+            "min7": 24,
+            "min6": 0,
+            "min7b5": 0,
+            "dim7": 0,
+            "aug": 0,
+            "add9": 0,
+            "minadd9": 0,
+            "maj9": 0,
+            "min9": 0,
+            "7sus4": 0
+          }
+        },
+        "current": {
+          "exact_primary_cases": 480,
+          "expected_present_anywhere_cases": 480,
+          "negative_controls_rejected": 36,
+          "per_quality_exact": {
+            "6": 24,
+            "7": 24,
+            "9": 24,
+            "power5": 24,
+            "major": 24,
+            "minor": 24,
+            "sus2": 24,
+            "sus4": 24,
+            "dim": 24,
+            "maj7": 24,
+            "min7": 24,
+            "min6": 24,
+            "min7b5": 24,
+            "dim7": 24,
+            "aug": 24,
+            "add9": 24,
+            "minadd9": 24,
+            "maj9": 24,
+            "min9": 24,
+            "7sus4": 24
+          }
+        }
+      }
+    },
+    "real_audio_smoke": {
+      "ok": true,
+      "app_version": "0.0.11",
+      "duration_seconds": 252.61,
+      "elapsed_seconds": 139.417,
+      "model_cache_only": true,
+      "source_unchanged": true,
+      "progress_updates": 75,
+      "progress_monotonic": true,
+      "selected_analysis_source": "original_mix",
+      "fallback": {
+        "attempted": true,
+        "selected": true,
+        "reason": "weak_guitar_stem",
+        "primary_tonal_coverage": 0.133,
+        "primary_input_rms_dbfs": -63.246,
+        "candidate_tonal_coverage": 0.1615,
+        "candidate_input_rms_dbfs": -12.517
+      },
+      "comparisons": [
+        {
+          "baseline": {
+            "elapsed_seconds": 2.684,
+            "tonal_coverage": 0.2565,
+            "event_count": 96,
+            "known_events": 50,
+            "ambiguous_events": 0,
+            "diagnostics": {
+              "status": "detected",
+              "reason": "detected",
+              "input_rms_dbfs": -63.246,
+              "input_peak_dbfs": -39.329,
+              "input_level": "very_quiet",
+              "analyzed_frame_count": 421,
+              "active_frame_count": 417,
+              "polyphonic_frame_count": 393,
+              "raw_candidate_frame_count": 295,
+              "reliable_frame_count": 108,
+              "unknown_frame_count": 313,
+              "channel_policy": "first_two_channels_rms_spectrum_no_phase_cancellation",
+              "tuning_reference_hz": 440,
+              "event_count_before_limit": 99,
+              "events_truncated": true,
+              "temporal_policy": "local_evidence_candidates_with_adjacent_window_support",
+              "timeline_limit_policy": "omitted_candidates_become_unknown_without_time_gaps"
+            }
+          },
+          "current": {
+            "elapsed_seconds": 3.38,
+            "tonal_coverage": 0.133,
+            "event_count": 65,
+            "known_events": 38,
+            "ambiguous_events": 15,
+            "diagnostics": {
+              "status": "detected",
+              "reason": "detected",
+              "input_rms_dbfs": -63.246,
+              "input_peak_dbfs": -39.329,
+              "input_level": "very_quiet",
+              "analyzed_frame_count": 421,
+              "active_frame_count": 417,
+              "polyphonic_frame_count": 393,
+              "raw_candidate_frame_count": 307,
+              "reliable_frame_count": 56,
+              "unknown_frame_count": 365,
+              "channel_policy": "first_two_channels_rms_spectrum_no_phase_cancellation",
+              "tuning_reference_hz": 440,
+              "event_count_before_limit": 65,
+              "events_truncated": false,
+              "temporal_policy": "local_evidence_candidates_with_adjacent_window_support",
+              "timeline_limit_policy": "omitted_candidates_become_unknown_without_time_gaps",
+              "chord_template_count": 20,
+              "ambiguous_event_count": 15,
+              "score_semantics": "heuristic_evidence_not_accuracy_probability"
+            }
+          }
+        },
+        {
+          "baseline": {
+            "elapsed_seconds": 2.861,
+            "tonal_coverage": 0.1876,
+            "event_count": 73,
+            "known_events": 38,
+            "ambiguous_events": 0,
+            "diagnostics": {
+              "status": "detected",
+              "reason": "detected",
+              "input_rms_dbfs": -12.517,
+              "input_peak_dbfs": 0,
+              "input_level": "normal",
+              "analyzed_frame_count": 421,
+              "active_frame_count": 421,
+              "polyphonic_frame_count": 418,
+              "raw_candidate_frame_count": 326,
+              "reliable_frame_count": 79,
+              "unknown_frame_count": 342,
+              "channel_policy": "first_two_channels_rms_spectrum_no_phase_cancellation",
+              "tuning_reference_hz": 440,
+              "event_count_before_limit": 73,
+              "events_truncated": false,
+              "temporal_policy": "local_evidence_candidates_with_adjacent_window_support",
+              "timeline_limit_policy": "omitted_candidates_become_unknown_without_time_gaps"
+            }
+          },
+          "current": {
+            "elapsed_seconds": 3.391,
+            "tonal_coverage": 0.1615,
+            "event_count": 76,
+            "known_events": 43,
+            "ambiguous_events": 20,
+            "diagnostics": {
+              "status": "detected",
+              "reason": "detected",
+              "input_rms_dbfs": -12.517,
+              "input_peak_dbfs": 0,
+              "input_level": "normal",
+              "analyzed_frame_count": 421,
+              "active_frame_count": 421,
+              "polyphonic_frame_count": 418,
+              "raw_candidate_frame_count": 336,
+              "reliable_frame_count": 68,
+              "unknown_frame_count": 353,
+              "channel_policy": "first_two_channels_rms_spectrum_no_phase_cancellation",
+              "tuning_reference_hz": 440,
+              "event_count_before_limit": 76,
+              "events_truncated": false,
+              "temporal_policy": "local_evidence_candidates_with_adjacent_window_support",
+              "timeline_limit_policy": "omitted_candidates_become_unknown_without_time_gaps",
+              "chord_template_count": 20,
+              "ambiguous_event_count": 20,
+              "score_semantics": "heuristic_evidence_not_accuracy_probability"
+            }
+          }
+        }
+      ],
+      "ground_truth_available": false,
+      "listening_quality_assessed": false,
+      "gui_tested": false,
+      "scope": "Actual input end-to-end smoke test, not chord or fingering accuracy measurement. No sample names, paths, hashes or audio are included."
+    },
+    "packaged_self_test": {
+      "ok": true,
+      "chord_voicing": {
+        "ok": true,
+        "template_count": 20,
+        "ninth_and_evidence_ok": true,
+        "ambiguity_ok": true,
+        "single_note_rejected": true,
+        "real_song_accuracy_measured": false
+      },
+      "reference_compare_ok": true,
+      "developer_sources_ok": true
+    },
+    "packaged_stem_full": {
+      "schema": "tonematch-stem-self-test/v1",
+      "app_version": "0.0.11",
+      "ok": true,
+      "status": "completed",
+      "mode": "complete",
+      "requested_seconds": 0,
+      "cancel_at_percent": null,
+      "compute_device": "cpu",
+      "progress_updates": 238,
+      "progress_percent": 100,
+      "progress_monotonic": true,
+      "source_unchanged": true,
+      "temporary_audio_cleaned": true,
+      "gui_tested": false,
+      "listening_quality_assessed": false,
+      "elapsed_seconds": 123.5568891999992,
+      "wav": {
+        "frames": 11140096,
+        "sample_rate": 44100,
+        "channels": 2,
+        "sample_format": "PCM16LE",
+        "peak_pcm16": 32734
+      },
+      "result": {
+        "duration_seconds": 252.60988662131518,
+        "processed_chunks": 9,
+        "model_downloaded_during_run": false,
+        "inference_total_seconds": 116.96450600000026,
+        "normalization_gain": 0.9171751788343053,
+        "normalized": true,
+        "peak_before_normalization": 1.0892139506759122,
+        "removed_stems": [
+          "guitar",
+          "piano"
+        ],
+        "kept_stems": [
+          "vocals",
+          "drums",
+          "bass",
+          "other"
+        ]
+      },
+      "partial_files_absent": true
+    },
+    "packaged_stem_cancel": {
+      "schema": "tonematch-stem-self-test/v1",
+      "app_version": "0.0.11",
+      "ok": true,
+      "status": "cancelled_as_requested",
+      "mode": "cancel",
+      "requested_seconds": 31,
+      "cancel_at_percent": 60,
+      "compute_device": "cpu",
+      "progress_updates": 9,
+      "progress_percent": 61.12683870967742,
+      "progress_monotonic": true,
+      "source_unchanged": true,
+      "temporary_audio_cleaned": true,
+      "gui_tested": false,
+      "listening_quality_assessed": false,
+      "elapsed_seconds": 11.370379899999534,
+      "cancelled_output_absent": true,
+      "partial_files_absent": true
+    },
+    "final_archive": {
+      "status": "passed",
+      "verified_at": "2026-10-01",
+      "manifest_entries": 4489,
+      "source_input_count": 48,
+      "fresh_exe_self_test": true,
+      "native_parity_ok": true,
+      "weights_absent": true,
+      "user_audio_absent": true,
+      "public_log_private_paths_absent": true,
+      "final_repack_requires_repeat_verification": true
+    }
+  },
+  "limitations": [
+    "Synthetic root-position fixtures are not a real-song accuracy benchmark.",
+    "Room 335 has no independently verified time-aligned chord annotation. Mixed-harmony support is only 68/421 windows (16.15%); many intervals remain unknown. Coverage is not accuracy.",
+    "Bass-based ordering is a preference for ambiguous pitch-class sets, not proof of musical root.",
+    "Candidate guitar shapes are playable suggestions, not detected strings/frets.",
+    "YouTube reference URL controls removed; no direct URL extraction added.",
+    "Manual visible GUI, listening quality, physical audio capture, first model download, OS-network-blocked operation, CUDA and code signing not validated in this release."
+  ],
+  "artifacts": {
+    "exe": {
+      "name": "ToneMatchTMP-v0.0.11.exe",
+      "bytes": 39526707,
+      "sha256": "44EF7D901B29F2253A0D65E095E8D5159F874FFDEB51470029EA23AC7503392F"
+    },
+    "native_dll": {
+      "bytes": 350720,
+      "sha256": "F4D129C73AB015799780B2281909CBB0B793F640655D531E52D851A769854EE5"
+    },
+    "zip_checksum_location": "External SHA256SUMS asset; the archive does not contain its own hash."
+  },
+  "final_archive_verified_at": "2026-10-01",
+  "release_date": "2026-10-01"
+}

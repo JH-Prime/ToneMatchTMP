@@ -898,6 +898,8 @@ def _analyze_chord_sources(
             event["bass_pc"] = None
             event["inversion"] = "unknown"
             event["symbol"] = str(event.get("symbol", "?")).split("/")[0]
+            for alternative in event.get("alternatives", ()):
+                alternative["symbol"] = str(alternative.get("symbol", "?")).split("/")[0]
         return candidate
     fallback["reason"] = "no_better_harmony"
     return primary

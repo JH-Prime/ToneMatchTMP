@@ -78,6 +78,8 @@ class DeveloperModeTests(unittest.TestCase):
             "tests/test_native_integration.py",
             "tests/test_voicing_display.py",
             "tests/test_voicing.py",
+            "tests/test_input_ui.py",
+            "tools/benchmark_voicing.py",
             "tools/collect_licenses.py",
             "tools/build_native.py",
             "tools/verify_native.py",

@@ -24,6 +24,7 @@ SOURCE_NAMES = (
     "voicing.py",
     "tests/test_developer_mode.py",
     "tests/test_engine.py",
+    "tests/test_input_ui.py",
     "tests/test_recorder.py",
     "tests/test_reference_compare.py",
     "tests/test_separator.py",
@@ -37,6 +38,7 @@ SOURCE_NAMES = (
     "tests/test_voicing.py",
     "tools/collect_licenses.py",
     "tools/build_native.py",
+    "tools/benchmark_voicing.py",
     "tools/verify_native.py",
     "tools/generate_function_reference.py",
     "tools/write_manifest.py",
@@ -66,7 +68,7 @@ def _function_rows(path: Path) -> list[tuple[int, str, str]]:
 def generate(project_root: Path, output: Path) -> None:
     """모든 배포 모듈의 함수 설명을 버전이 적힌 단일 문서로 저장한다."""
     lines = [
-        "# ToneMatch TMP 0.0.10 함수 설명서",
+        "# ToneMatch TMP 0.0.11 함수 설명서",
         "",
         "이 문서는 배포 소스의 모든 함수와 한국어 docstring을 자동으로 모은 색인입니다.",
         "앱의 `개발자 옵션`에서는 처리 순서 블록을 클릭해 같은 함수의 실제 소스와 원본 줄 번호를 볼 수 있습니다.",

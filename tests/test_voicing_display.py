@@ -83,6 +83,13 @@ def _render(analysis: dict, language: str = "ko", result: dict | None = None) ->
 class VoicingDisplayTests(unittest.TestCase):
     """보조 믹스 분석이 실제 기타 운지나 확정 코드로 오인되지 않도록 검사한다."""
 
+    def test_legacy_template_tones_are_not_relabelled_as_observed(self) -> None:
+        """근거 필드가 없는 구형 코드 구성음은 검출음으로 바꿔 부르지 않는다."""
+        for language in ("ko", "en"):
+            widget = _render({"events": [_known_event()]}, language)
+            self.assertIn(tr("ui.voicing_template_notes", language), widget.text())
+            self.assertNotIn(tr("ui.voicing_observed_notes", language), widget.text())
+
     def test_original_mix_hides_guitar_shapes_and_slash_bass_without_mutation(self) -> None:
         """원본 믹스에 남은 구형 역위·운지 정보도 표시하지 않고 입력 결과는 보존해야 한다."""
         analysis = {
@@ -95,7 +102,7 @@ class VoicingDisplayTests(unittest.TestCase):
         for language in ("ko", "en"):
             with self.subTest(language=language):
                 widget = _render(analysis, language)
-                self.assertIn("01:01–01:03   C   81%", widget.text("event"))
+                self.assertIn(f"01:01–01:03   C   {tr('ui.voicing_confidence', language)} 81/100", widget.text("event"))
                 self.assertNotIn("C/E", widget.text())
                 self.assertNotIn("TEST_SHAPE_ONLY", widget.text())
                 self.assertNotIn("E A D G B e", widget.text())
@@ -110,7 +117,7 @@ class VoicingDisplayTests(unittest.TestCase):
         for source in ("guitar_stem", "provided_audio"):
             with self.subTest(source=source):
                 widget = _render({"analysis_source": source, "events": [_known_event()]})
-                self.assertIn("00:01–00:03   C/E   81%", widget.text("event"))
+                self.assertIn("00:01–00:03   C/E   근거 점수 81/100", widget.text("event"))
                 self.assertIn("TEST_SHAPE_ONLY · E A D G B e = 0 3 2 0 1 0", widget.text("detail"))
                 self.assertIn(tr("ui.playable_shapes", "ko"), widget.text("warning"))
 
@@ -149,7 +156,7 @@ class VoicingDisplayTests(unittest.TestCase):
             {"analysis_source": "original_mix", "source_start_seconds": 30.0, "events": [_known_event()]},
             result={"source": {"start_seconds": 120.0}, "source_separation": {"used": False}},
         )
-        self.assertIn("00:31–00:33   C   81%", widget.text("event"))
+        self.assertIn("00:31–00:33   C   근거 점수 81/100", widget.text("event"))
         self.assertIn(tr("ui.voicing_source_original_mix", "ko"), widget.text("intro"))
         self.assertNotIn(tr("ui.voicing_source_provided_audio", "ko"), widget.text("intro"))
 
@@ -215,6 +222,58 @@ class VoicingDisplayTests(unittest.TestCase):
         self.assertEqual(widget.calls[-2:], [("configure", "disabled"), ("see", "1.0")])
         self.assertEqual(widget.state, "disabled")
         self.assertIn(tr("ui.voicing_limit", "ko"), widget.text("warning"))
+
+    def test_evidence_distinguishes_observed_notes_template_and_alternative_readings(self) -> None:
+        """검출음·코드 템플릿·모호한 대안을 분리해서 두 언어에 표시하고 원본은 보존한다."""
+        event = _known_event()
+        event["evidence"] = {
+            "observed_pitch_classes": [0, 4, 7, 9],
+            "required_pitch_classes": [0, 4, 7],
+            "ambiguous": True,
+            "supported_window_count": 3,
+            "analyzed_window_count": 4,
+        }
+        event["alternatives"] = [
+            {"symbol": "Am7/C", "score_delta": 0.012},
+            {"symbol": "C/E", "score_delta": 0.0},
+            {"symbol": "Am7/C", "score_delta": 0.013},
+        ]
+        original = deepcopy(event)
+        for language in ("ko", "en"):
+            with self.subTest(language=language):
+                widget = _render({"analysis_source": "guitar_stem", "events": [event]}, language)
+                self.assertIn(tr("ui.voicing_observed_notes", language) + " · C · E · G · A", widget.text("detail"))
+                self.assertIn(tr("ui.voicing_template_notes", language) + " · C · E · G", widget.text("detail"))
+                self.assertIn(tr("ui.voicing_window_support", language, supported=3, total=4), widget.text("detail"))
+                self.assertIn(tr("ui.voicing_alternatives", language) + " · Am7/C\n", widget.text("detail"))
+                self.assertIn(tr("ui.voicing_ambiguous", language), widget.text("warning"))
+                self.assertNotIn("0.012", widget.text())
+                self.assertNotIn("81%", widget.text())
+        self.assertEqual(event, original)
+
+    def test_mix_alternatives_hide_bass_and_unknown_candidates_are_not_promoted(self) -> None:
+        """믹스의 대안도 기타 베이스로 오인되지 않게 하고 미확정 후보를 확정 표시하지 않는다."""
+        event = _known_event()
+        event["alternatives"] = [{"symbol": "Am7/C"}, {"symbol": "Am7/E"}]
+        event["evidence"] = {"ambiguous": True}
+        widget = _render({"analysis_source": "original_mix", "events": [event]})
+        self.assertIn("다른 해석 · Am7\n", widget.text("detail"))
+        self.assertNotIn("Am7/", widget.text())
+        event["chord_type"] = "unknown"
+        unknown = _render({"events": [event]})
+        self.assertNotIn("Am7", unknown.text())
+        self.assertNotIn("81/100", unknown.text())
+        self.assertNotIn("TEST_SHAPE_ONLY", unknown.text())
+
+    def test_score_is_bounded_and_nonfinite_evidence_is_not_shown_as_certainty(self) -> None:
+        """구형·비정상 점수도 범위를 벗어나거나 확률·무한대로 표시되지 않아야 한다."""
+        for value, expected in ((float("nan"), "—"), (float("inf"), "—"), (-0.5, "0/100"), (1.2, "100/100")):
+            with self.subTest(value=value):
+                event = _known_event()
+                event["confidence"] = value
+                widget = _render({"events": [event]})
+                self.assertIn("근거 점수 " + expected, widget.text("event"))
+                self.assertNotIn("%", widget.text("event"))
 
 
 if __name__ == "__main__":
