@@ -1,32 +1,34 @@
-# ToneMatch TMP 0.0.11
+# ToneMatch TMP 0.0.12
 
 ToneMatch TMP is an unofficial, pre-release Windows desktop tool that analyzes a
 local audio/video file or authorized Windows playback capture, isolates the guitar
 stem, and recommends three starting-point tone chains for Fender Tone Master Pro.
-Version 0.0.11 improves chord/voicing candidate evaluation and evidence display.
-Ambiguous harmony remains a candidate, not a guaranteed transcription or detected
-guitar fingering. The reference-only YouTube field and browser button are removed:
-they did not provide the requested URL-to-audio analysis workflow.
-Selective Stem removal, real-model headless diagnostics and C ABI 2 live DSP remain.
-The build reference date is 2026-09-30 KST. Verified test and package outcomes belong
-in `QA_REPORT_v0.0.11.json` and `BUILD_HISTORY.md`; feature descriptions are not
-passed release gates.
+Version 0.0.12 expands audio chord candidates from 20 to 41 qualities and adds an
+independent **Chord & scale guide** with piano-key diagrams, 12 scales/modes and
+major/natural-minor diatonic triads and sevenths in all 12 roots.
+A theoretical chart is not a detected performance: ambiguous harmony remains a
+candidate, not a guaranteed transcription or physical guitar fingering.
+The build reference date is 2026-10-02 KST. Verified outcomes belong in
+`QA_REPORT_v0.0.12.json` and `BUILD_HISTORY.md`.
 
 한국어 설치·사용 안내는 [README_KO.md](README_KO.md)를 먼저 읽어 주세요.
 
-## v0.0.11 validation status
+## v0.0.12 validation status
 
-This is an unsigned CPU portable developer prerelease.
-The September 30 build passed 251 automated tests with warnings treated as errors,
-compileall, source/packaged chord and native-DSP self-tests, and actual cached-CPU
-full-song stem removal/cancellation. Fresh-extract integrity was checked on
-October 1. See `QA_REPORT_v0.0.11.json` and `BUILD_HISTORY.md` for exact scope;
-older release measurements are historical, not evidence for this build.
-Synthetic chord fixtures check specified cases, not accuracy on arbitrary songs.
-Room 335 results without an independently verified, time-aligned chord annotation
-do not establish transcription accuracy. Hidden-window and headless checks do not
-substitute for manual UI, listening, first-download, network-disabled, CUDA or actual
-capture testing. AI leakage and artifacts remain expected limitations.
+The October 2 build passed 282 automated tests (`-W error`), compileall and
+source/frozen chord, theory-guide and native-DSP self-tests. On October 3 the
+final EXE passed actual cached-CPU full-song removal and cancellation, followed
+by fresh-extract integrity and EXE checks. See `QA_REPORT_v0.0.12.json` and
+`BUILD_HISTORY.md` for scope; earlier release passes are not reused.
+
+A fixed synthetic comparison covers 41 qualities × 12 roots × 2 textures:
+v0.0.12 matched 984/984 expected primary labels, versus 480/984 in v0.0.11, and
+both rejected all 36 nonchord controls. This is not real-song accuracy.
+Room 335 has no independently verified, time-aligned chord annotation in this
+project, so successful processing or detected coverage cannot establish
+transcription accuracy. This remains an unsigned CPU developer prerelease.
+Hidden-window/headless checks do not substitute for manual UI, listening,
+first-download, network-disabled, CUDA or actual capture testing.
 
 ## Current scope
 
@@ -34,7 +36,7 @@ capture testing. AI leakage and artifacts remain expected limitations.
 - Tone Master Pro firmware 1.8.58 and Model Guide Rev. J catalog
 - Up to 20 minutes per analysis; `end = 0` means through the end, capped at 20 minutes
 - Demucs `htdemucs_6s` guitar-stem isolation for full mixes
-- Separate outer `Tone analysis` and `Stem removal` workspace tabs; the latter removes any one to five selected
+- Three outer workspaces: `Tone analysis`, `Stem removal`, and `Chord & scale guide`; Stem removal removes any one to five selected
   `vocals`/`drums`/`bass`/`guitar`/`piano`/`other` estimates, mixes what remains,
   and writes one new 44.1 kHz stereo PCM16 WAV
 - Stem-removal progress, elapsed time and cancellation, with no source or
@@ -68,6 +70,33 @@ capture testing. AI leakage and artifacts remain expected limitations.
 - Native NumPy vector optimization for repeated chord/voicing spectrum work
 - Clickable 11-stage developer diagram with bundled source, Korean docstrings, logs, and changelog
 - Quad Cortex and Line 6 Helix are visible extension placeholders only
+
+## Chord & scale guide
+
+Open the third outer **Chord & scale guide** tab without loading or analyzing
+audio. Choose a root, then a category and type. The keyboard, chord symbol,
+component notes and degree formula update immediately.
+
+- **Chords:** 41 qualities × 12 roots, including major/minor, sus, diminished,
+  augmented, 6/9, 7/9/11/13, minor-major and altered dominant chords.
+- **Scales:** major/Ionian, natural minor/Aeolian, major and minor pentatonic,
+  harmonic minor, ascending melodic minor, Dorian, Phrygian, Lydian, Mixolydian,
+  Locrian and six-note minor blues. Pentatonic is a scale, not a chord quality.
+- **Diatonic:** each degree of a major or natural-minor scale has a triad and a
+  seventh chord. Select a row to inspect its tones on the keyboard. “Diatonic”
+  describes a relationship to a scale, not another independent chord type.
+
+The chart preserves theoretical spelling, such as E♯ and B♯ in C♯ major or C♭ in
+E♭ natural minor. Enharmonic names can share one piano key. Extensions 9, 11 and
+13 appear in their upper octave; actual playing can use other inversions,
+octaves and omissions. Natural-minor diatonic rows do not silently substitute
+harmonic-minor V chords. Melodic minor is explicitly the ascending form.
+This guide is read-only and independent of the audio chord timeline; it does
+not detect scales or keys, fill unknown audio events, or alter tone recipes.
+
+Theory references: [Yamaha on pentatonic scales](https://hub.yamaha.com/guitars/g-how-to/a-guitarists-guide-to-major-and-minor-pentatonic-scales/),
+[minor-scale forms](https://musictheory.pugetsound.edu/mt21c/MinorScales.html),
+and [diatonic seventh chords](https://musictheory.pugetsound.edu/mt21c/RomanNumeralsOfDiatonicSeventhChords.html).
 
 ## Important boundaries
 
@@ -137,7 +166,14 @@ results, but drums, single-note parts, dense mixes and separation artifacts can
 still defeat the estimator. Evidence scores and alternative candidates describe
 observed support, not a calibrated probability that a chord is correct.
 
-Version 0.0.11 expands 9 chord qualities to 20, adding 6, m6, m7b5, dim7, aug,
+Version 0.0.12 adds 21 audio qualities to the previous 20: 7sus2,
+11/maj11/m11, 13/maj13/m13, m(maj7)/m(maj9), 6/9/m6/9,
+7♭5/7♯5/7♭9/7♯9/7♯11/7♭13, maj7♯5/maj7♯11, add11/m(add11).
+Extensions still need observed support, and additional labels are not a guarantee
+that complex real-world harmony can be uniquely identified.
+
+Historical v0.0.11 evidence (not current-build validation): that version expanded
+9 chord qualities to 20, adding 6, m6, m7b5, dim7, aug,
 add9, madd9, 9, maj9, m9 and 7sus4. Coverage-based scoring avoids favoring smaller
 subsets over supported extensions. Shared pitch-class sets such as C6/Am7 show
 alternative readings. Observed pitch-class candidates and template tones are
@@ -146,7 +182,7 @@ separate; a changing bass splits inversion events for guitar inputs.
 A fixed 480-case synthetic comparison (20 qualities × 12 roots × 2 textures)
 matched the expected primary label in 480 cases, versus 186 in v0.0.10. Both
 rejected all 36 single-note/nonchord/noise controls. This is not 100% accuracy on
-real songs. The complete Room 335 smoke test selected original-mix harmony due
+real songs. The v0.0.11 complete Room 335 smoke test selected original-mix harmony due
 to a weak separated guitar, with support in only 68/421 windows (16.15%). Many
 intervals remain unknown. That coverage is not accuracy, and no independent,
 time-aligned ground truth was available to validate real-song transcription.
@@ -217,7 +253,7 @@ py -3.12 -m venv ..\.venv
 & ..\.venv\Scripts\python.exe -m pip install -r requirements.txt
 & ..\.venv\Scripts\python.exe tools\build_native.py --zig C:\Tools\zig-0.15.2\zig.exe
 & ..\.venv\Scripts\python.exe -m unittest discover -s tests -v
-& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.11.json
+& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.12.json
 & ..\.venv\Scripts\python.exe app.py
 ```
 
@@ -230,12 +266,12 @@ fails without a download. The diagnostic is CPU-only. The default `0` duration
 means the full source subject to the normal 20-minute cap. Use a new JSON path.
 
 ```powershell
-& ..\.venv\Scripts\python.exe app.py --stem-self-test-source C:\Audio\sample.mp3 --stem-self-test-output .\stem-check-v0.0.11.json
-& ..\.venv\Scripts\python.exe app.py --stem-self-test-source C:\Audio\sample.mp3 --stem-self-test-output .\stem-cancel-v0.0.11.json --stem-self-test-seconds 31 --stem-self-test-cancel-at 35
+& ..\.venv\Scripts\python.exe app.py --stem-self-test-source C:\Audio\sample.mp3 --stem-self-test-output .\stem-check-v0.0.12.json
+& ..\.venv\Scripts\python.exe app.py --stem-self-test-source C:\Audio\sample.mp3 --stem-self-test-output .\stem-cancel-v0.0.12.json --stem-self-test-seconds 31 --stem-self-test-cancel-at 35
 ```
 
 For the packaged build, replace `python.exe app.py` with
-`.\ToneMatchTMP-v0.0.11.exe` and the same flags. The cancellation threshold
+`.\ToneMatchTMP-v0.0.12.exe` and the same flags. The cancellation threshold
 requests cancellation at a reported percentage, not at a guaranteed elapsed
 time; in-flight inference or network work can delay it. These are optional,
 potentially CPU-intensive diagnostics, not the ordinary lightweight

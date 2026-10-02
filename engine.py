@@ -29,7 +29,7 @@ from separator import (
     separate_guitar_wav,
     separation_info_dict,
 )
-from voicing import analyze_voicings, voicing_analysis_dict
+from voicing import analyze_voicings, voicing_analysis_dict, without_bass_note
 
 
 SAMPLE_RATE = 22_050
@@ -897,9 +897,9 @@ def _analyze_chord_sources(
             event["spacing"] = "unknown"
             event["bass_pc"] = None
             event["inversion"] = "unknown"
-            event["symbol"] = str(event.get("symbol", "?")).split("/")[0]
+            event["symbol"] = without_bass_note(str(event.get("symbol", "?")))
             for alternative in event.get("alternatives", ()):
-                alternative["symbol"] = str(alternative.get("symbol", "?")).split("/")[0]
+                alternative["symbol"] = without_bass_note(str(alternative.get("symbol", "?")))
         return candidate
     fallback["reason"] = "no_better_harmony"
     return primary

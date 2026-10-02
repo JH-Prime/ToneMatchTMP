@@ -8,6 +8,7 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 | 버전 | 상태 | 범위 |
 |---|---|---|
+| `0.0.12` | 서명되지 않은 CPU 포터블 개발자 프리릴리스 | 41종 코드, 12종 음계·장조/자연단조 다이어토닉 사전, 12근음 건반 참고 |
 | `0.0.11` | 서명되지 않은 CPU 포터블 개발자 프리릴리스 | 20종 코드 템플릿·모호성·구성음 근거·역위 보존, 참고용 YouTube UI 제거 |
 | `0.0.10` | 서명되지 않은 CPU 포터블 개발자 프리릴리스 | 악기 제거 상태·경로 보호, 잘린 WAV 거부, CPU·로컬 캐시 전용 실제 모델 CLI 진단 |
 | `0.0.09` | 서명되지 않은 CPU 포터블 개발자 프리릴리스 | 선택 악기 제거 도구와 C ABI 2 float32 직접 입력·실시간 DSP 진단 |
@@ -19,6 +20,72 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 | `0.0.03` | 포터블 개발 프리뷰 빌드 완료 | 포터블 개발 ZIP, 한·영 handoff, 로그·빌드 이력, NumPy 코드/보이싱 분석(실험) |
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
+
+## 0.0.12 — Expanded chord vocabulary and keyboard theory guide
+
+- 동결 빌드일 / Frozen build date: `2026-10-02 KST`
+- 최종 릴리스 검증일 / Final release verification: `2026-10-03 KST`
+- 상태 / Status: `UNSIGNED CPU PORTABLE DEVELOPER PRERELEASE`
+- Scope: 20→41 audio chord templates; 12-root chord/scale guide with 41 chord
+  qualities, 12 scales/modes, and major/natural-minor diatonic triads and sevenths.
+- The third outer workspace tab works without audio. Its keyboard preserves
+  compound 9th/11th/13th intervals and degree-aware enharmonic spelling.
+- Pentatonic scales and diatonic harmony are reference theory, not additional
+  chord qualities or automatic audio key/scale detection.
+- Full listed-tone evidence is required; omitted-tone/rootless extended chord
+  names are not inferred. Ambiguity, unknown spans and original-mix safeguards
+  remain. A terminal slash bass is removed without truncating 6/9.
+- Temporal tracking separates absolute local-evidence candidates from near-score
+  displayed alternatives. Unsupported candidates are pruned before path selection,
+  followed by a final adjacent-label check. No neighbor-tone copying or minimum-evidence
+  threshold relaxation; broader retention still does not establish correct transcription.
+
+### 검증 / Verification
+
+- 282 automated tests passed with `-W error` in 134.432 seconds; compileall passed.
+- Source and final EXE self-tests passed: 41 chord templates, new suspended/extended
+  chords, ambiguity, single-note rejection, actual theory calculations (41/12/2 ×
+  12 roots), enharmonic spelling, Reference Compare, developer source and C++ ABI 2 parity.
+- Fixed independent synthetic comparison: 984 cases (41 qualities × 12 roots ×
+  two textures), v0.0.11 primary matches 480/984 → v0.0.12 984/984.
+  All 36 negative controls rejected in both versions; elapsed 109.182 seconds.
+  This is not measured real-song accuracy or proof of detected fingering.
+- Actual Room 335, 252.61 seconds: comparison-inclusive source run 122.245 seconds,
+  75 monotonic progress updates to 100%, source unchanged, local model cache only.
+  Weak guitar (-63.246 dBFS) selected original-mix harmony.
+  Support is 151/421 windows (35.87%) before display limiting, versus 68/421 in
+  v0.0.11. This is coverage, not accuracy. The timeline is limited from 165 to
+  96 events (50 known / 46 unknown); omitted candidates become unknown without time gaps.
+  Many intervals remain unknown, and retained candidates may still be wrong.
+- Final EXE real-model removal: 252.6099 seconds / 11,140,096 frames, nine chunks,
+  118.817 seconds elapsed, 238 monotonic progress updates to 100%, no model download.
+  Output checked as stereo 44.1 kHz PCM16; normalization gain 0.91717518; source
+  preserved and temporary/partial audio cleaned. Timings are not a speedup or quality claim.
+- Final EXE cancellation: 31-second selection, requested at 60%, observed at
+  61.12684%, 10.092 seconds elapsed; cancelled output absent, source unchanged
+  and temporary/partial files cleaned.
+- Staged source-input verification: all 51 inputs and bundled developer code match;
+  native DLL/source/imports/licenses and actual ABI 2 agree.
+- Fresh extraction verified all 4493 manifest entries, 51 matching source
+  inputs, native DLL/imports/licenses, absence of audio/weights/private build-log
+  paths, and a new EXE self-test. Final docs are repackaged and independently
+  verified again before publication.
+
+### 산출물 / Artifacts
+
+- EXE: `ToneMatchTMP-v0.0.12.exe`, 39,565,178 bytes
+- EXE SHA-256: `46E38E5259C0722D3CC2CCA8A852F45EE293E70E6FD1EFB89299823E4544A0DD`
+- Native DLL: 350,720 bytes, ABI 2; SHA-256 `F4D129C73AB015799780B2281909CBB0B793F640655D531E52D851A769854EE5`
+- ZIP: `ToneMatchTMP-v0.0.12-Windows-x64-Portable-Dev.zip`; final ZIP hash belongs
+  in external `ToneMatchTMP-v0.0.12-SHA256SUMS.txt`, not inside the archive itself.
+- Includes privacy-safe synthetic/actual-input chord checks and final EXE
+  stem-completion/cancellation JSON. No user audio or model weights.
+- Comparative benchmark requires a Git checkout with tag `v0.0.11`:
+  `python tools/benchmark_voicing.py --output NEW.json`.
+
+Manual visible GUI/listening, physical capture, first download, OS-network-blocked
+operation, CUDA and code signing remain unverified. Evidence is not a calibrated
+probability; theoretical keyboard layouts and candidate shapes are not detected fingering.
 
 ## 0.0.11 — Extended chord evidence and input cleanup
 

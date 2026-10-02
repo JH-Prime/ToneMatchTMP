@@ -17,6 +17,7 @@ if str(MODULE_DIR) not in sys.path:
 
 from app import INPUT_METHODS, ToneMatchApp, _self_test_voicing  # noqa: E402
 from i18n import LANGUAGE_LABELS, tr  # noqa: E402
+from voicing import CHORD_INTERVALS  # noqa: E402
 
 
 @contextmanager
@@ -57,7 +58,9 @@ class InputUiTests(unittest.TestCase):
         """EXE 진단은 확장화음과 대안·단음 거부를 확인하되 실제 곡 정확도를 주장하지 않는다."""
         result = _self_test_voicing()
         self.assertTrue(result["ok"])
-        self.assertEqual(result["template_count"], 20)
+        self.assertEqual(result["template_count"], len(CHORD_INTERVALS))
+        self.assertTrue(result["suspended_seventh_ok"])
+        self.assertTrue(result["minor_eleventh_ok"])
         self.assertTrue(result["single_note_rejected"])
         self.assertFalse(result["real_song_accuracy_measured"])
 

@@ -26,6 +26,17 @@ CASES = {
     "dim7": (0, 3, 6, 9), "aug": (0, 4, 8), "add9": (0, 4, 7, 14),
     "minadd9": (0, 3, 7, 14), "9": (0, 4, 7, 10, 14),
     "maj9": (0, 4, 7, 11, 14), "min9": (0, 3, 7, 10, 14), "7sus4": (0, 5, 7, 10),
+    "7sus2": (0, 2, 7, 10), "11": (0, 4, 7, 10, 14, 17),
+    "maj11": (0, 4, 7, 11, 14, 17), "min11": (0, 3, 7, 10, 14, 17),
+    "13": (0, 4, 7, 10, 14, 17, 21), "maj13": (0, 4, 7, 11, 14, 17, 21),
+    "min13": (0, 3, 7, 10, 14, 17, 21), "minmaj7": (0, 3, 7, 11),
+    "minmaj9": (0, 3, 7, 11, 14), "6add9": (0, 4, 7, 9, 14),
+    "min6add9": (0, 3, 7, 9, 14), "7b5": (0, 4, 6, 10),
+    "7sharp5": (0, 4, 8, 10), "7b9": (0, 4, 7, 10, 13),
+    "7sharp9": (0, 4, 7, 10, 15), "7sharp11": (0, 4, 7, 10, 18),
+    "7b13": (0, 4, 7, 10, 20), "maj7sharp5": (0, 4, 8, 11),
+    "maj7sharp11": (0, 4, 7, 11, 18), "add11": (0, 4, 7, 17),
+    "minadd11": (0, 3, 7, 17),
 }
 RATE = 22_050
 
@@ -79,9 +90,9 @@ def load_baseline(reference: str):
 
 
 def main() -> None:
-    """고정된 480개 코드·36개 음성 대조 사례를 실행하고 새 JSON 보고서를 만든다."""
+    """고정된 984개 코드·36개 비화음 대조 사례를 실행하고 새 JSON 보고서를 만든다."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--baseline-ref", default="v0.0.10")
+    parser.add_argument("--baseline-ref", default="v0.0.11")
     parser.add_argument("--output", type=Path, required=True)
     arguments = parser.parse_args()
     if arguments.output.exists():

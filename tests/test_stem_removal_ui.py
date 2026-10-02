@@ -176,7 +176,7 @@ class StemRemovalLayoutTests(unittest.TestCase):
         """악기 제거는 상위 작업 탭에 두고 긴 폼은 내부 스크롤로 접근 가능해야 한다."""
         with tempfile.TemporaryDirectory() as temporary:
             with hidden_application(Path(temporary)) as (root, application):
-                self.assertEqual(len(application.workspace_notebook.tabs()), 2)
+                self.assertEqual(len(application.workspace_notebook.tabs()), 3)
                 self.assertEqual(application.workspace_notebook.tab(0, "text"), tr("ui.tone_analysis_tab", "ko"))
                 self.assertEqual(application.workspace_notebook.tab(1, "text"), tr("ui.stem_removal_tab", "ko"))
                 self.assertEqual(application.stem_tab.master, application.workspace_notebook)

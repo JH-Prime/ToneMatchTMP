@@ -233,6 +233,29 @@ class ChordSourcePolicyTests(unittest.TestCase):
         self.assertEqual(event["evidence"], candidate["events"][1]["evidence"])
         self.assertEqual(candidate["events"][1]["alternatives"][0]["symbol"], "Am7/C")
 
+    def test_mix_fallback_preserves_six_nine_names_in_primary_and_alternatives(self) -> None:
+        """믹스 결과의 6/9 본문은 보존하고 주 후보·대안 끝의 실제 베이스 표기만 제거한다."""
+        for quality, symbol, alternative in (("6add9", "C6/9/E", "Cm6/9/E♭"),
+                                              ("min6add9", "Cm6/9/E♭", "C6/9/E")):
+            with self.subTest(quality=quality):
+                candidate = _voicing_payload(0.7)
+                event = candidate["events"][1]
+                event.update(chord_type=quality, symbol=symbol,
+                             alternatives=[{"symbol": alternative}, {"symbol": "C6/9"}, {"symbol": "Cm6/9"}])
+                original = copy.deepcopy(candidate)
+                result, _, _ = self._run_sources(_voicing_payload(0.02, 1), candidate)
+                actual = result["events"][1]
+                self.assertEqual(result["analysis_source"], "original_mix")
+                self.assertEqual(actual["symbol"], symbol.rsplit("/", 1)[0])
+                self.assertEqual([item["symbol"] for item in actual["alternatives"]],
+                                 [alternative.rsplit("/", 1)[0], "C6/9", "Cm6/9"])
+                self.assertIsNone(actual["bass_pc"])
+                self.assertEqual(candidate, original)
+                guitar, _, _ = self._run_sources(candidate)
+                self.assertEqual(guitar["analysis_source"], "guitar_stem")
+                self.assertEqual(guitar["events"][1]["symbol"], symbol)
+                self.assertEqual(guitar["events"][1]["alternatives"], event["alternatives"])
+
     def test_near_silent_guitar_triggers_fallback_even_with_coverage(self) -> None:
         """낮은 음량 stem의 그럴듯한 코드 비율만으로 원본 참고 분석을 막지 않는다."""
         quiet = self.guitar * 0.001
@@ -715,6 +738,35 @@ class EngineAnalysisTests(unittest.TestCase):
             self.assertEqual(restored["chord_voicing"]["events"][1]["evidence"], event["evidence"])
             self.assertEqual(result, before)
             self.assertNotIn(f"<th>{report._rt('url', language)}</th>", document)
+
+    def test_six_nine_html_keeps_quality_and_only_hides_mixed_bass(self) -> None:
+        """한영 HTML에서 6/9 주 코드·대안은 보존하고 원본 믹스의 베이스만 숨긴다."""
+        baseline = self._analyze_result(self.base)
+        for language in ("ko", "en"):
+            for source in ("original_mix", "guitar_stem"):
+                for quality, symbol, alternative in (("6add9", "C6/9/E", "Cm6/9/E♭"),
+                                                      ("min6add9", "Cm6/9/E♭", "C6/9/E")):
+                    with self.subTest(language=language, source=source, quality=quality):
+                        result = engine.relocalize_result(baseline, language)
+                        analysis = _voicing_payload(0.7)
+                        analysis["analysis_source"] = source
+                        analysis["events"][1].update(chord_type=quality, symbol=symbol,
+                                                      alternatives=[{"symbol": alternative}, {"symbol": "C6/9"}, {"symbol": "Cm6/9"}],
+                                                      evidence={"ambiguous": True})
+                        result["chord_voicing"] = analysis
+                        original = copy.deepcopy(result)
+                        with tempfile.TemporaryDirectory() as directory:
+                            path = Path(directory) / "six-nine.html"
+                            report.save_html(result, path)
+                            document = path.read_text(encoding="utf-8")
+                        expected = symbol.rsplit("/", 1)[0] if source == "original_mix" else symbol
+                        other = alternative.rsplit("/", 1)[0] if source == "original_mix" else alternative
+                        self.assertIn(f"<b>{expected}</b>", document)
+                        self.assertIn(report.tr("ui.voicing_alternatives", language) + ": " + other + ", C6/9, Cm6/9", document)
+                        if source == "original_mix":
+                            self.assertNotIn(symbol, document)
+                            self.assertNotIn(alternative, document)
+                        self.assertEqual(result, original)
 
     def test_chord_context_and_event_labels_are_html_escaped(self) -> None:
         """코드 진단 문구와 후보 운지에 포함된 특수문자가 HTML로 실행되지 않는다."""

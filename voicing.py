@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import asdict, dataclass, field, replace
 from functools import lru_cache
 from typing import Iterable
@@ -36,6 +37,29 @@ CHORD_INTERVALS: dict[str, tuple[int, ...]] = {
     "maj9": (0, 4, 7, 11, 2),
     "min9": (0, 3, 7, 10, 2),
     "7sus4": (0, 5, 7, 10),
+    "7sus2": (0, 2, 7, 10),
+    # 11·13화음은 모든 확장 구성음이 실제 관측된 경우만 채택한다.
+    # 연주에서 흔한 5도·11도 생략이나 루트리스 보이싱을 임의로 보충하지 않는다.
+    "11": (0, 4, 7, 10, 2, 5),
+    "maj11": (0, 4, 7, 11, 2, 5),
+    "min11": (0, 3, 7, 10, 2, 5),
+    "13": (0, 4, 7, 10, 2, 5, 9),
+    "maj13": (0, 4, 7, 11, 2, 5, 9),
+    "min13": (0, 3, 7, 10, 2, 5, 9),
+    "minmaj7": (0, 3, 7, 11),
+    "minmaj9": (0, 3, 7, 11, 2),
+    "6add9": (0, 4, 7, 9, 2),
+    "min6add9": (0, 3, 7, 9, 2),
+    "7b5": (0, 4, 6, 10),
+    "7sharp5": (0, 4, 8, 10),
+    "7b9": (0, 4, 7, 10, 1),
+    "7sharp9": (0, 4, 7, 10, 3),
+    "7sharp11": (0, 4, 7, 10, 6),
+    "7b13": (0, 4, 7, 10, 8),
+    "maj7sharp5": (0, 4, 8, 11),
+    "maj7sharp11": (0, 4, 7, 11, 6),
+    "add11": (0, 4, 7, 5),
+    "minadd11": (0, 3, 7, 5),
 }
 CHORD_SUFFIX = {
     "power5": "5",
@@ -58,6 +82,27 @@ CHORD_SUFFIX = {
     "maj9": "maj9",
     "min9": "m9",
     "7sus4": "7sus4",
+    "7sus2": "7sus2",
+    "11": "11",
+    "maj11": "maj11",
+    "min11": "m11",
+    "13": "13",
+    "maj13": "maj13",
+    "min13": "m13",
+    "minmaj7": "m(maj7)",
+    "minmaj9": "m(maj9)",
+    "6add9": "6/9",
+    "min6add9": "m6/9",
+    "7b5": "7♭5",
+    "7sharp5": "7♯5",
+    "7b9": "7♭9",
+    "7sharp9": "7♯9",
+    "7sharp11": "7♯11",
+    "7b13": "7♭13",
+    "maj7sharp5": "maj7♯5",
+    "maj7sharp11": "maj7♯11",
+    "add11": "add11",
+    "minadd11": "m(add11)",
     "unknown": "?",
 }
 
@@ -330,7 +375,7 @@ def _classify_window(chroma: np.ndarray, salience: np.ndarray, fundamentals: np.
     # 같은 구성음인 C6/Am7, 감7 전위 등은 베이스 선호로 정렬하되 다른 해석을
     # 숨기지 않는다. 모든 후보는 현재 창에 필요한 음들이 직접 존재해야 한다.
     for score, candidate_root, candidate_type in candidates:
-        if score < max(0.0, best_score - 0.040):
+        if score < 0.0:
             break
         candidate_pcs = tuple((candidate_root + interval) % 12 for interval in CHORD_INTERVALS[candidate_type])
         candidate_coverage = float(np.sum(chroma[list(candidate_pcs)]))
@@ -357,11 +402,16 @@ def _classify_window(chroma: np.ndarray, salience: np.ndarray, fundamentals: np.
         alternative_rows = tuple({"root_pc": other["root_pc"], "chord_type": other["chord_type"],
                                   "symbol": other["symbol"],
                                   "score_delta": round(float(candidate["_score"] - other["_score"]), 4)}
-                                 for other in evidenced if other is not candidate)[:3]
+                                 for other in evidenced if other is not candidate
+                                 and abs(candidate["_score"] - other["_score"]) <= 0.040)[:3]
         candidate["alternatives"] = alternative_rows
         candidate["evidence"]["ambiguous"] = bool(alternative_rows)
     result = dict(evidenced[0])
-    result["_candidates"] = evidenced
+    result["_candidates"] = [candidate for candidate in evidenced if candidate["_score"] >= best_score - 0.040]
+    # 순간 멜로디가 만든 확장화음 하나가 기존 화음의 국소 증거를 목록에서
+    # 지워서는 안 된다. 시간 추적에는 같은 절대 근거 기준을 통과한 모든
+    # 후보를 제공하고, 표시용 대안은 여전히 근접 점수에 한정한다.
+    result["_temporal_candidates"] = evidenced
     return result
 
 
@@ -374,10 +424,24 @@ def _unknown_window(window: dict) -> dict:
 
 
 def _smooth_labels(windows: list[dict]) -> list[dict]:
-    """각 창에서 이미 입증된 근접 후보만 연결하고 반복 증거 없는 단발 라벨은 거부한다."""
+    """각 창의 직접 근거와 인접 창의 반복 근거가 있는 후보만 시간 경로에 사용한다."""
     if not windows:
         return []
-    candidates = [item.get("_candidates") or [item] for item in windows]
+    candidates = [item.get("_temporal_candidates") or item.get("_candidates") or [item] for item in windows]
+    if len(candidates) > 1:
+        labels_by_window = [{(option["root_pc"], option["chord_type"]) for option in options}
+                            for options in candidates]
+        supported_candidates = []
+        for index, options in enumerate(candidates):
+            neighbors = set()
+            if index > 0:
+                neighbors.update(labels_by_window[index - 1])
+            if index + 1 < len(candidates):
+                neighbors.update(labels_by_window[index + 1])
+            supported = [option for option in options if option["chord_type"] == "unknown"
+                         or (option["root_pc"], option["chord_type"]) in neighbors]
+            supported_candidates.append(supported or [_unknown_window(windows[index])])
+        candidates = supported_candidates
     costs: list[list[float]] = []
     previous_indexes: list[list[int]] = []
     for index, options in enumerate(candidates):
@@ -587,9 +651,10 @@ def analyze_voicings(
         "tuning_reference_hz": float(tuning_reference_hz),
         "event_count_before_limit": event_count_before_limit,
         "events_truncated": event_count_before_limit > max_events,
-        "temporal_policy": "local_evidence_candidates_with_adjacent_window_support",
+        "temporal_policy": "absolute_local_evidence_candidates_pruned_for_adjacent_support_before_path_selection",
         "timeline_limit_policy": "omitted_candidates_become_unknown_without_time_gaps",
         "chord_template_count": len(CHORD_INTERVALS),
+        "template_tone_policy": "all_listed_pitch_classes_required_no_omitted_tone_inference",
         "ambiguous_event_count": sum(bool(event.evidence.get("ambiguous")) for event in events),
         "score_semantics": "heuristic_evidence_not_accuracy_probability",
     }
@@ -602,6 +667,7 @@ def analyze_voicings(
         "harmonically_overlapping_notes_and_missing_fundamentals_can_remain_unknown",
         "isolated_short_chords_without_repeated_evidence_remain_unknown",
         "identical_pitch_class_sets_can_have_multiple_valid_chord_names",
+        "full_extension_templates_require_each_listed_pitch_class",
     )
     return VoicingAnalysis(
         schema="tonematch-voicing/v1",
@@ -624,3 +690,8 @@ def voicing_analysis_dict(analysis: VoicingAnalysis) -> dict:
 def pitch_class_names(values: Iterable[int]) -> str:
     """pitch class 정수 모음을 사람이 읽는 음이름 문자열로 바꾼다."""
     return " · ".join(NOTE_NAMES[int(value) % 12] for value in values)
+
+
+def without_bass_note(symbol: str) -> str:
+    """끝에 붙은 역위 베이스 음이름만 제거하고 6/9 같은 코드 유형 표기는 보존한다."""
+    return re.sub(r"/[A-G](?:[♯♭#b])?$", "", symbol)

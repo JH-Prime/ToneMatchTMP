@@ -1,21 +1,59 @@
-# ToneMatch TMP 개발자 안내서 · 0.0.11
+# ToneMatch TMP 개발자 안내서 · 0.0.12
 
 이 문서는 구현 구조를 빠르게 이해하기 위한 한국어 요약입니다. 모든 함수의
 이름·원본 줄·docstring은 `FUNCTION_REFERENCE_KO.md`, 새 PC 재구성과 릴리스
 절차는 `DEVELOPER_HANDOFF_KO_EN.md`를 함께 보세요.
 
-빌드 기준일은 2026-09-30 KST입니다. v0.0.11은 코드·보이싱 후보와 관측 근거
-표시를 보완하고 분석 입력으로 연결되지 않던 YouTube 참고 URL UI를 제거합니다.
-기존 선택 악기 제거, 실제 모델을 사용하는 GUI 없는 진단과 C ABI 2 실시간 DSP는
-유지합니다. 자동 테스트 251개, compileall, 소스·패키지 코드/C++ 자체 진단과 실제
-CPU 모델의 전체 곡 제거·취소를 통과했으며 새 압축 해제 검증일은 2026-10-01입니다.
-범위는 `QA_REPORT_v0.0.11.json`과 `BUILD_HISTORY.md`에 기록합니다. 이전 수치를 재사용하지
-않습니다. 합성 화음 회귀는 해당 입력 조건에 대한 검사이며 실제 곡의 정답률이나
-정확한 기타 운지 복원을 입증하지 않습니다. GUI 없는 진단은 수동 화면·청감·
-첫 다운로드·오프라인·CUDA·실제 캡처 검증을 대신하지 않습니다.
-서명되지 않은 CPU 포터블 개발자 프리릴리스입니다.
+빌드 기준일은 2026-10-02 KST입니다. v0.0.12는 오디오 코드 후보를 20→41종으로
+확장하고 바깥쪽 세 번째 `코드·스케일 사전` 작업 탭을 추가합니다. 음원과 독립적인
+12근음의 코드·건반 참고, 12종 스케일과 장음계·자연단음계 다이어토닉을 제공합니다.
+기존 선택 악기 제거, GUI 없는 실제 모델 진단과 C ABI 2 실시간 DSP는 유지합니다.
 
-## v0.0.11 코드·보이싱 및 입력 계약
+10월 2일 자동 테스트 282개와 소스·EXE 진단, 10월 3일 실제 CPU 모델의
+전체 곡 제거·취소 및 새 ZIP 압축 해제 검증을 통과했습니다.
+`QA_REPORT_v0.0.12.json`과 `BUILD_HISTORY.md`를 릴리스 게이트의 근거로 사용합니다.
+서명되지 않은 CPU 개발자 프리릴리스입니다. 합성 회귀는 실제 곡의 정확도나 기타
+운지 복원을 입증하지 않습니다. 숨긴 창·GUI 없는 검사는 수동 UI·청감·첫 다운로드·
+네트워크 차단·CUDA·실제 캡처 검증을 대신하지 않습니다.
+
+## v0.0.12 코드·스케일 사전과 확장 화음 계약
+
+- `voicing.CHORD_INTERVALS`/`CHORD_SUFFIX`는 41종 오디오 후보를 정의합니다.
+  이전 20종에 7sus2, 11·maj11·min11, 13·maj13·min13, minmaj7·minmaj9,
+  6add9·min6add9, 7b5·7sharp5·7b9·7sharp9·7sharp11·7b13,
+  maj7sharp5·maj7sharp11, add11·minadd11을 추가합니다.
+- 시간 연결 후보와 표시용 근접 대안을 분리합니다. 구성음 존재·설명력·최소 근거
+  점수를 모두 통과한 후보 중 인접 창에서도 같은 이름이 지지되는 후보를 경로 선택
+  전에 남깁니다. 선택 후에도 단발 이름을 거부하며 무음·없는 음을 이웃에서 복사하지
+  않습니다. 코드 종류가 늘어도 순간 확장음이 반복되는 기본 화음의 근거를 지우지
+  않도록 한 보완이며, 실제 곡의 정답률이나 모든 구성음의 악기 출처를 확정하지 않습니다.
+- `harmony_reference.py`는 공유 코드 구성음을 이론 도수·음이름과 대조합니다.
+  41유형 × 12근음의 492개 코드 정의와 12스케일 × 12근음의 144개 음계 정의를
+  오디오·네트워크 없이 만드는 읽기 전용 API입니다. 스케일 자동 판정기가 아닙니다.
+- `chord_options`/`scale_options`/`diatonic_options`와
+  `get_chord_reference`/`get_scale_reference`/`get_diatonic_reference`는
+  JSON 직렬화 가능한 새로운 사전을 반환합니다. 반환값 변경은 공유 정의를 바꾸지 않습니다.
+- C♯ 메이저의 E♯·B♯, E♭ 자연단음계의 C♭, 감7화음의 ♭♭7처럼 도수 철자를
+  유지합니다. 피치 클래스와 별도로 `intervals`에 9=14·11=17·13=21 반음을
+  보존해 상위 옥타브를 그립니다. 실제 연주의 역위·생략음·운지를 검출한 것은 아닙니다.
+- 스케일 12종은 major/Ionian, natural minor/Aeolian, major/minor pentatonic,
+  harmonic minor, ascending melodic minor, Dorian, Phrygian, Lydian,
+  Mixolydian, Locrian, six-note minor blues입니다. 펜타토닉을 코드 유형에 추가하지 않습니다.
+- 다이어토닉은 장음계·자연단음계 각각의 7도수에서 3화음·7화음을 보여 줍니다.
+  12근음 × 2음계 × 7도수 × 2화음 = 336개 구성음 관계입니다.
+  자연단음계의 v를 화성단음계의 V로 바꾸지 않고 문맥에 맞는 근음 철자도 유지합니다.
+- 사전 UI는 세 번째 바깥 탭에서 근음·분류·유형을 선택하며 음원 없이 열립니다.
+  음원 분석의 미확정 구간을 채우거나 톤 특징·레시피를 바꾸지 않습니다.
+- 현행 고정 합성 벤치마크 984개(41유형 × 12근음 × 2음색)는 기대한 대표 이름
+  일치가 v0.0.11의 480개에서 v0.0.12의 984개로 증가했고 비화음 대조 36개는
+  두 버전 모두 거부했습니다. 이 결과는 합성 조건만의 비교이며 실제 곡 정확도가 아닙니다.
+- 음악 이론 기준은 [펜타토닉 설명](https://hub.yamaha.com/guitars/g-how-to/a-guitarists-guide-to-major-and-minor-pentatonic-scales/),
+  [단음계 형태](https://musictheory.pugetsound.edu/mt21c/MinorScales.html),
+  [다이어토닉 7화음](https://musictheory.pugetsound.edu/mt21c/RomanNumeralsOfDiatonicSeventhChords.html)을 참고합니다.
+
+## v0.0.11 코드·보이싱 및 입력 계약 · 역사 기록
+
+아래 20유형·480개 비교와 Room 335 수치는 v0.0.11 당시 기록이며 현행 검증이 아닙니다.
 
 - 20종 템플릿과 구성음 설명력·복잡도 비용으로 확장음을 포함한 화음을 비교합니다.
   모든 후보는 해당 분석 창의 구성음 근거와 최소 점수 0.34를 통과해야 합니다.
@@ -43,7 +81,7 @@ CPU 모델의 전체 곡 제거·취소를 통과했으며 새 압축 해제 검
 
 ## 악기 제거 처리 흐름과 저장 계약
 
-바깥쪽 `톤 분석`/`악기 제거` 작업 탭으로 두 기능을 구분합니다. 악기 제거는 로컬
+바깥쪽 `톤 분석`/`악기 제거`/`코드·스케일 사전` 작업 탭으로 기능을 구분합니다. 악기 제거는 로컬
 오디오·영상에서 `vocals`, `drums`, `bass`, `guitar`, `piano`, `other` 가운데
 제거할 1~5개를 선택하고 나머지를 새 WAV 하나로 합치는 독립 작업입니다.
 
@@ -170,7 +208,7 @@ WAV 형식·길이·원본 보존과 정리를 확인합니다. `--stem-self-tes
   블록이나 네트워크 대기를 즉시 강제 종료하지 않으므로 반영이 지연될 수 있습니다.
 - 모델 준비 예외 체인을 서버·네트워크, 캐시 권한·디스크, 메모리 부족, 기타
   모델·런타임으로 분류합니다. 모든 예외를 인터넷 미연결로 설명하지 않습니다.
-  현행 오디오·EXE 검증 결과는 `QA_REPORT_v0.0.11.json`과 `BUILD_HISTORY.md`를
+  현행 오디오·EXE 검증 결과는 `QA_REPORT_v0.0.12.json`과 `BUILD_HISTORY.md`를
   기준으로 하며 이 구현 설명 자체는 해당 검증의 성공 증거가 아닙니다.
 
 ## 실시간 스펙트럼 처리 시퀀스
@@ -235,6 +273,7 @@ Reference 생성은 파일 분석 경로에, Current 갱신은 기존 실시간 
 | `native/tonematch_dsp.cpp`, `.h` | C++17 C ABI 2 엔진, float32/float64 입력, 사전 할당 PCM·Hann/FFT·평활화 이력, 입력/완성 창/잔여 frame 카운터 |
 | `tools/build_native.py` | 명시적인 Zig 0.15.2 경로로 Windows x64 DSP DLL 빌드 |
 | `reference_compare.py` | 분석 PCM의 레벨 정규화 Reference 프로필, 6밴드 집계, 실시간 Current 보간과 `Δ(Current−Reference)` 계산 |
+| `harmony_reference.py` | 41종 코드와 12종 스케일의 도수·이명동음 철자, 12근음 다이어토닉 3·7화음, 분석과 독립적인 건반 사전 자료 |
 | `voicing.py` | 채널별 스펙트럼, 독립 피치·잡음/배음 억제, 반복 근거·미확정 이벤트·진단, 화음 후보·대안·관측 구성음과 기타 소스의 보이싱 후보 |
 | `catalog.py` | 앱/펌웨어/가이드 버전, 패치 기록, 18개 Tone Master Pro 톤 템플릿 |
 | `devices.py` | Tone Master Pro 지원 프로필과 Quad Cortex/Helix 미구현 자리 |
@@ -377,7 +416,7 @@ Peak 창 최댓값, 최신 파형 계약을 기존 기준 구현과 수치 비�
 & ..\.venv\Scripts\python.exe tools\build_native.py --zig C:\Tools\zig-0.15.2\zig.exe
 & ..\.venv\Scripts\python.exe -m compileall -q .
 & ..\.venv\Scripts\python.exe -m unittest discover -s tests -v
-& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.11.json
+& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.12.json
 & ..\.venv\Scripts\python.exe app.py
 ```
 
@@ -419,8 +458,8 @@ C++ 재빌드에는 [공식 Zig 0.15.2 Windows x64 ZIP](https://ziglang.org/down
 1. 재현 테스트를 추가하고 코드를 수정합니다.
 2. 모든 함수의 한국어 docstring과 사용자용 한·영 문자열을 유지합니다.
 3. `catalog.APP_VERSION`, 최신 `CHANGELOG`, `version_info.txt`, spec, 문서와
-   파일명을 다음 패치인 `0.0.12`로 정확히 한 단계 올립니다. 현행 `0.0.11`의
-   검증을 먼저 마치고 v0.0.10 이하의 역사 기록은 변경하지 않습니다.
+   파일명을 다음 패치인 `0.0.13`로 정확히 한 단계 올립니다. 현행 `0.0.12`의
+   검증을 먼저 마치고 v0.0.11 이하의 역사 기록은 변경하지 않습니다.
 4. 함수 색인과 제3자 라이선스 목록을 다시 생성합니다.
 5. 단위 테스트, 소스 자체 진단, 실제 모델 제거·취소 진단, 패키지 자체 진단을
    통과시킵니다. C++ DLL이 실제 로드된 수치 비교·분할 입력·초기화/수명·오류 회귀와

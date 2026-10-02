@@ -13,7 +13,7 @@ MODULE_DIR = Path(__file__).resolve().parents[1]
 if str(MODULE_DIR) not in sys.path:
     sys.path.insert(0, str(MODULE_DIR))
 
-from voicing import CHORD_INTERVALS, _smooth_labels, analyze_voicings, candidate_guitar_shapes, voicing_analysis_dict  # noqa: E402
+from voicing import CHORD_INTERVALS, CHORD_SUFFIX, _score_chord, _smooth_labels, analyze_voicings, candidate_guitar_shapes, voicing_analysis_dict, without_bass_note  # noqa: E402
 
 
 SAMPLE_RATE = 22_050
@@ -65,10 +65,79 @@ class VoicingAnalysisTests(unittest.TestCase):
         for _ in range(256):
             chroma = rng.dirichlet(np.ones(12) * 0.6)
             result = _classify_window(chroma, pitches, pitches, 0.1)
-            for candidate in result.get("_candidates", ()):
+            for candidate in result.get("_temporal_candidates", ()):
                 accepted += 1
                 self.assertGreaterEqual(candidate["confidence"], 0.34)
+                self.assertGreaterEqual(candidate["evidence"]["explained_energy"], 0.60)
+                self.assertTrue(set(candidate["pitch_classes"]).issubset(candidate["evidence"]["observed_pitch_classes"]))
         self.assertGreater(accepted, 0)
+
+    def test_transient_extension_does_not_delete_repeated_local_core_evidence(self) -> None:
+        """단발 확장음이 매 창에서 직접 관측한 기본 화음을 후보 목록에서 지우지 않는다."""
+        from voicing import _classify_window, _guitar_midi_frequencies
+        midi, _ = _guitar_midi_frequencies()
+        notes_by_window = ((0, 4, 7), (0, 4, 7, 5), (0, 4, 7))
+        windows = []
+        for index, pitch_classes in enumerate(notes_by_window):
+            chroma = np.zeros(12)
+            chroma[list(pitch_classes)] = 1.0 / len(pitch_classes)
+            pitches = np.zeros(len(midi))
+            pitches[np.isin(midi, [48 + value for value in pitch_classes])] = 1.0
+            item = _classify_window(chroma, pitches, pitches, 0.1)
+            item["_start_seconds"] = index * 0.6
+            windows.append(item)
+        self.assertEqual(windows[1]["chord_type"], "add11")
+        self.assertNotIn((0, "major"), [(item["root_pc"], item["chord_type"]) for item in windows[1]["_candidates"]])
+        original_symbols = [item["symbol"] for item in windows]
+        smoothed = _smooth_labels(windows)
+        self.assertTrue(all((item["root_pc"], item["chord_type"]) == (0, "major") for item in smoothed))
+        for index, item in enumerate(smoothed):
+            self.assertTrue(set(item["pitch_classes"]).issubset(notes_by_window[index]))
+            self.assertGreaterEqual(item["confidence"], 0.34)
+        self.assertEqual([item["symbol"] for item in windows], original_symbols)
+        self.assertEqual(_smooth_labels([windows[1]])[0]["chord_type"], "add11")
+        self.assertTrue(all(item["chord_type"] == "add11" for item in _smooth_labels([windows[1], windows[1]])))
+
+    def test_temporal_pool_cannot_copy_missing_tones_or_bridge_silence(self) -> None:
+        """인접 화음의 구성음을 복사하지 않고 무음 및 다른 실제 화음의 경계를 보존한다."""
+        from voicing import _classify_window, _guitar_midi_frequencies
+        midi, _ = _guitar_midi_frequencies()
+        classified = []
+        for pitch_classes in ((0, 4, 7), (0, 5, 7), (2, 7, 11), ()):
+            chroma = np.zeros(12)
+            if pitch_classes:
+                chroma[list(pitch_classes)] = 1.0 / len(pitch_classes)
+            pitches = np.zeros(len(midi))
+            pitches[np.isin(midi, [48 + value for value in pitch_classes])] = 1.0
+            classified.append(_classify_window(chroma, pitches, pitches, 0.1 if pitch_classes else 0.0))
+        major, suspended, dominant, silence = classified
+        interrupted = _smooth_labels([major, major, suspended, major, major])
+        self.assertEqual(interrupted[2]["chord_type"], "unknown")
+        gap = _smooth_labels([major, major, silence, major, major])
+        self.assertEqual(gap[2]["chord_type"], "unknown")
+        self.assertEqual(gap[2]["pitch_classes"], ())
+        changed = _smooth_labels([major, major, dominant, dominant])
+        self.assertEqual([(item["root_pc"], item["chord_type"]) for item in changed],
+                         [(0, "major"), (0, "major"), (7, "major"), (7, "major")])
+
+    def test_dense_chromatic_and_random_nonchord_sets_stay_unknown(self) -> None:
+        """균일한 12음과 코드 템플릿이 없는 무작위 3음은 시간 풀 확장으로 화음이 되지 않는다."""
+        from voicing import _classify_window, _guitar_midi_frequencies
+        rng = np.random.default_rng(121212)
+        pitches = np.zeros(len(_guitar_midi_frequencies()[0]))
+        chord_sets = [{(root + value) % 12 for value in intervals}
+                      for root in range(12) for intervals in CHORD_INTERVALS.values() if len(intervals) <= 3]
+        windows = []
+        for _ in range(96):
+            observed = set(int(value) for value in rng.choice(12, size=3, replace=False))
+            if any(notes.issubset(observed) for notes in chord_sets):
+                continue
+            chroma = np.zeros(12)
+            chroma[list(observed)] = 1.0 / 3
+            windows.append(_classify_window(chroma, pitches, pitches, 0.1))
+        windows.extend(_classify_window(np.ones(12) / 12, pitches, pitches, 0.1) for _ in range(3))
+        self.assertGreater(len(windows), 10)
+        self.assertTrue(all(item["chord_type"] == "unknown" for item in _smooth_labels(windows)))
 
     def test_major_minor_and_power_chords(self) -> None:
         """C, Am, E5의 코드 유형과 근음이 예상값으로 판정되어야 한다."""
@@ -122,14 +191,78 @@ class VoicingAnalysisTests(unittest.TestCase):
                 self.assertEqual(analysis.tonal_coverage, 1.0)
 
     def test_all_templates_transpose_across_twelve_roots(self) -> None:
-        """20종 코드의 12개 근음 합성 입력 모두가 단순 전조에 같은 판정을 유지한다."""
-        self.assertEqual(len(CHORD_INTERVALS), 20)
+        """41종 코드의 12개 근음 합성 입력 모두가 단순 전조에 같은 판정을 유지한다."""
+        self.assertEqual(len(CHORD_INTERVALS), 41)
         for quality, intervals in CHORD_INTERVALS.items():
             for root in range(12):
-                notes = tuple(48 + root + (14 if interval == 2 and quality != "sus2" else interval) for interval in intervals)
+                notes = tuple(48 + root + (14 if interval == 2 and quality not in ("sus2", "7sus2") else interval) for interval in intervals)
                 with self.subTest(root=root, quality=quality):
                     analysis = analyze_voicings(_synth_chord(notes, 1.5), SAMPLE_RATE)
                     self.assertTrue(all((event.root_pc, event.chord_type) == (root, quality) for event in analysis.events))
+
+    def test_all_templates_require_every_explicit_chord_tone(self) -> None:
+        """모든 근음·유형에서 구성음 하나라도 없으면 해당 완전 화음 템플릿을 거부한다."""
+        self.assertEqual(set(CHORD_SUFFIX) - {"unknown"}, set(CHORD_INTERVALS))
+        for quality, intervals in CHORD_INTERVALS.items():
+            self.assertEqual(len(set(intervals)), len(intervals))
+            for root in range(12):
+                required = [(root + interval) % 12 for interval in intervals]
+                complete = np.zeros(12)
+                complete[required] = 1.0 / len(required)
+                self.assertGreater(_score_chord(complete, root, quality), 0.0)
+                for missing in required:
+                    chroma = complete.copy()
+                    chroma[missing] = 0.0
+                    chroma /= np.sum(chroma)
+                    with self.subTest(root=root, quality=quality, missing=missing):
+                        self.assertEqual(_score_chord(chroma, root, quality), -1.0)
+
+    def test_bass_suffix_removal_preserves_six_nine_chord_names(self) -> None:
+        """역위 베이스를 숨길 때 6/9 코드의 본래 슬래시나 다른 본문은 지우지 않는다."""
+        cases = {"C6/9": "C6/9", "C6/9/E": "C6/9", "Am6/9/C": "Am6/9",
+                 "C7/E♭": "C7", "C7/F#": "C7", "C7/Bb": "C7",
+                 "Cmaj13": "Cmaj13", "C/E text": "C/E text", "?": "?"}
+        for symbol, expected in cases.items():
+            with self.subTest(symbol=symbol):
+                self.assertEqual(without_bass_note(symbol), expected)
+
+    def test_dense_extensions_preserve_seven_required_pitch_classes(self) -> None:
+        """7음 13화음은 구성음 표시를 여섯 음으로 자르거나 임의의 기타 운지를 만들지 않는다."""
+        for quality in ("13", "maj13", "min13"):
+            analysis = analyze_voicings(_synth_chord(tuple(48 + interval for interval in CHORD_INTERVALS[quality])), SAMPLE_RATE)
+            for event in analysis.events:
+                with self.subTest(quality=quality):
+                    self.assertEqual((event.root_pc, event.chord_type), (0, quality))
+                    self.assertEqual(len(event.pitch_classes), 7)
+                    self.assertEqual(set(event.pitch_classes), set(CHORD_INTERVALS[quality]))
+                    self.assertEqual(event.candidate_shapes, ())
+
+    def test_new_extensions_work_above_the_root_octave(self) -> None:
+        """추가된 9·11·13 및 변화음이 근음보다 높은 옥타브에 있어도 같은 코드를 보존한다."""
+        for quality, intervals in list(CHORD_INTERVALS.items())[20:]:
+            notes = tuple(48 + interval + (12 if index >= 4 or (quality in ("add11", "minadd11") and index == 3) else 0)
+                          for index, interval in enumerate(intervals))
+            with self.subTest(quality=quality):
+                analysis = analyze_voicings(_synth_chord(notes, 1.5), SAMPLE_RATE)
+                self.assertTrue(all((event.root_pc, event.chord_type) == (0, quality) for event in analysis.events))
+                self.assertEqual(analysis.tonal_coverage, 1.0)
+
+    def test_missing_tones_in_new_audio_do_not_create_complete_extensions(self) -> None:
+        """새 확장 화음의 근음이나 끝 구성음을 뺀 음원에서 빠진 음을 추측으로 채우지 않는다."""
+        for quality, intervals in list(CHORD_INTERVALS.items())[20:]:
+            for omitted in (0, len(intervals) - 1):
+                notes = tuple(48 + interval for index, interval in enumerate(intervals) if index != omitted)
+                observed = {note % 12 for note in notes}
+                with self.subTest(quality=quality, omitted=omitted):
+                    analysis = analyze_voicings(_synth_chord(notes, 1.5), SAMPLE_RATE)
+                    for event in analysis.events:
+                        if event.chord_type == "unknown":
+                            continue
+                        self.assertNotEqual((event.root_pc, event.chord_type), (0, quality))
+                        self.assertTrue(set(event.pitch_classes).issubset(observed))
+                        for alternative in event.alternatives:
+                            required = {(alternative["root_pc"] + value) % 12 for value in CHORD_INTERVALS[alternative["chord_type"]]}
+                            self.assertTrue(required.issubset(observed))
 
     def test_extended_picked_chords_keep_their_extensions(self) -> None:
         """스트럼과 아르페지오에서도 반복해서 들리는 9음과 반감7을 보존한다."""
@@ -145,7 +278,10 @@ class VoicingAnalysisTests(unittest.TestCase):
         """C6·Am7과 감7·증화음의 동음 구성 해석을 하나의 확정 답처럼 숨기지 않는다."""
         cases = [((48, 52, 55, 57), "6", {(9, "min7")}),
                  ((48, 51, 54, 57), "dim7", {(3, "dim7"), (6, "dim7"), (9, "dim7")}),
-                 ((48, 52, 56), "aug", {(4, "aug"), (8, "aug")})]
+                 ((48, 52, 56), "aug", {(4, "aug"), (8, "aug")}),
+                 ((48, 50, 55, 58), "7sus2", {(7, "minadd11")}),
+                 ((48, 52, 54, 58), "7b5", {(6, "7b5")}),
+                 ((48, 52, 55, 58, 62, 65, 69), "13", {(7, "min13"), (5, "maj13")})]
         for notes, quality, expected in cases:
             with self.subTest(quality=quality):
                 analysis = analyze_voicings(_synth_chord(notes), SAMPLE_RATE)

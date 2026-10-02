@@ -265,6 +265,31 @@ class VoicingDisplayTests(unittest.TestCase):
         self.assertNotIn("81/100", unknown.text())
         self.assertNotIn("TEST_SHAPE_ONLY", unknown.text())
 
+    def test_six_nine_display_preserves_quality_in_primary_and_alternatives(self) -> None:
+        """두 언어의 6/9 주 코드·대안은 본문을 보존하며 믹스에서만 마지막 베이스를 숨긴다."""
+        for language in ("ko", "en"):
+            for source in ("original_mix", "guitar_stem"):
+                for quality, symbol, alternative in (("6add9", "C6/9/E", "Cm6/9/E♭"),
+                                                      ("min6add9", "Cm6/9/E♭", "C6/9/E")):
+                    with self.subTest(language=language, source=source, quality=quality):
+                        event = _known_event()
+                        event.update(chord_type=quality, symbol=symbol,
+                                     alternatives=[{"symbol": alternative}, {"symbol": "C6/9"}, {"symbol": "Cm6/9"}],
+                                     evidence={"ambiguous": True})
+                        analysis = {"analysis_source": source, "events": [event]}
+                        original = deepcopy(analysis)
+                        widget = _render(analysis, language)
+                        expected = symbol.rsplit("/", 1)[0] if source == "original_mix" else symbol
+                        other = alternative.rsplit("/", 1)[0] if source == "original_mix" else alternative
+                        self.assertIn("00:01–00:03   " + expected + "   ", widget.text("event"))
+                        self.assertIn(other, widget.text("detail"))
+                        self.assertIn("C6/9", widget.text())
+                        self.assertIn("Cm6/9", widget.text())
+                        if source == "original_mix":
+                            self.assertNotIn(symbol, widget.text())
+                            self.assertNotIn(alternative, widget.text())
+                        self.assertEqual(analysis, original)
+
     def test_score_is_bounded_and_nonfinite_evidence_is_not_shown_as_certainty(self) -> None:
         """구형·비정상 점수도 범위를 벗어나거나 확률·무한대로 표시되지 않아야 한다."""
         for value, expected in ((float("nan"), "—"), (float("inf"), "—"), (-0.5, "0/100"), (1.2, "100/100")):

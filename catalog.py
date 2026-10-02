@@ -8,18 +8,48 @@
 from __future__ import annotations
 
 
-APP_VERSION = "0.0.11"
+APP_VERSION = "0.0.12"
 TARGET_FIRMWARE = "1.8.58"
 MODEL_GUIDE_REVISION = "Rev. J (2026-07)"
-BUILD_DATE = "2026-09-30"
+BUILD_DATE = "2026-10-02"
 
 
 # 앱 내부의 변경 기록 화면과 배포 문서가 함께 사용하는 단일 원본이다.
 # 이후 패치는 0.0.02, 0.0.03, 0.0.04처럼 한 단계씩 올리고 최신 항목을 맨 위에 둔다.
 CHANGELOG: list[dict] = [
     {
-        "version": "0.0.11",
+        "version": "0.0.12",
         "date": BUILD_DATE,
+        "status": "공개 개발 프리뷰",
+        "status_en": "Public development preview",
+        "changes": [
+            "7sus2·11·13·마이너 메이저·6/9·변형 텐션을 포함해 코드 유형 확대",
+            "12개 근음의 코드·음계·다이어토닉 화음을 구성음과 건반으로 보는 독립 참고표 추가",
+            "펜타토닉·모드 등 음계와 개별 코드 판별을 구분하고 다이어토닉 3화음·7화음을 나란히 표시",
+            "6/9 코드 이름을 슬래시 베이스와 혼동하지 않도록 믹스 결과 표시 보완",
+            "단발 확장음 후보 때문에 반복되는 화음 근거가 사라지지 않도록 시간 연결 후보 선택 보완",
+        ],
+        "changes_en": [
+            "Expands chord qualities with 7sus2, 11ths, 13ths, minor-major, 6/9 and altered tensions",
+            "Adds a separate 12-root chord, scale and diatonic reference with notes and keyboard display",
+            "Separates pentatonic/mode references from chord detection and shows diatonic triads/sevenths",
+            "Preserves 6/9 chord names when removing non-guitar slash-bass claims from mixed harmony",
+            "Preserves repeated local chord evidence when isolated extension candidates compete during temporal tracking",
+        ],
+        "known_issues": [
+            "참고표는 이론 조회이며 실제 음원의 키·음계 자동 판정이나 운지 검출이 아님",
+            "확장화음의 구성음이 빠지거나 믹스·분리 누출이 복잡하면 후보가 틀리거나 미확정으로 남을 수 있음",
+            "합성 검증은 실제 곡 정답률을 뜻하지 않으며 수동 화면·청감·CUDA·코드 서명은 별도 검증",
+        ],
+        "known_issues_en": [
+            "The reference is theoretical lookup, not detected key, scale or played fingering",
+            "Missing extension tones, dense mixes and separation bleed can yield wrong or unknown candidates",
+            "Synthetic checks do not measure real-song accuracy; manual GUI/listening, CUDA and signing require separate validation",
+        ],
+    },
+    {
+        "version": "0.0.11",
+        "date": "2026-09-30",
         "status": "공개 개발 프리뷰",
         "status_en": "Public development preview",
         "changes": [

@@ -9,7 +9,7 @@ from urllib.parse import urlsplit
 
 from engine import human_feature_rows
 from i18n import tr, voicing_context_lines
-from voicing import pitch_class_names
+from voicing import pitch_class_names, without_bass_note
 
 
 REPORT_TEXT = {
@@ -271,7 +271,7 @@ def save_html(result: dict, path: str | Path) -> None:
         )
         symbol = "?" if unknown else str(event["symbol"])
         if mixed_harmony:
-            symbol = symbol.split("/", 1)[0]
+            symbol = without_bass_note(symbol)
         confidence = "—"
         if not unknown:
             try:
@@ -287,7 +287,7 @@ def save_html(result: dict, path: str | Path) -> None:
                 evidence_lines.append(tr("ui.voicing_ambiguous", language))
             alternatives = [str(item.get("symbol", "?")) for item in event.get("alternatives", ())[:3]]
             if mixed_harmony:
-                alternatives = [symbol.split("/", 1)[0] for symbol in alternatives]
+                alternatives = [without_bass_note(symbol) for symbol in alternatives]
             if alternatives:
                 evidence_lines.append(tr("ui.voicing_alternatives", language) + ": " + ", ".join(alternatives))
             if "supported_window_count" in evidence and "analyzed_window_count" in evidence:

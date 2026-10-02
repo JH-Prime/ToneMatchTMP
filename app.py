@@ -1,4 +1,4 @@
-"""ToneMatch TMP v0.0.11 데스크톱 애플리케이션.
+"""ToneMatch TMP v0.0.12 데스크톱 애플리케이션.
 
 로컬 오디오·영상 또는 Windows PC 재생음 녹음을 받아 AI로 guitar stem만
 분리하고, Tone Master Pro에 수동 적용할 설명 가능한 톤 체인을 추천한다.
@@ -69,6 +69,10 @@ from engine import (
     save_json,
 )
 from i18n import LANGUAGE_LABELS, choice_code, choice_label, choice_values, language_code, tr, voicing_context_lines
+from harmony_reference import (
+    chord_options, scale_options, diatonic_options,
+    get_chord_reference, get_scale_reference, get_diatonic_reference,
+)
 from native_dsp import create_spectrum_engine, native_runtime_info
 from reference_compare import ReferenceCompareError, compare_live_frame
 from recorder import (
@@ -84,7 +88,7 @@ from report import recipe_as_text, save_html
 from separator import separator_runtime_status
 from spectrum import SpectrumFrame, analyze_spectrum_frame
 from stem_removal import StemRemovalCancelled, StemRemovalError, remove_stems_from_file
-from voicing import pitch_class_names
+from voicing import NOTE_NAMES, pitch_class_names, without_bass_note
 
 
 APP_NAME = "ToneMatch TMP"
@@ -225,6 +229,11 @@ class ToneMatchApp:
         self.output_code = "frfr"
         self.compute_backend_code = "auto"
         self.input_method_code = "local"
+        self.harmony_root_pc = 0
+        self.harmony_category = "chord"
+        self.harmony_choices = {"chord": "major", "scale": "major", "diatonic": "major"}
+        self.harmony_degree_index = 0
+        self.harmony_chord_size = "triad"
         self.hardware_status: dict[str, object] = {}
         self.hardware_probe_active = False
         self.recipe_texts: list[ScrolledText] = []
@@ -643,6 +652,7 @@ class ToneMatchApp:
         self.notebook.hide(self.changelog_tab)
         self._update_copy_availability()
         self._build_stem_removal_tab()
+        self._build_harmony_reference_tab()
 
         footer = ttk.Frame(shell)
         footer.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(10, 0))
@@ -658,6 +668,217 @@ class ToneMatchApp:
             self._show_result(self.result, reset_notebook=False)
         if self.last_spectrum_frame is not None:
             self._apply_spectrum_frame(self.last_spectrum_frame, update_comparison=False)
+
+    def _build_harmony_reference_tab(self) -> None:
+        """음원 분석과 분리된 코드·스케일 이론 사전을 스크롤 가능한 상위 탭에 만든다."""
+        self.harmony_tab = ttk.Frame(self.workspace_notebook, style="Alt.TFrame")
+        self.workspace_notebook.add(self.harmony_tab, text=tr("ui.harmony_tab", self.language))
+        self.harmony_tab.columnconfigure(0, weight=1)
+        self.harmony_tab.rowconfigure(0, weight=1)
+        self.harmony_canvas = tk.Canvas(self.harmony_tab, bg=COLORS["panel_alt"], width=1, height=1, highlightthickness=0)
+        self.harmony_canvas.grid(row=0, column=0, sticky="nsew")
+        scrollbar = ttk.Scrollbar(self.harmony_tab, orient="vertical", command=self.harmony_canvas.yview)
+        scrollbar.grid(row=0, column=1, sticky="ns")
+        self.harmony_canvas.configure(yscrollcommand=scrollbar.set)
+        self.harmony_content = ttk.Frame(self.harmony_canvas, style="Alt.TFrame", padding=14)
+        self.harmony_content.columnconfigure(0, weight=1)
+        self.harmony_scroll_window = self.harmony_canvas.create_window((0, 0), window=self.harmony_content, anchor="nw")
+        self.harmony_canvas.bind("<Configure>", self._resize_harmony_content)
+        self.harmony_content.bind("<Configure>", self._sync_harmony_scroll_region)
+        self.harmony_wrap_labels = []
+
+        def label(key: str, row: int, color: str = "muted") -> ttk.Label:
+            """가변 폭의 이론 설명 라벨을 만들고 창 너비에 맞춰 줄바꿈하도록 등록한다."""
+            widget = ttk.Label(self.harmony_content, text=tr(key, self.language), width=1, wraplength=380,
+                               background=COLORS["panel_alt"], foreground=COLORS[color], justify="left")
+            widget.grid(row=row, column=0, sticky="ew", pady=(0, 8))
+            self.harmony_wrap_labels.append(widget)
+            return widget
+
+        label("ui.harmony_tab", 0, "accent").configure(font=(self.ui_font, 15, "bold"))
+        label("ui.harmony_intro", 1)
+        controls = ttk.Frame(self.harmony_content, style="Alt.TFrame")
+        controls.grid(row=2, column=0, sticky="ew", pady=(0, 10))
+        controls.columnconfigure(0, weight=1)
+        controls.columnconfigure(1, weight=3)
+        ttk.Label(controls, text=tr("ui.harmony_root", self.language), background=COLORS["panel_alt"]).grid(row=0, column=0, sticky="w")
+        ttk.Label(controls, text=tr("ui.harmony_category", self.language), background=COLORS["panel_alt"]).grid(row=0, column=1, sticky="w", padx=(8, 0))
+        self.harmony_root_combo = ttk.Combobox(controls, values=NOTE_NAMES, width=5, state="readonly")
+        self.harmony_root_combo.grid(row=1, column=0, sticky="ew")
+        self.harmony_root_combo.current(self.harmony_root_pc)
+        self.harmony_root_combo.bind("<<ComboboxSelected>>", self._change_harmony_root)
+        self.harmony_category_combo = ttk.Combobox(controls, values=[tr(f"ui.harmony_{key}", self.language) for key in ("chord", "scale", "diatonic")], width=1, state="readonly")
+        self.harmony_category_combo.grid(row=1, column=1, sticky="ew", padx=(8, 0))
+        self.harmony_category_combo.current(("chord", "scale", "diatonic").index(self.harmony_category))
+        self.harmony_category_combo.bind("<<ComboboxSelected>>", self._change_harmony_category)
+        ttk.Label(controls, text=tr("ui.harmony_selection", self.language), background=COLORS["panel_alt"]).grid(row=2, column=0, columnspan=2, sticky="w", pady=(7, 0))
+        self.harmony_type_combo = ttk.Combobox(controls, width=1, state="readonly")
+        self.harmony_type_combo.grid(row=3, column=0, columnspan=2, sticky="ew")
+        self.harmony_type_combo.bind("<<ComboboxSelected>>", self._change_harmony_type)
+        self.harmony_title_label = label("ui.harmony_notes", 3, "text")
+        self.harmony_title_label.configure(font=(self.ui_font, 12, "bold"))
+        self.harmony_notes_label = label("ui.harmony_notes", 4, "blue")
+        self.harmony_degrees_label = label("ui.harmony_degrees", 5)
+        label("ui.harmony_keyboard", 6)
+        self.harmony_keyboard = tk.Canvas(self.harmony_content, bg=COLORS["panel_alt"], height=152, width=1, highlightthickness=0)
+        self.harmony_keyboard.grid(row=7, column=0, sticky="ew", pady=(0, 10))
+        self.harmony_keyboard.bind("<Configure>", self._draw_harmony_keyboard)
+        self.harmony_diatonic_frame = ttk.Frame(self.harmony_content, style="Alt.TFrame")
+        self.harmony_diatonic_frame.grid(row=8, column=0, sticky="ew", pady=(0, 10))
+        self.harmony_diatonic_frame.columnconfigure(0, weight=1)
+        table_intro = ttk.Label(self.harmony_diatonic_frame, text=tr("ui.harmony_diatonic_select", self.language), width=1, wraplength=380, background=COLORS["panel_alt"], foreground=COLORS["muted"])
+        table_intro.grid(row=0, column=0, sticky="ew", pady=(0, 5))
+        self.harmony_wrap_labels.append(table_intro)
+        self.harmony_diatonic_tree = ttk.Treeview(self.harmony_diatonic_frame, columns=("degree", "triad", "seventh"), show="headings", selectmode="browse", height=7)
+        for key, width in (("degree", 58), ("triad", 100), ("seventh", 130)):
+            self.harmony_diatonic_tree.heading(key, text=tr(f"ui.harmony_{key}", self.language))
+            self.harmony_diatonic_tree.column(key, width=width, minwidth=40, stretch=True, anchor="w")
+        self.harmony_diatonic_tree.grid(row=1, column=0, sticky="ew")
+        self.harmony_diatonic_tree.bind("<<TreeviewSelect>>", self._select_harmony_degree)
+        ttk.Label(self.harmony_diatonic_frame, text=tr("ui.harmony_keyboard_chord", self.language), background=COLORS["panel_alt"]).grid(row=2, column=0, sticky="w", pady=(7, 0))
+        self.harmony_size_combo = ttk.Combobox(self.harmony_diatonic_frame, values=[tr(f"ui.harmony_{key}", self.language) for key in ("triad", "seventh")], width=1, state="readonly")
+        self.harmony_size_combo.grid(row=3, column=0, sticky="ew")
+        self.harmony_size_combo.current(("triad", "seventh").index(self.harmony_chord_size))
+        self.harmony_size_combo.bind("<<ComboboxSelected>>", self._change_harmony_size)
+        self.harmony_explanation_label = label("ui.harmony_notice", 9)
+        self.harmony_limits_label = label("ui.harmony_notice", 10)
+        label("ui.harmony_notice", 11, "warning")
+        self.harmony_keyboard_reference = {}
+        self.harmony_diatonic_rows = []
+        self._populate_harmony_types()
+        self._bind_harmony_mousewheel(self.harmony_content)
+
+    def _populate_harmony_types(self) -> None:
+        """현재 분류의 이론 목록을 번역해 채우되 언어 전환 시 선택 코드를 보존한다."""
+        provider = {"chord": chord_options, "scale": scale_options, "diatonic": diatonic_options}[self.harmony_category]
+        self.harmony_options = provider(self.language)
+        keys = [option["key"] for option in self.harmony_options]
+        selected = self.harmony_choices[self.harmony_category]
+        if selected not in keys:
+            selected = keys[0]
+        self.harmony_choices[self.harmony_category] = selected
+        self.harmony_type_combo.configure(values=[option["name"] for option in self.harmony_options])
+        self.harmony_type_combo.current(keys.index(selected))
+        self._refresh_harmony_reference()
+
+    def _change_harmony_root(self, _event: object | None = None) -> None:
+        """사전 기준음을 바꾸고 화음·음계 및 건반 표시를 함께 갱신한다."""
+        self.harmony_root_pc = max(0, self.harmony_root_combo.current())
+        self._refresh_harmony_reference()
+
+    def _change_harmony_category(self, _event: object | None = None) -> None:
+        """코드·스케일·다이어토닉 분류를 전환하고 각각의 이전 선택을 복원한다."""
+        self.harmony_category = ("chord", "scale", "diatonic")[max(0, self.harmony_category_combo.current())]
+        self._populate_harmony_types()
+
+    def _change_harmony_type(self, _event: object | None = None) -> None:
+        """종류 선택을 언어와 무관한 키로 저장하고 이론 정보를 갱신한다."""
+        self.harmony_choices[self.harmony_category] = self.harmony_options[max(0, self.harmony_type_combo.current())]["key"]
+        self._refresh_harmony_reference()
+
+    def _change_harmony_size(self, _event: object | None = None) -> None:
+        """다이어토닉 건반 예시를 삼화음 또는 7화음으로 전환한다."""
+        self.harmony_chord_size = ("triad", "seventh")[max(0, self.harmony_size_combo.current())]
+        self._show_harmony_degree()
+
+    def _select_harmony_degree(self, _event: object | None = None) -> None:
+        """선택한 다이어토닉 도수의 화음을 표시하되 분석 결과는 변경하지 않는다."""
+        selected = self.harmony_diatonic_tree.selection()
+        if selected and self.harmony_category == "diatonic":
+            self.harmony_degree_index = int(selected[0])
+            self._show_harmony_degree()
+
+    def _refresh_harmony_reference(self) -> None:
+        """사전 데이터만 읽어 이론 설명과 건반을 갱신하며 음원 분석을 호출하지 않는다."""
+        key = self.harmony_choices[self.harmony_category]
+        if self.harmony_category == "diatonic":
+            reference = get_diatonic_reference(self.harmony_root_pc, key, self.language)
+            self.harmony_diatonic_rows = reference["rows"]
+            self.harmony_diatonic_frame.grid()
+            self.harmony_diatonic_tree.delete(*self.harmony_diatonic_tree.get_children())
+            for index, row in enumerate(self.harmony_diatonic_rows):
+                self.harmony_diatonic_tree.insert("", "end", iid=str(index), values=(row["degree_label"], row["triad"]["symbol"], row["seventh"]["symbol"]))
+            self.harmony_diatonic_tree.selection_set(str(self.harmony_degree_index))
+            self._show_harmony_degree()
+        else:
+            self.harmony_diatonic_frame.grid_remove()
+            provider = get_chord_reference if self.harmony_category == "chord" else get_scale_reference
+            reference = provider(self.harmony_root_pc, key, self.language)
+            self._display_harmony_tones(reference)
+        self.harmony_explanation_label.configure(text=reference["explanation"])
+        self.harmony_limits_label.configure(text="\n".join(reference["limitations"][1:]))
+        self._sync_harmony_scroll_region()
+
+    def _show_harmony_degree(self) -> None:
+        """다이어토닉 행의 이론적 철자를 유지하며 선택 화음의 표시 데이터를 만든다."""
+        if not self.harmony_diatonic_rows:
+            return
+        row = self.harmony_diatonic_rows[self.harmony_degree_index]
+        chord = row[self.harmony_chord_size]
+        self._display_harmony_tones(dict(chord))
+
+    def _display_harmony_tones(self, reference: dict) -> None:
+        """음정과 구성음을 실제 검출 결과가 아닌 이론 건반 예시로 표시한다."""
+        self.harmony_keyboard_reference = reference
+        title = reference["symbol"] if reference["kind"] == "scale" else f"{reference['symbol']} · {reference['name']}"
+        self.harmony_title_label.configure(text=title)
+        self.harmony_notes_label.configure(text=f"{tr('ui.harmony_notes', self.language)} · {' · '.join(reference['note_names'])}")
+        self.harmony_degrees_label.configure(text=f"{tr('ui.harmony_degrees', self.language)} · {' – '.join(reference['degree_labels'])}\n{tr('ui.harmony_semitones', self.language)} · {', '.join(str(value) for value in reference['intervals'])}")
+        self._draw_harmony_keyboard()
+
+    def _draw_harmony_keyboard(self, event: object | None = None) -> None:
+        """선택 화음·스케일의 실제 음정 위치만 두세 옥타브 건반에 색칠한다."""
+        reference = self.harmony_keyboard_reference
+        canvas = self.harmony_keyboard
+        canvas.delete("all")
+        if not reference:
+            return
+        root = int(reference["root_pc"])
+        active = {root + int(interval): name for interval, name in zip(reference["intervals"], reference["note_names"])}
+        octaves = max(2, (max(active) + 11) // 12)
+        keys = range(octaves * 12 + 1)
+        whites = [key for key in keys if key % 12 in (0, 2, 4, 5, 7, 9, 11)]
+        width = max(1, int(getattr(event, "width", canvas.winfo_width())))
+        white_width = max(0.1, (width - 2) / len(whites))
+        for index, key in enumerate(whites):
+            color = COLORS["accent"] if key == root else COLORS["blue"] if key in active else "#e9edf0"
+            tags = ("white", f"key_{key}", "active" if key in active else "inactive", "root" if key == root else "member")
+            canvas.create_rectangle(1 + index * white_width, 2, 1 + (index + 1) * white_width, 148, fill=color, outline="#52606c", tags=tags)
+            text = active.get(key, NOTE_NAMES[key % 12] if key % 12 == 0 else "")
+            canvas.create_text(1 + (index + 0.5) * white_width, 134, text=text, fill="#10202c", font=(self.ui_font, 8), tags=("key_label",))
+        for key in keys:
+            if key % 12 in (0, 2, 4, 5, 7, 9, 11):
+                continue
+            center = 1 + sum(white < key for white in whites) * white_width
+            color = COLORS["accent"] if key == root else COLORS["blue"] if key in active else "#14202a"
+            tags = ("black", f"key_{key}", "active" if key in active else "inactive", "root" if key == root else "member")
+            canvas.create_rectangle(center - white_width * .32, 2, center + white_width * .32, 93, fill=color, outline="#52606c", tags=tags)
+            if key in active:
+                canvas.create_text(center, 77, text=active[key], fill="#10202c", font=(self.ui_font, 7), tags=("key_label",))
+
+    def _resize_harmony_content(self, event: tk.Event) -> None:
+        """사전 내용 폭과 설명 줄바꿈을 실제 탭 폭에 맞춰 가로 넘침을 막는다."""
+        self.harmony_canvas.itemconfigure(self.harmony_scroll_window, width=max(1, event.width))
+        for label in self.harmony_wrap_labels:
+            label.configure(wraplength=max(1, event.width - 28))
+        self._sync_harmony_scroll_region()
+
+    def _sync_harmony_scroll_region(self, _event: object | None = None) -> None:
+        """작은 창에서도 이론 설명과 다이어토닉 표 전체를 세로 스크롤로 제공한다."""
+        bounds = self.harmony_canvas.bbox(self.harmony_scroll_window)
+        if bounds:
+            self.harmony_canvas.configure(scrollregion=(0, 0, bounds[2], max(bounds[3], self.harmony_canvas.winfo_height())))
+
+    def _bind_harmony_mousewheel(self, widget: tk.Widget) -> None:
+        """사전 내부 컨트롤에서만 휠을 연결해 다른 작업 탭의 스크롤을 보존한다."""
+        widget.bind("<MouseWheel>", self._scroll_harmony_reference)
+        for child in widget.winfo_children():
+            self._bind_harmony_mousewheel(child)
+
+    def _scroll_harmony_reference(self, event: tk.Event) -> str:
+        """사전 페이지의 세로 위치만 바꾸고 콤보박스 선택은 휠로 변경하지 않는다."""
+        self.harmony_canvas.yview_scroll(int(-event.delta / 120), "units")
+        return "break"
 
     def _build_stem_removal_tab(self) -> None:
         """원본과 분리된 악기 선택을 받는 독립적인 스크롤 탭을 만든다."""
@@ -1786,6 +2007,7 @@ class ToneMatchApp:
             and hasattr(self, "stem_tab")
             and self.workspace_notebook.select() == str(self.stem_tab)
         )
+        harmony_workspace_selected = self.workspace_notebook.select() == str(self.harmony_tab)
         self.language = new_language
         if self.result:
             self.result = relocalize_result(self.result, self.language)
@@ -1798,6 +2020,8 @@ class ToneMatchApp:
             self._toggle_developer_mode()
         if stem_workspace_selected:
             self.workspace_notebook.select(self.stem_tab)
+        elif harmony_workspace_selected:
+            self.workspace_notebook.select(self.harmony_tab)
         self._save_settings()
 
     def _change_device(self, _event: object | None = None) -> None:
@@ -2756,7 +2980,7 @@ class ToneMatchApp:
             except (TypeError, ValueError):
                 confidence = math.nan
             score = f"{max(0, min(100, round(confidence * 100)))}/100" if math.isfinite(confidence) else "—"
-            symbol = str(event["symbol"]).split("/")[0] if is_mix else event["symbol"]
+            symbol = without_bass_note(str(event["symbol"])) if is_mix else event["symbol"]
             widget.insert("end", f"{start}–{end}   {symbol}   {tr('ui.voicing_confidence', self.language)} {score}\n", "event")
             evidence = event.get("evidence") or {}
             notes = pitch_class_names(evidence.get("observed_pitch_classes", event.get("pitch_classes", ()))) or "—"
@@ -2774,7 +2998,7 @@ class ToneMatchApp:
             alternatives = []
             for candidate in event.get("alternatives", ()):
                 alternative = str(candidate.get("symbol", ""))
-                alternative = alternative.split("/")[0] if is_mix else alternative
+                alternative = without_bass_note(alternative) if is_mix else alternative
                 if alternative and alternative != symbol and alternative not in alternatives:
                     alternatives.append(alternative)
             if alternatives:
@@ -2941,7 +3165,7 @@ class ToneMatchApp:
         destination = filedialog.asksaveasfilename(title=tr("dialog.debug_bundle_title", self.language), defaultextension=".zip", initialfile=initial, filetypes=(("ZIP", "*.zip"),))
         if not destination:
             return
-        source_names = ("app.py", "catalog.py", "debug_info.py", "devices.py", "engine.py", "i18n.py", "native_dsp.py", "native/tonematch_dsp.cpp", "native/tonematch_dsp.h", "recorder.py", "reference_compare.py", "report.py", "separator.py", "spectrum.py", "stem_removal.py", "voicing.py")
+        source_names = ("app.py", "catalog.py", "debug_info.py", "devices.py", "engine.py", "harmony_reference.py", "i18n.py", "native_dsp.py", "native/tonematch_dsp.cpp", "native/tonematch_dsp.h", "recorder.py", "reference_compare.py", "report.py", "separator.py", "spectrum.py", "stem_removal.py", "stem_diagnostics.py", "voicing.py")
         diagnostics = {
             "app_version": APP_VERSION,
             "build_date": BUILD_DATE,
@@ -3144,13 +3368,36 @@ def _self_test_voicing() -> dict:
 
     ninth = analyze_notes((48, 52, 55, 58, 62))
     sixth = analyze_notes((48, 52, 55, 57))
+    suspended = analyze_notes((48, 50, 55, 58))
+    eleventh = analyze_notes((48, 51, 55, 58, 62, 65))
     single = analyze_notes((48,))
     ninth_ok = bool(ninth.events) and all(e.root_pc == 0 and e.chord_type == "9" and e.evidence.get("observed_pitch_classes") for e in ninth.events)
     ambiguity_ok = bool(sixth.events) and all(e.evidence.get("ambiguous") and any(a["chord_type"] == "min7" for a in e.alternatives) for e in sixth.events)
     single_ok = single.tonal_coverage == 0 and all(e.chord_type == "unknown" for e in single.events)
-    return {"ok": bool(ninth_ok and ambiguity_ok and single_ok), "template_count": len(CHORD_INTERVALS),
+    suspended_ok = bool(suspended.events) and all(e.root_pc == 0 and e.chord_type == "7sus2" for e in suspended.events)
+    eleventh_ok = bool(eleventh.events) and all(e.root_pc == 0 and e.chord_type == "min11" for e in eleventh.events)
+    return {"ok": bool(ninth_ok and ambiguity_ok and single_ok and suspended_ok and eleventh_ok), "template_count": len(CHORD_INTERVALS),
             "ninth_and_evidence_ok": bool(ninth_ok), "ambiguity_ok": bool(ambiguity_ok),
+            "suspended_seventh_ok": bool(suspended_ok), "minor_eleventh_ok": bool(eleventh_ok),
             "single_note_rejected": bool(single_ok), "real_song_accuracy_measured": False}
+
+
+def _self_test_harmony_reference() -> dict:
+    """동결 앱의 이론 사전이 확장음·음이름·펜타토닉·다이어토닉 자료를 실제 계산하는지 확인한다."""
+    thirteenth = get_chord_reference(0, "13", "en")
+    sharp_major = get_scale_reference(1, "major", "en")
+    pentatonic = get_scale_reference(0, "minor_pentatonic", "en")
+    diatonic = get_diatonic_reference(0, "major", "en")
+    extended_ok = thirteenth["intervals"] == [0, 4, 7, 10, 14, 17, 21]
+    spelling_ok = sharp_major["note_names"] == ["C♯", "D♯", "E♯", "F♯", "G♯", "A♯", "B♯"]
+    pentatonic_ok = pentatonic["pitch_classes"] == [0, 3, 5, 7, 10]
+    diatonic_ok = len(diatonic["rows"]) == 7 and diatonic["rows"][4]["seventh"]["symbol"] == "G7"
+    counts = {"chord_type_count": len(chord_options()), "scale_type_count": len(scale_options()),
+              "diatonic_scale_count": len(diatonic_options()), "root_count": len(NOTE_NAMES)}
+    return {"ok": bool(extended_ok and spelling_ok and pentatonic_ok and diatonic_ok), **counts,
+            "compound_intervals_ok": bool(extended_ok), "enharmonic_spelling_ok": bool(spelling_ok),
+            "pentatonic_ok": bool(pentatonic_ok), "diatonic_rows_ok": bool(diatonic_ok),
+            "automatic_audio_key_detection": False}
 
 
 def run_self_test(output_path: str | Path) -> int:
@@ -3175,18 +3422,22 @@ def run_self_test(output_path: str | Path) -> int:
         debug_sources_ok = all("def " in code_for_block(block["id"]) and "소스 위치를 찾지 못했습니다" not in code_for_block(block["id"]) for block in PIPELINE_BLOCKS)
         stem_removal_source_ok = "def remove_stems_from_file(" in source_file_path("stem_removal.py").read_text(encoding="utf-8")
         stem_diagnostics_source_ok = "def run_stem_self_test(" in source_file_path("stem_diagnostics.py").read_text(encoding="utf-8")
+        harmony_reference_source_ok = "def get_chord_reference(" in source_file_path("harmony_reference.py").read_text(encoding="utf-8")
         separator_status = separator_runtime_status()
         native_dsp_status = _self_test_native_dsp()
         chord_voicing_status = _self_test_voicing()
+        harmony_reference_status = _self_test_harmony_reference()
         payload = {
-            "ok": len(result.get("recipes", [])) == 3 and debug_sources_ok and stem_removal_source_ok and stem_diagnostics_source_ok and english.get("language") == "en" and bool(separator_status.get("available")) and reference_compare_ok and native_dsp_status["smoke_ok"] and chord_voicing_status["ok"],
+            "ok": len(result.get("recipes", [])) == 3 and debug_sources_ok and stem_removal_source_ok and stem_diagnostics_source_ok and harmony_reference_source_ok and english.get("language") == "en" and bool(separator_status.get("available")) and reference_compare_ok and native_dsp_status["smoke_ok"] and chord_voicing_status["ok"] and harmony_reference_status["ok"],
             "chord_voicing": chord_voicing_status,
+            "harmony_reference": harmony_reference_status,
             "app_version": APP_VERSION,
             "ffmpeg_analysis": True,
             "developer_source_blocks": len(PIPELINE_BLOCKS),
             "developer_sources_ok": debug_sources_ok,
             "stem_removal_source_ok": stem_removal_source_ok,
             "stem_diagnostics_source_ok": stem_diagnostics_source_ok,
+            "harmony_reference_source_ok": harmony_reference_source_ok,
             "english_localization": english.get("language") == "en",
             "reference_compare_ok": reference_compare_ok,
             "reference_bands": len(result["reference_spectrum"]["bands"]),
