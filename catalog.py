@@ -8,18 +8,48 @@
 from __future__ import annotations
 
 
-APP_VERSION = "0.0.12"
+APP_VERSION = "0.0.13"
 TARGET_FIRMWARE = "1.8.58"
 MODEL_GUIDE_REVISION = "Rev. J (2026-07)"
-BUILD_DATE = "2026-10-02"
+BUILD_DATE = "2026-10-04"
 
 
 # 앱 내부의 변경 기록 화면과 배포 문서가 함께 사용하는 단일 원본이다.
 # 이후 패치는 0.0.02, 0.0.03, 0.0.04처럼 한 단계씩 올리고 최신 항목을 맨 위에 둔다.
 CHANGELOG: list[dict] = [
     {
-        "version": "0.0.12",
+        "version": "0.0.13",
         "date": BUILD_DATE,
+        "status": "공개 개발 프리뷰",
+        "status_en": "Public development preview",
+        "changes": [
+            "코드·보이싱 결과를 한 줄 4마디, 페이지당 16마디 코드표로 표시",
+            "BPM·박자·첫 마디 시작 위치를 보정하고 미확정·한 마디 안의 코드 변화를 보존",
+            "표준 튜닝 기타의 구성음 검증 운지 후보를 확장하고 실제 연주 검출과 구분",
+            "긴 곡에서 기존 96개 표시 상한으로 생략되던 코드 이벤트를 페이지 단위로 유지",
+            "채보 알고리즘 조사와 정답 주석 기반 후속 평가 계획 문서화",
+        ],
+        "changes_en": [
+            "Displays chord/voicing results as four bars per row and sixteen bars per page",
+            "Editable BPM, meter and first downbeat preserve unknown spans and within-bar changes",
+            "Expands pitch-validated standard-tuning guitar suggestions, distinct from detected performance",
+            "Retains long-song chord events beyond the previous 96-event display limit",
+            "Documents transcription research and a ground-truth evaluation plan",
+        ],
+        "known_issues": [
+            "마디는 일정 템포의 보정 가능한 참고 격자이며 자동 다운비트 채보가 아님",
+            "운지는 이론 후보이며 실제 손가락·현·프렛 검출이 아님; 7구성음의 완전한 13화음은 6현에 표시하지 않음",
+            "신경망 채보 모델은 도입하지 않았으며 실제 곡 정확도 향상을 측정하지 않음",
+        ],
+        "known_issues_en": [
+            "Bars use an editable constant-tempo guide, not detected downbeats",
+            "Shapes are theoretical suggestions, not detected fingers; seven-tone 13ths cannot fit six strings",
+            "No neural transcription model is integrated and real-song accuracy gains are not measured",
+        ],
+    },
+    {
+        "version": "0.0.12",
+        "date": "2026-10-02",
         "status": "공개 개발 프리뷰",
         "status_en": "Public development preview",
         "changes": [

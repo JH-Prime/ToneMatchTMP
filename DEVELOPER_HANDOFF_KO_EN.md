@@ -1,36 +1,53 @@
-# ToneMatch TMP v0.0.12 — 개발 인수인계 / Developer Handoff
+# ToneMatch TMP v0.0.13 — 개발 인수인계 / Developer Handoff
 
-이 문서는 v0.0.12 개발 스냅샷을 다른 Windows PC나 새 개발 세션에서 이어서
-작업하기 위한 기준 문서입니다. 소스, `QA_REPORT_v0.0.12.json`과
-`BUILD_HISTORY.md`가 상태의 근거이며 빌드 기준일은 2026-10-02 KST입니다.
+이 문서는 v0.0.13 개발 스냅샷을 다른 Windows PC나 새 개발 세션에서 이어서
+작업하기 위한 기준 문서입니다. 소스, `QA_REPORT_v0.0.13.json`과
+`BUILD_HISTORY.md`가 상태의 근거이며 빌드 기준일은 2026-10-04 KST입니다.
 서명되지 않은 CPU 포터블 개발자 프리릴리스입니다.
 
-This handoff covers the v0.0.12 development snapshot. Source,
-`QA_REPORT_v0.0.12.json` and `BUILD_HISTORY.md` define its state.
-The build reference date is 2026-10-02 KST. This is an unsigned CPU portable
+This handoff covers the v0.0.13 development snapshot. Source,
+`QA_REPORT_v0.0.13.json` and `BUILD_HISTORY.md` define its state.
+The build reference date is 2026-10-04 KST. This is an unsigned CPU portable
 developer prerelease.
 
-v0.0.12는 오디오 코드 후보를 20→41종으로 확대하고 바깥쪽 세 번째
-`코드·스케일 사전`을 추가합니다. 12근음의 건반·구성음·도수, 12종 스케일·모드,
-장음계·자연단음계의 다이어토닉 3화음·7화음을 음원 없이 확인할 수 있습니다.
-이론 참고표와 음원 검출을 구분하며 코드 유형 증가를 채보 정확도 보증으로 표현하지 않습니다.
+v0.0.13은 `코드·보이싱` 결과에 한 줄 4마디·한 페이지 16마디 차트와 수동
+BPM·박 수·첫 강박 보정을 추가합니다. 기존 41종 오디오 화음 후보와 독립
+`코드·스케일 사전`은 유지하고 이론상 기타 운지는 38종 × 12근음으로 넓힙니다.
+기본 이벤트 상한은 96→4096으로 올리되 이를 정확도 향상 수치로 표현하지 않습니다.
+수동 마디 격자·이론상 운지는 검출된 정답 악보나 실제 연주 위치가 아닙니다.
 YouTube URL 입력·자동 추출은 없고 권한 있는 로컬 파일·녹음 입력은 유지합니다.
 
-Version 0.0.12 expands audio chord candidates from 20 to 41 qualities and adds the
-third outer `Chord & scale guide` workspace. Piano keys, component notes and degrees
-are available in all 12 roots, with 12 scales/modes and major/natural-minor diatonic
-triads and sevenths. The guide is independent of audio analysis, not a detected
-performance or a scale/key detector. More templates do not guarantee transcription
-accuracy. There is no YouTube URL input or automatic extraction.
+Version 0.0.13 adds four-by-four, 16-bar chart pages to `Chord & voicing`, with
+editable BPM, beats per bar and first-downbeat offset. The existing 41-quality
+audio vocabulary and independent guide remain. Theoretical standard-EADGBE shapes
+cover 38 qualities in all 12 roots. The default event limit rises from 96 to
+4,096 to preserve detected changes, not to claim better accuracy. A manual grid
+and theoretical fingering are not a detected score or performance. No YouTube URL
+input or automatic extraction is provided.
+
+10월 4일 316개 전체 회귀·compileall·소스/EXE 자체 진단을 통과했고, 10월 5일
+최종 EXE의 캐시 CPU 모델 전체 곡 처리·취소·원본 보존 및 새 ZIP의 4,503개 파일·
+56개 빌드 입력·새 EXE 실행 검사를 통과했습니다. 최종 문서 반영 후 ZIP을 게시 전 재검사합니다.
+숨김 코드표 UI도 한·영·960×600/1080×720·120/150% 배율·설정 펼침과 실제 곡의
+165개 이벤트/12페이지 보존을 확인했습니다. 정답 채보·수동 화면·청감 검증은 아닙니다.
+The October 4 build passed 316 tests, compileall and source/frozen self-tests.
+October 5 checks passed cached-CPU full-song processing/cancellation, source
+preservation and fresh extraction of 4,503 manifest files with 56 matching build
+inputs and a new EXE self-test. Final documents are repackaged and reverified
+before publication. Hidden KO/EN chart tests include 960×600/1080×720 at 120/150%
+scaling, expanded settings and all 165 actual-input events across 12 pages.
+These do not establish transcription accuracy or manual visual/listening quality.
+
+### 이전 v0.0.12 검증 기록 / Historical v0.0.12 validation
 
 10월 2일 자동 테스트 282개(`-W error`)·소스/EXE 자체 진단과 10월 3일 실제
 CPU 모델 전체 곡 제거·취소, 새 압축 해제 무결성·EXE 검증을 통과했습니다.
 The October 2 build passed 282 tests and source/frozen self-tests. October 3
 checks passed real cached-CPU full-song removal, cancellation, fresh-extract
-integrity and a new EXE self-test. See current QA/build history for scope.
-현행 합성 비교는 41유형 × 12근음 × 2음색의 984개에서 대표 이름 일치 984개,
+integrity and a new EXE self-test. See `QA_REPORT_v0.0.12.json` and its build-history section.
+v0.0.12 합성 비교는 41유형 × 12근음 × 2음색의 984개에서 대표 이름 일치 984개,
 v0.0.11 비교본은 480개이며 두 버전 모두 비화음 대조 36개를 거부했습니다.
-The fixed 984-case synthetic comparison matches 984 expected primary labels versus
+The v0.0.12 fixed 984-case synthetic comparison matches 984 expected primary labels versus
 480 in v0.0.11; both reject all 36 controls. This is not real-song accuracy.
 정답 주석 없는 Room 335 실행이나 검출 구간 비율은 채보 정답률이 아닙니다.
 An unannotated Room 335 run or its supported-window coverage cannot establish
@@ -43,7 +60,7 @@ download, network-disabled use, CUDA or live capture. User media, output, raw lo
 and model weights must not enter public artifacts.
 
 > 게시 전 최종 ZIP을 새로 검사해 manifest·소스·DLL·고지·SHA-256 일치를 확인합니다.
-> `ToneMatchTMP-v0.0.12-SHA256SUMS.txt`는 ZIP 해시, `MANIFEST.json`은 내부 파일의 기준입니다.
+> `ToneMatchTMP-v0.0.13-SHA256SUMS.txt`는 ZIP 해시, `MANIFEST.json`은 내부 파일의 기준입니다.
 > Publication requires a fresh final ZIP check. The sibling checksum file covers the ZIP;
 > `MANIFEST.json` covers its contents.
 
@@ -53,7 +70,7 @@ and model weights must not enter public artifacts.
 
 ### 1. 제품 범위와 변하지 않아야 할 계약
 
-- 앱 버전: `0.0.12`
+- 앱 버전: `0.0.13`
 - 대상 장치: Fender Tone Master Pro
 - 대상 펌웨어/모델 가이드: `1.8.58` / `Rev. J (2026-07)`
 - 플랫폼: 64-bit Windows, Python 3.12 계열
@@ -63,6 +80,7 @@ and model weights must not enter public artifacts.
 - 기타 단독 파일: 사용자 선택으로 AI 분리 생략
 - 악기 제거: 별도 작업 탭에서 Demucs 6-stem 중 1~5개를 제외하고 나머지를 새 44.1 kHz stereo PCM16 WAV 하나로 합산; 원본·기존 출력 비덮어쓰기
 - 사전: 음원과 독립적인 세 번째 `코드·스케일 사전` 탭, 41코드·12스케일·장음계/자연단음계 다이어토닉의 12근음 참고
+- 마디 차트: 분석 안의 4×4/16마디 표시, 수동 BPM·박 수·첫 강박 상대 초 보정, 미확정·마디 내 변화 보존; 자동 강박 검출 아님
 - 출력: 상위 3개 Tone Master Pro 레시피, JSON, 독립형 HTML, 클립보드 텍스트, 코드·보이싱 후보·관측 근거, 레벨 정규화 Reference와 실시간 Current의 6밴드·주파수 차이
 - 기기 제어: Tone Master Pro/Pro Control 자동 쓰기 없음. 사용자가 값을 수동 적용
 - 네트워크: 오디오 업로드·YouTube URL 입력·추출 없음. 앱이 직접 받는 콘텐츠는 첫 AI 모델뿐이며 이전 `reference_url` 메타데이터는 호환성용으로만 유지
@@ -82,10 +100,34 @@ Neural DSP Quad Cortex, Line 6 Helix Family와 예약 장치 슬롯은 UI 확장
 - `0.0.10`: 새 악기 제거 입력의 상태 초기화, 끊어진 출력 링크 보호, 기타 분리의 잘린 WAV 검사·정리, 실제 모델 제거·취소·진행률·원본 보존용 GUI 없는 진단·임시 음원 정리·경로 비공개 JSON
 - `0.0.11`: 코드·보이싱 후보와 관측 근거·대안 표시 보완, 분석 입력과 무관한 참고용 YouTube UI 제거
 - `0.0.12`: 오디오 코드 41종, 코드·스케일 사전, 12근음의 건반·도수·음이름, 12스케일 및 장음계·자연단음계 다이어토닉 3·7화음
+- `0.0.13`: 4×4/16마디 코드 차트, 수동 격자 보정·JSON 설정 저장, 38종 × 12근음 이론상 기타 운지, 기본 4,096개 이벤트 보존과 채보 알고리즘 조사
 
 v0.0.03에서 도입된 보이싱 결과는 톤 레시피와 별도의 참고 진단입니다. 완전한 다성음 채보, 타브 생성 또는 연주 정확도 판정으로 표현하지 않습니다.
 
-### v0.0.12 코드·스케일 사전과 확장 코드 계약
+### v0.0.13 마디 차트·기타 운지·연구 계약
+
+- `chord_chart.py`는 오디오 재분석 없이 이벤트를 4마디씩 4줄로 나누는 순수
+  표시 모델입니다. 일정 템포·박 수·첫 강박을 자동 검출하거나 코드 시각을
+  양자화하지 않습니다. 마디 안의 모든 변화, 공백/미확정, 못갖춘 앞부분을 보존합니다.
+- 기존 `features.bpm`이 20~300이면 초깃값으로 쓰고 아니면 120입니다. 기본
+  박 수는 4, 첫 강박은 분석 구간 기준 0초입니다. 원본 시작 30초에서 첫 강박
+  2초는 원본 32초입니다. 곡 중간의 템포·박자 변화는 자동 추적하지 않습니다.
+- UI 적용값은 결과 JSON의 `chord_chart_settings`에 보존합니다. HTML과
+  클립보드는 기존 전체 상세 타임라인이며 16마디 페이지 내보내기가 아닙니다.
+- 기존 6종 E/A형과 `guitar_shapes.py`의 추가 32종 탐색을 합쳐 38종 × 12근음의
+  완전 구성음 후보를 지원합니다. 표준 EADGBE, 프렛 0~15, 양의 프렛 max−min≤3,
+  대략 네 손가락/바레 제한입니다. 반환은 `detected: false`이며 실제 손가락
+  번호나 편안함을 보장하지 않습니다. 7개 구성음의 13·maj13·min13은 6현에 모두
+  넣을 수 없어 완전 운지가 비어 있지만 오디오·건반 사전에서는 계속 지원합니다.
+- `original_mix`에서는 기타 운지와 기타 저음/역위 주장을 계속 숨깁니다.
+  41종 화음은 실제 오디오 후보에 연결되어 있지만 악기별 전용 채보 모델은 아닙니다.
+- `analyze_voicings` 기본 상한 96→4096은 이미 검출된 이벤트 보존입니다.
+  명시적 상한·잘림 진단은 유지하고 이벤트 수·근거 비율을 정답률로 부르지 않습니다.
+- NNLS/Chordino나 새 신경망을 통합하지 않았습니다. 조사한 알고리즘·라이선스·
+  독립 정답 기반 평가 계획은 [TRANSCRIPTION_RESEARCH_KO.md](TRANSCRIPTION_RESEARCH_KO.md)를
+  확인하며 연구 후보를 구현 완료 기능으로 표시하지 않습니다.
+
+### v0.0.12 도입 코드·스케일 사전과 확장 코드 계약 · 현행 유지
 
 세 번째 바깥 `코드·스케일 사전` 탭은 음원 없이 근음·분류·유형을 선택하고
 구성음·도수·건반도를 살펴보는 읽기 전용 기능입니다. 오디오 코드 결과 탭의
@@ -206,6 +248,8 @@ Current용 두 번째 장치 스트림을 만들지 않습니다. Δ 부호는 �
 | `spectrum.py` | 입력 정규화, 채널별 FFT power, 20 Hz~20 kHz 스펙트럼·dBFS·중심 주파수 계산과 4프레임 평활화 |
 | `reference_compare.py` | 분석 PCM의 레벨 정규화 Reference 프로필, 6밴드 집계, 실시간 Current 보간과 `Δ(Current−Reference)` 계산 |
 | `harmony_reference.py` | 41코드·12스케일의 이론 도수·음이름과 장음계/자연단음계 다이어토닉, 12근음 건반 사전 자료(음원 분석과 독립) |
+| `chord_chart.py` | 수동 격자의 4×4/16마디 표시 모델, 모든 변화·미확정·앞부분·원본 시각 보존 |
+| `guitar_shapes.py` | 완전 구성음·프렛 범위·바레 근사 제한을 지키는 표준 기타 이론 운지 탐색 |
 | `voicing.py` | 캐시와 NumPy 벡터 연산 기반 피치 클래스·코드/대안 후보·저음/음역 근거 추정(톤 매칭과 분리) |
 | `catalog.py` | 앱/펌웨어 버전, 변경 기록, 18개 TMP 톤 템플릿 |
 | `i18n.py` | 한국어/영어 UI·오류·진행 문자열과 안정적인 선택 코드 변환 |
@@ -216,7 +260,7 @@ Current용 두 번째 장치 스트림을 만들지 않습니다. Δ 부호는 �
 | `ToneMatchTMP.spec` | PyInstaller 데이터·바이너리·숨은 import·버전 리소스 |
 | `build.ps1` | 테스트 후 깨끗한 PyInstaller 빌드 |
 
-`DEVELOPMENT_KO.md`는 v0.0.12 구현 구조 요약이고, `FUNCTION_REFERENCE_KO.md`는 배포 소스의 모든 함수와 한국어 docstring을 자동 색인합니다. 새 PC 재구성과 릴리스 판정은 이 문서를 우선합니다.
+`DEVELOPMENT_KO.md`는 v0.0.13 구현 구조 요약이고, `FUNCTION_REFERENCE_KO.md`는 배포 소스의 모든 함수와 한국어 docstring을 자동 색인합니다. 새 PC 재구성과 릴리스 판정은 이 문서를 우선합니다.
 
 #### v0.0.03 도입 코드/보이싱 API와 v0.0.07 도입 계약(현행 유지)
 
@@ -282,8 +326,8 @@ v0.0.07은 `analysis_source`를 `guitar_stem`/`provided_audio`/`original_mix`로
   GUI 없는 실행을 수동 UI·청감 검증으로 부르지 않습니다.
 
 ```powershell
-& .\ToneMatchTMP-v0.0.12.exe --stem-self-test-source C:\Audio\sample.mp3 --stem-self-test-output .\stem-check-v0.0.12.json
-& .\ToneMatchTMP-v0.0.12.exe --stem-self-test-source C:\Audio\sample.mp3 --stem-self-test-output .\stem-cancel-v0.0.12.json --stem-self-test-seconds 31 --stem-self-test-cancel-at 35
+& .\ToneMatchTMP-v0.0.13.exe --stem-self-test-source C:\Audio\sample.mp3 --stem-self-test-output .\stem-check-v0.0.13.json
+& .\ToneMatchTMP-v0.0.13.exe --stem-self-test-source C:\Audio\sample.mp3 --stem-self-test-output .\stem-cancel-v0.0.13.json --stem-self-test-seconds 31 --stem-self-test-cancel-at 35
 ```
 
 #### v0.0.09 C++ 입력·진단 계약
@@ -330,9 +374,9 @@ PCM16을 디코딩하고 `separator.separate_stem_chunks(...)`로 남길 stem �
 권장 폴더 구조:
 
 ```text
-C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.12\
+C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.13\
 ├─ .venv\                 새 PC에서 다시 생성
-├─ ToneMatchTMP-v0.0.12.exe
+├─ ToneMatchTMP-v0.0.13.exe
 └─ source\                자체 완결된 개발 프로젝트
    ├─ app.py
    ├─ requirements.txt
@@ -348,7 +392,7 @@ C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.12\
 `build.ps1`는 프로젝트의 형제 위치인 `..\.venv`를 찾습니다. 압축에 `.venv`가 있더라도 사용하지 마세요. Python 가상환경에는 원래 PC의 절대 경로와 네이티브 바이너리가 들어가므로 새 PC에서 다시 만드는 것이 안전합니다.
 
 ```powershell
-Set-Location C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.12
+Set-Location C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.13
 py -3.12 -m venv .venv
 & .\.venv\Scripts\python.exe -m pip install --upgrade pip
 & .\.venv\Scripts\python.exe -m pip install -r .\source\requirements.txt
@@ -380,7 +424,7 @@ Set-Location .\source
 
 `_load_hf_separator_model`은 각 파일을 `local_files_only=True`로 먼저 확인하고 누락 파일만 공식 저장소에서 받습니다. Demucs의 범용 로더 대신 이 명시 로더를 사용하여 Hugging Face 오류를 숨긴 채 구형 모델 다운로드로 바뀌는 폴백을 제거했습니다. 다운로드용 `tqdm`은 콘솔 출력 없이 실제 바이트를 앱 콜백에 전달합니다. 총량 없는 수신은 바이트만 표시하며 캐시 확인·파일 수신·메모리 로딩을 구분합니다.
 
-`app.py`는 외부 라이브러리 import 전에 `sys.stdout`·`sys.stderr`가 `None`일 때만 안전한 스트림을 연결합니다. 콘솔 없는 EXE의 `'NoneType' object has no attribute 'write'`는 네트워크 상태와 무관한 출력 오류일 수 있으므로 인터넷 미연결로 단정하면 안 됩니다. 모델 준비 예외는 체인을 따라 서버·네트워크, 캐시 권한·디스크, 메모리 부족, 기타 모델·런타임 오류로 나눕니다. 릴리스 검증에서는 단순 자체 진단뿐 아니라 모델 준비를 실제로 실행하는 EXE 분석도 확인하고 그 결과를 `QA_REPORT_v0.0.12.json`과 `BUILD_HISTORY.md`에 남깁니다.
+`app.py`는 외부 라이브러리 import 전에 `sys.stdout`·`sys.stderr`가 `None`일 때만 안전한 스트림을 연결합니다. 콘솔 없는 EXE의 `'NoneType' object has no attribute 'write'`는 네트워크 상태와 무관한 출력 오류일 수 있으므로 인터넷 미연결로 단정하면 안 됩니다. 모델 준비 예외는 체인을 따라 서버·네트워크, 캐시 권한·디스크, 메모리 부족, 기타 모델·런타임 오류로 나눕니다. 릴리스 검증에서는 단순 자체 진단뿐 아니라 모델 준비를 실제로 실행하는 EXE 분석도 확인하고 그 결과를 `QA_REPORT_v0.0.13.json`과 `BUILD_HISTORY.md`에 남깁니다.
 
 기본 위치:
 
@@ -400,7 +444,7 @@ Set-Location .\source
 
 ```powershell
 $env:HF_HOME = "D:\ToneMatchTMP-model-cache"
-& .\ToneMatchTMP-v0.0.12.exe
+& .\ToneMatchTMP-v0.0.13.exe
 ```
 
 다른 PC에서 재다운로드하지 않으려면 모델의 배포 조건을 먼저 확인하고 `models--adefossez--HTDemucs-6s` 전체(`blobs`, `refs`, `snapshots` 포함)를 새 PC의 대응 경로로 복사합니다. 부분 다운로드나 실행 중이던 분석을 다른 PC에서 이어받는 기능은 보장하지 않습니다. 캐시 복사가 불완전하면 지우고 온라인 상태에서 다시 받는 편이 안전합니다.
@@ -428,7 +472,7 @@ $env:HF_HOME = "D:\ToneMatchTMP-model-cache"
 & ..\.venv\Scripts\python.exe -m unittest discover -s tests -v
 
 # 소스 자체 진단
-& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.12.json
+& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.13.json
 
 # 테스트 후 PyInstaller 빌드
 .\build.ps1 -ZigPath C:\Tools\zig-0.15.2\zig.exe
@@ -461,6 +505,7 @@ $env:HF_HOME = "D:\ToneMatchTMP-model-cache"
 20. 첫 다운로드와 캐시 재사용 결과를 구분해 기록하고, 다운로드 총량 미상·취소·모델 예외 분류 및 `stdout`/`stderr`가 없는 시작 조건은 회귀 테스트 결과와 실제 실행 결과를 구분해 남김
 21. 바깥쪽 톤 분석/악기 제거/코드·스케일 사전 탭, 사전의 41/12/2 유형·12근음·다이어토닉 행·상위 옥타브 표시, 한·영 입력·긴 완료 문구·작은 창, 1~5개 선택과 3초/20분 경계, 진행률·취소·작업 상호 배타를 확인
 22. 악기 제거의 실제 캐시 모델 실행과 새 PCM16 stereo WAV 완성, 기존 파일/처리 중 생성 파일 비덮어쓰기, 전역 peak 감쇠와 완료/오류/취소 임시 파일 정리를 확인하고 mock·소스·최종 EXE 결과를 구분
+23. 코드 차트 4×4/16마디·페이지 이동, BPM·박 수·첫 강박 보정과 범위 오류, 미확정/앞부분/다중 변화 보존, 언어 전환·작은 창·스크롤, 기타 후보와 원본 믹스의 운지 숨김, JSON 설정 저장을 확인. 숨긴 Tk 회귀와 수동 시각 검증은 별도로 기록
 
 ### 8. 포터블 개발 ZIP 구성
 
@@ -483,17 +528,19 @@ $env:HF_HOME = "D:\ToneMatchTMP-model-cache"
 - `%TEMP%\ToneMatchTMP-error.log`
 - API 키, 토큰, 프록시·계정 정보와 개인 경로가 들어간 설정
 
-대상 파일명은 `ToneMatchTMP-v0.0.12-Windows-x64-Portable-Dev.zip`입니다. EXE·ZIP·자체 진단의 최종 SHA-256은 패키징이 모두 끝난 뒤 형제 파일 `ToneMatchTMP-v0.0.12-SHA256SUMS.txt`와 `BUILD_HISTORY.md`에 기록합니다.
+대상 파일명은 `ToneMatchTMP-v0.0.13-Windows-x64-Portable-Dev.zip`입니다. EXE·ZIP·자체 진단의 최종 SHA-256은 패키징이 모두 끝난 뒤 형제 파일 `ToneMatchTMP-v0.0.13-SHA256SUMS.txt`와 `BUILD_HISTORY.md`에 기록합니다.
 
 ### 9. 릴리스 게이트
 
-v0.0.12에서 다음 개발자가 재확인할 항목입니다. 실제 CUDA GPU, 물리 장치/loopback 실시간 스펙트럼·Reference Compare·녹음과 코드 서명은 이번 릴리스 PC에서 검증되지 않았다면 `BUILD_HISTORY.md`에 그대로 남깁니다.
+v0.0.13에서 다음 개발자가 재확인할 항목입니다. 실제 CUDA GPU, 물리 장치/loopback 실시간 스펙트럼·Reference Compare·녹음과 코드 서명은 이번 릴리스 PC에서 검증되지 않았다면 `BUILD_HISTORY.md`에 그대로 남깁니다.
 
+- 16마디 차트가 수동 격자라고 명시되고 BPM·박 수·첫 강박/원본 오프셋, 미확정·앞부분·모든 변화 보존, JSON 설정 저장과 HTML 상세 타임라인 경계가 맞는지
+- 38종 × 12근음 운지의 모든 음이 템플릿과 일치하고 7구성음 13계열은 비어 있으며 원본 믹스에서 운지·역위를 다시 만들어 내지 않는지
 - 코드·스케일 사전이 음원 없이 열리고 41/12/2 유형·12근음, 상위 옥타브·도수 철자·다이어토닉 선택이 맞으며 분석 결과와 혼동되지 않는지
-- `catalog.APP_VERSION`, 최신 `CHANGELOG`, `version_info.txt`, spec의 EXE 이름과 모든 현재 문서가 `0.0.12`인지
+- `catalog.APP_VERSION`, 최신 `CHANGELOG`, `version_info.txt`, spec의 EXE 이름과 모든 현재 문서가 `0.0.13`인지
 - 실제 C ABI 2 DLL의 float32/float64 수치·분할 입력·카운터/reset·오류 회귀와 ABI 1 거부/자동 폴백을 구분해 확인했는지
 - DSP push ms·완성 창·잔여 frame을 한·영/작은 창에서 표시하고 처리 시간을 왕복 지연 또는 전체 곡 AI 가속으로 설명하지 않는지
-- spec에 `i18n.py`, `devices.py`, `separator.py`, `stem_removal.py`, `native_dsp.py`, ABI-2 DLL, `recorder.py`, `spectrum.py`, `reference_compare.py`와 필요한 Demucs/PyTorch/SoundCard 런타임이 포함되는지
+- spec에 `chord_chart.py`, `guitar_shapes.py`, `harmony_reference.py`, `i18n.py`, `devices.py`, `separator.py`, `stem_removal.py`, `native_dsp.py`, ABI-2 DLL, `recorder.py`, `spectrum.py`, `reference_compare.py`와 필요한 Demucs/PyTorch/SoundCard 런타임이 포함되는지
 - 악기 제거의 1~5개 선택, 새 44.1 kHz stereo PCM16 WAV, 비덮어쓰기와 임시 파일 정리·취소를 검증하고 사용자 음원/출력을 공개 산출물에서 제외했는지
 - `voicing.py`와 해당 테스트·표시 문자열이 포함되고, 코드 근거 점수가 정답률·톤 추천 신뢰도와 혼동되지 않는지
 - `requirements.txt`가 새 의존성을 재현 가능하게 고정하는지
@@ -512,7 +559,7 @@ v0.0.12에서 다음 개발자가 재확인할 항목입니다. 실제 CUDA GPU,
 - Reference Compare를 Match %·실시간 특징 미터·자동 EQ/TMP 추천 또는 C++ 장치 입출력/ASIO로 과장하지 않는지
 - 코드의 반복 근거·잡음/배음·역상·미확정 처리와 원본 믹스의 기타 운지/역위 비표시를 확인하고, 원본 화성 참고가 톤·Reference·레시피를 바꾸지 않는지
 - 선택 구간의 원본 시각과 출처·진단 안내가 GUI/JSON/한국어·영어 HTML에 일치하고, 작은 작업 영역과 긴 완료 문구에서도 버튼·상태 영역을 사용할 수 있는지
-- 다음 패치는 현재 파일·산출물 이름을 `0.0.13`로 올리되 v0.0.12 이하 역사 섹션은 다시 쓰지 않는지
+- 다음 패치는 현재 파일·산출물 이름을 `0.0.14`로 올리되 v0.0.13 이하 역사 섹션은 다시 쓰지 않는지
 
 ---
 
@@ -520,7 +567,7 @@ v0.0.12에서 다음 개발자가 재확인할 항목입니다. 실제 CUDA GPU,
 
 ### 1. Product contract
 
-- App version: `0.0.12`
+- App version: `0.0.13`
 - Active target: Fender Tone Master Pro
 - Target firmware/model guide: `1.8.58` / `Rev. J (2026-07)`
 - Platform: 64-bit Windows with the Python 3.12 line
@@ -530,6 +577,7 @@ v0.0.12에서 다음 개발자가 재확인할 항목입니다. 실제 CUDA GPU,
 - Guitar-only input: user can skip AI separation
 - Stem removal: a separate workspace removes one to five of six Demucs estimates and sums the rest into one new 44.1 kHz stereo PCM16 WAV, without overwriting the source or an existing destination
 - Guide: independent third `Chord & scale guide` workspace with 41 chords, 12 scales and major/natural-minor diatonic reference in all 12 roots
+- Bar chart: four-by-four, 16-bar result pages with manual BPM, beats per bar and relative first-downbeat settings; preserves unknowns and all changes, without automatic downbeat detection
 - Output: three Tone Master Pro recipes, JSON, standalone HTML, clipboard text, chord/voicing candidates and observed evidence, and six-band/frequency differences between a normalized Reference and live Current input
 - Device control: no automatic write to Tone Master Pro or Pro Control
 - Network: no audio upload, YouTube URL input or extraction; the only content fetched directly by the app is the first-use AI model. Legacy `reference_url` metadata remains for compatibility, not fetching
@@ -549,10 +597,39 @@ Keep the version boundary explicit:
 - `0.0.10`: New-source stem state reset, dangling-output-link protection, truncated guitar-isolation WAV checks/cleanup, and real-model headless removal/cancellation/progress/source-preservation diagnostics with temporary-audio cleanup and path-redacted JSON
 - `0.0.11`: Improved chord/voicing candidates, observed evidence and alternatives, with removal of the reference-only YouTube UI
 - `0.0.12`: 41 audio chord qualities, independent Chord & scale guide, 12-root piano diagrams/degrees/spellings, 12 scales and major/natural-minor diatonic triads/sevenths
+- `0.0.13`: four-by-four/16-bar chord pages, manual grid correction and JSON settings, theoretical guitar shapes for 38 qualities in 12 roots, 4,096-event preservation and transcription research
 
 The voicing output introduced in v0.0.03 is a separate diagnostic aid. Do not present it as complete polyphonic transcription, tablature, or performance grading.
 
-### v0.0.12 guide and expanded-chord contract
+### v0.0.13 chart, guitar-shape and research contract
+
+- `chord_chart.py` builds a pure display model with four bars per row and 16 per
+  page. It does not reanalyze audio, detect meter/downbeats or quantize events.
+  All within-bar changes, unknowns/gaps and pickup/pre-roll remain represented.
+- The existing `features.bpm` is used only as an initial hint when within 20–300;
+  otherwise the default is 120. Initial beats per bar is four and first downbeat
+  is zero relative to the analyzed segment. Source start 30 plus first downbeat
+  2 means original-file second 32. No automatic tempo/meter-change tracking is added.
+- Applied settings are stored in result JSON as `chord_chart_settings`. HTML and
+  clipboard output remain the full detailed timeline, not paged score exports.
+- The six existing E/A families plus 32 additional searched qualities provide
+  complete-tone candidates for 38 qualities in all 12 roots. Standard EADGBE,
+  frets 0–15, positive-fret max−min≤3 and approximately four fingers/barres bound
+  the search. Shapes are `detected: false`, not recovered fingering, finger
+  numbers or guaranteed comfort. Seven-tone 13/maj13/min13 cannot fit six strings
+  completely, so they have no complete shape; audio and keyboard support remain.
+- `original_mix` continues to hide guitar fingering and guitar bass/inversion
+  claims. The 41 qualities are used by audio candidate analysis but do not amount
+  to separate instrument-specific transcription models.
+- The default `analyze_voicings` cap changes from 96 to 4,096 to retain detected
+  timeline events. Explicit limits and truncation diagnostics remain; neither
+  event counts nor evidence coverage measure correctness.
+- No NNLS/Chordino integration or new neural model is bundled. Consult
+  [TRANSCRIPTION_RESEARCH_KO.md](TRANSCRIPTION_RESEARCH_KO.md) for the researched
+  methods, licensing and independent-ground-truth evaluation plan. Do not
+  describe research candidates as implemented functionality.
+
+### Guide and expanded-chord contract introduced in v0.0.12 — retained
 
 The third outer `Chord & scale guide` tab opens without audio. Select a root,
 category and type to inspect the keyboard, formula and component notes. It is a
@@ -769,14 +846,14 @@ of v0.0.08's historical results.
 Use this layout because `build.ps1` expects a sibling `..\.venv`:
 
 ```text
-C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.12\
+C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.13\
 ├─ .venv\                 recreate on the new PC
-├─ ToneMatchTMP-v0.0.12.exe
+├─ ToneMatchTMP-v0.0.13.exe
 └─ source\                self-contained development project
 ```
 
 ```powershell
-Set-Location C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.12
+Set-Location C:\ToneMatchTMP-dev\ToneMatchTMP-v0.0.13
 py -3.12 -m venv .venv
 & .\.venv\Scripts\python.exe -m pip install --upgrade pip
 & .\.venv\Scripts\python.exe -m pip install -r .\source\requirements.txt
@@ -794,7 +871,7 @@ That is the portable CPU baseline. On a compatible NVIDIA PC, first verify the b
 
 `separator.py` explicitly loads the official `adefossez/HTDemucs-6s` YAML and safetensors. `_load_hf_separator_model` first checks each file with `local_files_only=True`, downloading missing files only. This replaces the generic loader's silent legacy-model fallback after a Hugging Face failure. A console-free `tqdm` adapter forwards actual received bytes to the UI, reports file percentage only with a known total, and distinguishes cache lookup, download, and memory loading.
 
-Before importing external libraries, `app.py` supplies safe output streams only when `sys.stdout` or `sys.stderr` is `None`. The windowed EXE's `'NoneType' object has no attribute 'write'` failure can be an output-stream issue, not an internet outage. Model setup exceptions are categorized through their cause chain as server/network, cache permissions/disk, memory, or other model/runtime failures. Release verification must include packaged analysis that actually initializes the model, not only the standard self-test. Use `QA_REPORT_v0.0.12.json` and `BUILD_HISTORY.md` for verified outcomes.
+Before importing external libraries, `app.py` supplies safe output streams only when `sys.stdout` or `sys.stderr` is `None`. The windowed EXE's `'NoneType' object has no attribute 'write'` failure can be an output-stream issue, not an internet outage. Model setup exceptions are categorized through their cause chain as server/network, cache permissions/disk, memory, or other model/runtime failures. Release verification must include packaged analysis that actually initializes the model, not only the standard self-test. Use `QA_REPORT_v0.0.13.json` and `BUILD_HISTORY.md` for verified outcomes.
 
 The default model cache is:
 
@@ -816,7 +893,7 @@ To avoid downloading again on another PC, first check the model distribution ter
 
 ```powershell
 & ..\.venv\Scripts\python.exe -m unittest discover -s tests -v
-& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.12.json
+& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.13.json
 .\build.ps1 -ZigPath C:\Tools\zig-0.15.2\zig.exe
 ```
 
@@ -824,15 +901,15 @@ Before release, manually exercise guitar-only bypass, first-download full-mix is
 
 For the v0.0.06 progress/output fix, run an actual full-mix analysis in the final windowed portable EXE, exercising model initialization through cache lookup or download and continuing through internal separation blocks to three completed recommendations. The standard `--self-test-output` result alone does not validate that path. With developer mode off, verify that overall percentage and elapsed `mm:ss` stay visible, elapsed time refreshes while callbacks are pending without inventing progress, and the last values remain after completion, errors, or cancellation. Record first-download, cache-reuse, and offline checks separately. Distinguish mocked regression coverage for missing `stdout`/`stderr`, unknown download totals, cancellation, and categorized model failures from paths actually exercised in the EXE.
 
-The target archive name is `ToneMatchTMP-v0.0.12-Windows-x64-Portable-Dev.zip`. Its `source` folder must be self-contained and include source, tests, FFmpeg, the native DLL, C++ source/header, bridge and native build script, build metadata, base/CUDA setup files, documentation, and licenses alongside the EXE built from the same code. Record final artifact hashes only after packaging in the sibling checksum file and `BUILD_HISTORY.md`. Exclude virtual environments, compiler/toolchain archives, build caches, model weights, personal media/results, raw logs, credentials, and machine-specific settings.
+The target archive name is `ToneMatchTMP-v0.0.13-Windows-x64-Portable-Dev.zip`. Its `source` folder must be self-contained and include source, tests, FFmpeg, the native DLL, C++ source/header, bridge and native build script, build metadata, base/CUDA setup files, documentation, and licenses alongside the EXE built from the same code. Record final artifact hashes only after packaging in the sibling checksum file and `BUILD_HISTORY.md`. Exclude virtual environments, compiler/toolchain archives, build caches, model weights, personal media/results, raw logs, credentials, and machine-specific settings.
 
 ### 6. Resume checklist for the next developer or agent
 
 1. Verify the archive hash and extract it to a writable local folder.
 2. Read `README_KO.md`, this file, and `BUILD_HISTORY.md` before editing.
 3. Recreate the sibling virtual environment and run the full test suite.
-4. Confirm every current version-bearing file says `0.0.12` and that `BUILD_HISTORY.md` keeps all prior version sections unchanged.
-5. Confirm the PyInstaller spec includes `harmony_reference.py`, `stem_diagnostics.py`, `stem_removal.py`, `native_dsp.py`, the ABI-2 DLL, `reference_compare.py` and `spectrum.py` plus the existing modules and lazy AI/recording dependencies. The developer archive must also carry native source/header, native tests and the build script.
+4. Confirm every current version-bearing file says `0.0.13` and that `BUILD_HISTORY.md` keeps all prior version sections unchanged.
+5. Confirm the PyInstaller spec includes `chord_chart.py`, `guitar_shapes.py`, `harmony_reference.py`, `stem_diagnostics.py`, `stem_removal.py`, `native_dsp.py`, the ABI-2 DLL, `reference_compare.py` and `spectrum.py` plus the existing modules and lazy AI/recording dependencies. The developer archive must also carry native source/header, native tests and the build script.
 6. Confirm third-party notices and license files cover the AI/recording stack, model terms and the native binary's linked runtimes.
 7. Keep AI weights and user data out of the archive.
 8. Verify CPU/CUDA diagnostics and all three Amp/Cab routes; do not claim real GPU validation without compatible hardware.
@@ -844,4 +921,5 @@ The target archive name is `ToneMatchTMP-v0.0.12-Windows-x64-Portable-Dev.zip`. 
 14. If using a new Codex/task session, explicitly provide the extracted `source` folder (or clone `https://github.com/JH-Prime/ToneMatchTMP`) and ask it to treat these handoff documents as context. Chat history and interrupted analysis state are not embedded in the ZIP.
 15. Verify repeated chord evidence, noise/harmonic/antiphase rejection, original-mix source labeling without guitar-shape/inversion claims, original-file times and unknown intervals in both languages. Confirm that the fallback does not change tone features, Reference or recipes, and that small work areas and long completed-status text remain usable. Record actual MP3/EXE checks separately from synthetic or mocked coverage.
 16. Verify all three outer workspaces in Korean/English and small windows; verify independent guide access, all 41/12/2 type choices, keyboard extension octaves, theoretical spelling and diatonic selection; then exercise one-to-five selection, three-second/20-minute ranges, progress, cancellation, task exclusion, new stereo PCM16 WAV output, destination races, peak normalization, and temporary-file cleanup. Separate mocks, source runtime checks, and final EXE checks.
-17. For the next patch, increment version-bearing files and artifact names from `0.0.12` to `0.0.13`; do not rewrite historical release sections.
+17. Check four-by-four/16-bar chart pages, pagination, valid/invalid manual grid settings, relative/source offsets, pickups/unknowns/all changes, small-window scrolling and language switching. Verify JSON settings and full-timeline HTML export, theoretical guitar shapes and full-mix shape suppression. Report hidden Tk tests separately from manual visual checks.
+18. For the next patch, increment version-bearing files and artifact names from `0.0.13` to `0.0.14`; do not rewrite historical release sections.

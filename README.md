@@ -1,19 +1,35 @@
-# ToneMatch TMP 0.0.12
+# ToneMatch TMP 0.0.13
 
 ToneMatch TMP is an unofficial, pre-release Windows desktop tool that analyzes a
 local audio/video file or authorized Windows playback capture, isolates the guitar
 stem, and recommends three starting-point tone chains for Fender Tone Master Pro.
-Version 0.0.12 expands audio chord candidates from 20 to 41 qualities and adds an
-independent **Chord & scale guide** with piano-key diagrams, 12 scales/modes and
-major/natural-minor diatonic triads and sevenths in all 12 roots.
-A theoretical chart is not a detected performance: ambiguous harmony remains a
-candidate, not a guaranteed transcription or physical guitar fingering.
-The build reference date is 2026-10-02 KST. Verified outcomes belong in
-`QA_REPORT_v0.0.12.json` and `BUILD_HISTORY.md`.
+Version 0.0.13 adds a paged chord chart with four bars per row and 16 bars per
+page to the audio **Chord & voicing** results. BPM, beats per bar and the first
+bar's position are editable display settings, not a newly detected downbeat map.
+The 41-quality audio vocabulary and independent **Chord & scale guide** remain.
+Theoretical guitar-shape suggestions now cover 38 qualities in all 12 roots;
+they are not recovered physical fingering or guaranteed transcription.
+The build reference date is 2026-10-04 KST. Verified outcomes belong in
+`QA_REPORT_v0.0.13.json` and `BUILD_HISTORY.md`.
 
 한국어 설치·사용 안내는 [README_KO.md](README_KO.md)를 먼저 읽어 주세요.
 
-## v0.0.12 validation status
+## v0.0.13 validation status
+
+The October 4 build passed 316 tests with warnings as errors, compileall and
+source/frozen self-tests. October 5 checks passed actual cached-CPU full-song
+processing, cancellation, source preservation and fresh extraction: 4,503 manifest
+files, 56 matching build inputs and a new EXE self-test. Final documentation is
+repackaged and verified again before publication. See `QA_REPORT_v0.0.13.json`.
+
+Hidden Tk checks cover Korean/English at 960×600 and 1080×720 with 120/150% scaling,
+including expanded settings. Room 335 preserves all 165 events in a tentative
+188-bar/12-page grid, not verified downbeats. Synthetic results remain 984 primary
+matches and 36 rejected controls, equal to v0.0.12. Acoustic classification is
+unchanged; real-song accuracy, manual visible UI/listening, first download,
+network-disabled use, CUDA and physical capture were not established.
+
+### Historical v0.0.12 validation, not v0.0.13 evidence
 
 The October 2 build passed 282 automated tests (`-W error`), compileall and
 source/frozen chord, theory-guide and native-DSP self-tests. On October 3 the
@@ -63,6 +79,8 @@ first-download, network-disabled, CUDA or actual capture testing.
 - Chord/voicing analysis timeline with source labels, original-file times,
   unknown intervals and evidence diagnostics; guitar-source results may include
   bass/inversion, register, spacing and playable-candidate cues
+- Four-by-four, 16-bar chord-chart pages with editable BPM/meter/first-bar offset,
+  alongside the detailed timeline; unknowns and within-bar changes are preserved
 - Optional original-mix harmony reference when separated guitar evidence is weak,
   without claiming guitar fingering, bass or inversion from the full mix
 - Work-area-aware startup sizing and a fixed-height, scrollable analysis status
@@ -70,6 +88,46 @@ first-download, network-disabled, CUDA or actual capture testing.
 - Native NumPy vector optimization for repeated chord/voicing spectrum work
 - Clickable 11-stage developer diagram with bundled source, Korean docstrings, logs, and changelog
 - Quad Cortex and Line 6 Helix are visible extension placeholders only
+
+## 16-bar chord chart
+
+After audio analysis, open **Chord & voicing** inside **Tone analysis**. Its
+chart groups the detected timeline into four bars per row and up to 16 bars per
+page. Use the page controls to move through the song and the detailed view to
+inspect individual changes, source times and uncertainty.
+
+Expand `Grid settings`, set BPM, beats per bar and the first downbeat in seconds,
+then apply. The first
+downbeat is relative to the selected analysis segment: if analysis starts at
+30 seconds, a setting of 2 means the first bar begins at original-file second 32.
+The initial BPM uses the existing rough tempo estimate when valid, otherwise
+120; the initial meter is four beats and the offset is zero. These are a manual,
+constant-tempo display grid, not automatic beat/downbeat detection. Correct them
+by listening. Pickups/pre-roll and unknown intervals remain visible; changing
+the grid does not quantize chord times or fabricate missing chords. Tempo changes
+and meter changes within a song are not tracked automatically.
+
+Applied grid settings are included in result JSON as `chord_chart_settings`.
+The standalone HTML export and clipboard remain the full detailed timeline;
+they do not export the paged 16-bar chart.
+
+For guitar sources, diagrams are **theoretical standard-EADGBE candidates**.
+The six familiar E/A-shape families remain, and bounded search extends support
+to 38 of the 41 qualities across all 12 roots. Every candidate contains all
+template pitch classes, stays within frets 0–15 and four adjacent frets, and uses
+at most four approximately counted fingers/barres. This is not an ergonomic
+guarantee or detected finger numbering. The seven-note 13/maj13/min13 templates
+cannot fit six strings without omissions, so no complete shape is invented.
+`original_mix` harmony results continue to hide guitar diagrams and guitar-only
+bass/inversion claims; adding a chart does not identify the instrument playing
+each chord. The audio vocabulary is shared harmony, not separate piano/guitar
+transcription models.
+
+The default timeline limit increases from 96 to 4,096 events so paging need not
+discard already detected changes. This is data preservation, not an accuracy
+improvement. No new neural transcription model is bundled. Algorithm research,
+licensing considerations and an evaluation plan are in
+[TRANSCRIPTION_RESEARCH_KO.md](TRANSCRIPTION_RESEARCH_KO.md).
 
 ## Chord & scale guide
 
@@ -253,7 +311,7 @@ py -3.12 -m venv ..\.venv
 & ..\.venv\Scripts\python.exe -m pip install -r requirements.txt
 & ..\.venv\Scripts\python.exe tools\build_native.py --zig C:\Tools\zig-0.15.2\zig.exe
 & ..\.venv\Scripts\python.exe -m unittest discover -s tests -v
-& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.12.json
+& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.0.13.json
 & ..\.venv\Scripts\python.exe app.py
 ```
 
@@ -266,12 +324,12 @@ fails without a download. The diagnostic is CPU-only. The default `0` duration
 means the full source subject to the normal 20-minute cap. Use a new JSON path.
 
 ```powershell
-& ..\.venv\Scripts\python.exe app.py --stem-self-test-source C:\Audio\sample.mp3 --stem-self-test-output .\stem-check-v0.0.12.json
-& ..\.venv\Scripts\python.exe app.py --stem-self-test-source C:\Audio\sample.mp3 --stem-self-test-output .\stem-cancel-v0.0.12.json --stem-self-test-seconds 31 --stem-self-test-cancel-at 35
+& ..\.venv\Scripts\python.exe app.py --stem-self-test-source C:\Audio\sample.mp3 --stem-self-test-output .\stem-check-v0.0.13.json
+& ..\.venv\Scripts\python.exe app.py --stem-self-test-source C:\Audio\sample.mp3 --stem-self-test-output .\stem-cancel-v0.0.13.json --stem-self-test-seconds 31 --stem-self-test-cancel-at 35
 ```
 
 For the packaged build, replace `python.exe app.py` with
-`.\ToneMatchTMP-v0.0.12.exe` and the same flags. The cancellation threshold
+`.\ToneMatchTMP-v0.0.13.exe` and the same flags. The cancellation threshold
 requests cancellation at a reported percentage, not at a guaranteed elapsed
 time; in-flight inference or network work can delay it. These are optional,
 potentially CPU-intensive diagnostics, not the ordinary lightweight

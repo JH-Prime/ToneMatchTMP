@@ -1,4 +1,4 @@
-"""ToneMatch TMP v0.0.12 데스크톱 애플리케이션.
+"""ToneMatch TMP v0.0.13 데스크톱 애플리케이션.
 
 로컬 오디오·영상 또는 Windows PC 재생음 녹음을 받아 AI로 guitar stem만
 분리하고, Tone Master Pro에 수동 적용할 설명 가능한 톤 체인을 추천한다.
@@ -24,7 +24,7 @@ import webbrowser
 import zipfile
 from datetime import datetime
 from pathlib import Path
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, font as tkfont
 import tkinter as tk
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
@@ -44,6 +44,7 @@ _ensure_standard_streams()
 import numpy as np
 
 from catalog import APP_VERSION, BUILD_DATE, CHANGELOG, MODEL_GUIDE_REVISION, TARGET_FIRMWARE
+from chord_chart import build_chord_chart, initial_chart_settings
 from debug_info import (
     PIPELINE_BLOCKS,
     block_by_id,
@@ -234,6 +235,9 @@ class ToneMatchApp:
         self.harmony_choices = {"chord": "major", "scale": "major", "diatonic": "major"}
         self.harmony_degree_index = 0
         self.harmony_chord_size = "triad"
+        self.chart_settings: dict | None = None
+        self.chart_page_index = 0
+        self.chart_settings_expanded = False
         self.hardware_status: dict[str, object] = {}
         self.hardware_probe_active = False
         self.recipe_texts: list[ScrolledText] = []
@@ -564,12 +568,14 @@ class ToneMatchApp:
         self.analysis_workspace.rowconfigure(2, weight=1)
 
         top = ttk.Frame(self.analysis_workspace, style="Panel.TFrame")
+        self.result_header = top
         top.grid(row=0, column=0, sticky="ew", pady=(0, 9))
         top.columnconfigure(0, weight=1)
         self.result_title_var = tk.StringVar(value=tr("ui.result", self.language))
         self.result_title_label = ttk.Label(top, textvariable=self.result_title_var, style="CardTitle.TLabel", width=1, wraplength=700)
         self.result_title_label.grid(row=0, column=0, sticky="ew")
         result_actions = ttk.Frame(top, style="Panel.TFrame")
+        self.result_actions = result_actions
         result_actions.grid(row=1, column=0, sticky="e", pady=(5, 0))
         self.export_json_button = ttk.Button(result_actions, text=tr("ui.save_json", self.language), command=self._export_json, state="disabled")
         self.export_json_button.grid(row=0, column=0)
@@ -601,17 +607,7 @@ class ToneMatchApp:
             text.tag_configure("warning", foreground=COLORS["warning"], spacing1=8)
             self.recipe_texts.append(text)
 
-        self.voicing_tab = ttk.Frame(self.notebook, style="Alt.TFrame", padding=4)
-        self.notebook.add(self.voicing_tab, text=tr("ui.voicing_tab", self.language))
-        self.voicing_tab.rowconfigure(0, weight=1)
-        self.voicing_tab.columnconfigure(0, weight=1)
-        self.voicing_text = ScrolledText(self.voicing_tab, wrap="word", bg=COLORS["panel_alt"], fg=COLORS["text"], selectbackground="#315369", relief="flat", padx=18, pady=16, font=(self.ui_font, 10), state="disabled")
-        self.voicing_text.grid(row=0, column=0, sticky="nsew")
-        self.voicing_text.tag_configure("heading", font=(self.ui_font, 16, "bold"), foreground=COLORS["accent"], spacing3=7)
-        self.voicing_text.tag_configure("intro", foreground=COLORS["muted"], spacing3=12)
-        self.voicing_text.tag_configure("event", font=(self.ui_font, 12, "bold"), foreground=COLORS["blue"], spacing1=10, spacing3=3)
-        self.voicing_text.tag_configure("detail", foreground=COLORS["text"], lmargin1=18, lmargin2=18)
-        self.voicing_text.tag_configure("warning", foreground=COLORS["warning"], spacing1=10)
+        self._build_voicing_tab()
 
         self._build_spectrum_tab()
         self._build_reference_compare_tab()
@@ -668,6 +664,314 @@ class ToneMatchApp:
             self._show_result(self.result, reset_notebook=False)
         if self.last_spectrum_frame is not None:
             self._apply_spectrum_frame(self.last_spectrum_frame, update_comparison=False)
+
+    def _build_voicing_tab(self) -> None:
+        """16마디 악보형 보기와 기존 전체 근거 타임라인을 같은 분석 탭에 만든다."""
+        self.voicing_tab = ttk.Frame(self.notebook, style="Alt.TFrame", padding=4)
+        self.notebook.add(self.voicing_tab, text=tr("ui.voicing_tab", self.language))
+        self.voicing_tab.rowconfigure(0, weight=1)
+        self.voicing_tab.columnconfigure(0, weight=1)
+        chart_style = ttk.Style(self.root)
+        chart_style.configure("ChartViews.TNotebook.Tab", padding=(7, 3), font=(self.ui_font, 8))
+        chart_style.configure("Chart.TButton", padding=(6, 3), font=(self.ui_font, 8))
+        self.voicing_views = ttk.Notebook(self.voicing_tab, style="ChartViews.TNotebook")
+        self.voicing_views.grid(row=0, column=0, sticky="nsew")
+        self.chart_tab = ttk.Frame(self.voicing_views, style="Alt.TFrame")
+        self.chart_tab.columnconfigure(0, weight=1)
+        self.chart_tab.rowconfigure(2, weight=1)
+        self.voicing_views.add(self.chart_tab, text=tr("ui.chart_view", self.language))
+        self.voicing_details_tab = ttk.Frame(self.voicing_views, style="Alt.TFrame")
+        self.voicing_details_tab.rowconfigure(0, weight=1)
+        self.voicing_details_tab.columnconfigure(0, weight=1)
+        self.voicing_views.add(self.voicing_details_tab, text=tr("ui.chart_details", self.language))
+        controls = ttk.Frame(self.chart_tab, style="Alt.TFrame", padding=(4, 4))
+        self.chart_controls = controls
+        controls.grid(row=0, column=0, sticky="ew")
+        controls.columnconfigure(5, weight=1)
+        settings = self.chart_settings or initial_chart_settings(self.result or {})
+        self.chart_bpm_var = tk.StringVar(self.root, value=f"{settings['bpm']:g}")
+        self.chart_meter_var = tk.StringVar(self.root, value=str(settings["beats_per_bar"]))
+        self.chart_downbeat_var = tk.StringVar(self.root, value=f"{settings['first_downbeat_seconds']:g}")
+        for column, key, variable, width in (
+            (0, "ui.chart_bpm", self.chart_bpm_var, 6),
+            (2, "ui.chart_meter", self.chart_meter_var, 3),
+            (4, "ui.chart_downbeat", self.chart_downbeat_var, 6),
+        ):
+            ttk.Label(controls, text=tr(key, self.language), background=COLORS["panel_alt"],
+                      font=(self.ui_font, 8)).grid(row=0, column=column, columnspan=2, sticky="w", padx=3)
+            entry = ttk.Entry(controls, textvariable=variable, width=width, font=(self.ui_font, 8))
+            entry.grid(row=1, column=column, columnspan=2, sticky="ew", padx=3)
+            entry.bind("<Return>", self._apply_chart_settings)
+        ttk.Button(controls, text=tr("ui.chart_apply", self.language), command=self._apply_chart_settings,
+                   style="Chart.TButton", width=6).grid(
+            row=1, column=6, padx=3)
+        self.chart_notice_var = tk.StringVar(self.root, value=tr("ui.chart_manual_notice", self.language))
+        pager = ttk.Frame(self.chart_tab, style="Alt.TFrame", padding=(4, 0, 4, 5))
+        pager.grid(row=1, column=0, sticky="ew")
+        pager.columnconfigure(2, weight=1)
+        self.chart_settings_button = ttk.Button(pager, text=tr("ui.chart_settings", self.language),
+                                                command=self._toggle_chart_settings, style="Chart.TButton", width=11)
+        self.chart_settings_button.grid(row=0, column=0, padx=(0, 4))
+        self.chart_previous = ttk.Button(pager, text="‹", width=3, command=self._previous_chart_page, style="Chart.TButton")
+        self.chart_previous.grid(row=0, column=1)
+        self.chart_page_var = tk.StringVar(self.root)
+        ttk.Label(pager, textvariable=self.chart_page_var, anchor="center", width=1,
+                  background=COLORS["panel_alt"], font=(self.ui_font, 9, "bold")).grid(row=0, column=2, sticky="ew")
+        self.chart_next = ttk.Button(pager, text="›", width=3, command=self._next_chart_page, style="Chart.TButton")
+        self.chart_next.grid(row=0, column=3)
+        if not self.chart_settings_expanded:
+            controls.grid_remove()
+        viewport = ttk.Frame(self.chart_tab, style="Alt.TFrame")
+        viewport.grid(row=2, column=0, sticky="nsew")
+        viewport.rowconfigure(0, weight=1)
+        viewport.columnconfigure(0, weight=1)
+        self.chart_canvas = tk.Canvas(viewport, bg="#f5f2e9", width=1, height=1, highlightthickness=0)
+        self.chart_canvas.grid(row=0, column=0, sticky="nsew")
+        scrollbar = ttk.Scrollbar(viewport, orient="vertical", command=self.chart_canvas.yview)
+        self.chart_scrollbar = scrollbar
+        scrollbar.grid(row=0, column=1, sticky="ns")
+        self.chart_canvas.configure(yscrollcommand=scrollbar.set)
+        self.chart_canvas.bind("<Configure>", self._resize_chart)
+        viewport.bind("<Configure>", self._resize_chart)
+        self.chart_canvas.bind("<MouseWheel>", self._scroll_chart)
+        self.chart_canvas.bind("<Button-4>", self._scroll_chart)
+        self.chart_canvas.bind("<Button-5>", self._scroll_chart)
+        self.voicing_text = ScrolledText(self.voicing_details_tab, wrap="word", bg=COLORS["panel_alt"],
+                                        fg=COLORS["text"], selectbackground="#315369", relief="flat",
+                                        padx=18, pady=16, font=(self.ui_font, 10), state="disabled")
+        self.voicing_text.grid(row=0, column=0, sticky="nsew")
+        for tag, options in {
+            "heading": {"font": (self.ui_font, 16, "bold"), "foreground": COLORS["accent"], "spacing3": 7},
+            "intro": {"foreground": COLORS["muted"], "spacing3": 12},
+            "event": {"font": (self.ui_font, 12, "bold"), "foreground": COLORS["blue"], "spacing1": 10, "spacing3": 3},
+            "detail": {"foreground": COLORS["text"], "lmargin1": 18, "lmargin2": 18},
+            "warning": {"foreground": COLORS["warning"], "spacing1": 10},
+        }.items():
+            self.voicing_text.tag_configure(tag, **options)
+        self.chart_data = {"pages": []}
+        if not self.result:
+            self._draw_chart_page()
+
+    def _resize_chart(self, event: object | None = None) -> None:
+        """네 마디 열은 유지하고 좁은 화면의 설명 줄바꿈과 종이 폭을 다시 계산한다."""
+        width = max(100, int(getattr(event, "width", self.chart_canvas.winfo_width())))
+        if getattr(event, "widget", None) is self.chart_canvas.master:
+            width = max(100, width - self.chart_scrollbar.winfo_reqwidth())
+        self._draw_chart_page(width=width)
+
+    def _toggle_chart_settings(self) -> None:
+        """좁은 창의 코드표 높이를 확보하면서 필요할 때만 수동 마디 설정을 펼친다."""
+        self.chart_settings_expanded = not self.chart_settings_expanded
+        if self.chart_settings_expanded:
+            self.chart_controls.grid()
+        else:
+            self.chart_controls.grid_remove()
+
+    def _scroll_chart(self, event: object) -> str:
+        """악보 위의 휠만 해당 세로 스크롤로 전달해 다른 입력 패널과 충돌하지 않게 한다."""
+        if getattr(event, "num", 0) == 4:
+            steps = -1
+        elif getattr(event, "num", 0) == 5:
+            steps = 1
+        else:
+            delta = getattr(event, "delta", 0)
+            steps = -1 if delta > 0 else 1 if delta < 0 else 0
+        self.chart_canvas.yview_scroll(steps * 3, "units")
+        return "break"
+
+    def _apply_chart_settings(self, _event: object | None = None) -> None:
+        """입력한 일정 템포·마디당 박 수·첫 마디 위치를 검증한 뒤 음원 재분석 없이 재배치한다."""
+        try:
+            candidate = {
+                "bpm": float(self.chart_bpm_var.get()),
+                "beats_per_bar": int(self.chart_meter_var.get()),
+                "first_downbeat_seconds": float(self.chart_downbeat_var.get()),
+            }
+            duration = initial_chart_settings(self.result or {}).get("duration_seconds")
+            chart = build_chord_chart(getattr(self, "chart_analysis", {}), **candidate, duration_seconds=duration)
+        except (TypeError, ValueError, OverflowError):
+            previous = self.chart_settings or initial_chart_settings(self.result or {})
+            self.chart_bpm_var.set(f"{previous['bpm']:g}")
+            self.chart_meter_var.set(str(previous["beats_per_bar"]))
+            self.chart_downbeat_var.set(f"{previous['first_downbeat_seconds']:g}")
+            self.chart_notice_var.set(tr("ui.chart_invalid", self.language))
+            self.chart_canvas.yview_moveto(0)
+            self._draw_chart_page()
+            return
+        self.chart_settings = candidate
+        if self.result is not None:
+            self.result["chord_chart_settings"] = dict(candidate)
+        self.chart_data = chart
+        self.chart_page_index = 0
+        self.chart_notice_var.set(tr("ui.chart_manual_notice", self.language))
+        self.chart_settings_expanded = False
+        self.chart_controls.grid_remove()
+        self.chart_canvas.yview_moveto(0)
+        self._draw_chart_page()
+
+    def _previous_chart_page(self) -> None:
+        """16마디씩 이전 묶음으로 이동하고 세로 위치를 맨 위로 돌린다."""
+        self.chart_page_index = max(0, self.chart_page_index - 1)
+        self.chart_canvas.yview_moveto(0)
+        self._draw_chart_page()
+
+    def _next_chart_page(self) -> None:
+        """16마디씩 다음 묶음으로 이동하되 마지막 페이지를 넘지 않는다."""
+        self.chart_page_index = min(max(0, len(self.chart_data.get("pages", [])) - 1), self.chart_page_index + 1)
+        self.chart_canvas.yview_moveto(0)
+        self._draw_chart_page()
+
+    def _show_chart_bar_details(self, event_index: int | None) -> None:
+        """마디의 첫 검출 이벤트에 해당하는 기존 전체 근거·대안 해석을 연다."""
+        self.voicing_views.select(self.voicing_details_tab)
+        mark = f"chart_event_{event_index}" if event_index is not None else "1.0"
+        if mark != "1.0" and mark not in self.voicing_text.mark_names():
+            mark = "1.0"
+        self.voicing_text.see(mark)
+
+    def _draw_chart_shape(self, shape: dict, x: float, y: float, tag: str) -> None:
+        """이론상 후보의 6현·프렛·개방현·뮤트를 그리고 추정하지 않은 손가락 번호는 생략한다."""
+        frets = shape.get("frets_low_e_to_high_e", ())
+        if len(frets) != 6:
+            return
+        positive = [value for value in frets if isinstance(value, int) and value > 0]
+        base = max(1, min(positive, default=1))
+        canvas = self.chart_canvas
+        ink = "#253a3a"
+        for string in range(6):
+            canvas.create_line(x + string * 9, y, x + string * 9, y + 44, fill=ink, tags=(tag, "fret_diagram"))
+        for fret in range(5):
+            canvas.create_line(x, y + fret * 11, x + 45, y + fret * 11,
+                               fill=ink, width=2 if fret == 0 and base == 1 else 1, tags=(tag, "fret_diagram"))
+        canvas.create_text(x - 4, y + 5, text=str(base), anchor="e", fill=ink,
+                           font=(self.ui_font, 7), tags=(tag, "fret_diagram"))
+        for string, fret in enumerate(frets):
+            sx = x + string * 9
+            if fret == "x" or (isinstance(fret, int) and fret < 0):
+                canvas.create_text(sx, y - 8, text="×", fill=ink, font=(self.ui_font, 8), tags=(tag, "fret_diagram"))
+            elif fret == 0:
+                canvas.create_oval(sx - 2, y - 10, sx + 2, y - 6, outline=ink, tags=(tag, "fret_diagram"))
+            elif isinstance(fret, int):
+                sy = y + (fret - base + 0.5) * 11
+                canvas.create_oval(sx - 3, sy - 3, sx + 3, sy + 3, fill=ink, outline=ink, tags=(tag, "fret_diagram"))
+        canvas.create_text(x + 22, y + 52, text="E A D G B e", fill=ink,
+                           font=("Consolas", 6), tags=(tag, "fret_diagram"))
+
+    def _draw_chart_page(self, width: int | None = None) -> None:
+        """모든 코드 변화를 생략하지 않는 네 열 악보와 출처·미확정·이론 운지 안내를 그린다."""
+        canvas = self.chart_canvas
+        canvas.delete("all")
+        page_width = max(280, width or canvas.winfo_width())
+        pages = self.chart_data.get("pages", [])
+        self.chart_page_index = max(0, min(self.chart_page_index, len(pages) - 1))
+        self.chart_previous.configure(state="normal" if self.chart_page_index > 0 else "disabled")
+        self.chart_next.configure(state="normal" if self.chart_page_index + 1 < len(pages) else "disabled")
+        if not pages:
+            self.chart_page_var.set(tr("ui.chart_no_pages", self.language))
+            canvas.create_text(16, 22, text=tr("ui.voicing_empty", self.language), width=page_width - 32,
+                               anchor="nw", fill="#5b6668", font=(self.ui_font, 10), tags="chart_empty")
+            canvas.configure(scrollregion=(0, 0, page_width, 90))
+            return
+        page = pages[self.chart_page_index]
+        self.chart_page_var.set(tr("ui.chart_page", self.language, first=page["first_bar_number"],
+                                  last=page["last_bar_number"], page=self.chart_page_index + 1, total=len(pages)))
+        source = getattr(self, "chart_analysis", {}).get("analysis_source", "provided_audio")
+        if source not in {"original_mix", "guitar_stem", "provided_audio"}:
+            source = "provided_audio"
+        headline = tr(f"ui.chart_source_{source}", self.language)
+        caption = tr("ui.chart_caption_mix" if source == "original_mix" else "ui.chart_caption", self.language)
+        canvas.create_text(14, 13, text=headline, fill="#125e54", anchor="nw", width=page_width - 28,
+                           font=(self.ui_font, 11, "bold"), tags="chart_source")
+        box = canvas.bbox("chart_source")
+        caption_y = (box[3] if box else 28) + 8
+        canvas.create_text(14, caption_y, text=caption, fill="#536467", anchor="nw", width=page_width - 28,
+                           font=(self.ui_font, 8), tags="chart_caption")
+        notice_y = canvas.bbox("chart_caption")[3] + 8
+        canvas.create_text(14, notice_y, text=self.chart_notice_var.get(), fill="#855c1b", anchor="nw",
+                           width=page_width - 28, font=(self.ui_font, 8), tags="chart_notice")
+        y = canvas.bbox("chart_notice")[3] + 18
+        margin, gap = 12, 0
+        cell_width = (page_width - margin * 2 - gap * 3) / 4
+        bars = page["bars"]
+        for row_start in range(0, len(bars), 4):
+            row = bars[row_start:row_start + 4]
+            row_bottom = y
+            for column, bar in enumerate(row):
+                x = margin + column * (cell_width + gap)
+                tag = f"chart_bar_{bar['number']}"
+                heading = tr("ui.chart_pickup", self.language, bar=bar["number"]) if bar["is_pickup"] else str(bar["number"])
+                heading_item = canvas.create_text(x + 7, y + 7, text=heading, anchor="nw", fill="#57706b",
+                                                  width=cell_width - 14, font=(self.ui_font, 8, "bold"), tags=(tag, "bar_number"))
+                time_item = canvas.create_text(x + 7, canvas.bbox(heading_item)[3] + 5,
+                                               text=f"{self._format_time(bar['absolute_start_seconds'])}–{self._format_time(bar['absolute_end_seconds'])}",
+                                               anchor="nw", fill="#64716b", width=cell_width - 14,
+                                               font=("Consolas", 7), tags=(tag, "bar_time"))
+                sy = canvas.bbox(time_item)[3] + 8
+                for segment_index, segment in enumerate(bar["segments"]):
+                    segment_tag = f"{tag}_segment_{segment_index}"
+                    unknown = segment["unknown"]
+                    label = "?" if unknown else segment["label"]
+                    if source == "original_mix":
+                        label = without_bass_note(label)
+                    continuation = "↳ " if segment.get("continues_from_previous") else ""
+                    label_font = tkfont.Font(root=self.root, family=self.ui_font, size=12, weight="bold")
+                    while label_font.measure(continuation + label) > cell_width - 14 and label_font.cget("size") > 7:
+                        label_font.configure(size=label_font.cget("size") - 1)
+                    label_item = canvas.create_text(x + 7, sy, text=continuation + label, anchor="nw", width=cell_width - 14,
+                                                    fill="#9a6c1c" if unknown else "#132c31", font=(self.ui_font, label_font.cget("size"), "bold"),
+                                                    tags=(tag, segment_tag, "chord_label", "unknown_chord" if unknown else "known_chord"))
+                    beat_item = canvas.create_text(x + 7, canvas.bbox(label_item)[3] + 4,
+                                                   text=tr("ui.chart_beat", self.language, beat=f"{segment['start_beat']:.2f}".rstrip("0").rstrip(".")),
+                                                   anchor="nw", fill="#64716b", font=(self.ui_font, 7),
+                                                   tags=(tag, segment_tag, "chart_beat"))
+                    sy = canvas.bbox(beat_item)[3] + 10
+                    shapes = segment.get("candidate_shapes", ()) if not unknown and source != "original_mix" else ()
+                    if shapes:
+                        shape_tag = f"{segment_tag}_shape"
+                        self._draw_chart_shape(shapes[0], x + max(20, (cell_width - 45) / 2), sy + 12, shape_tag)
+                        for item in canvas.find_withtag(shape_tag):
+                            canvas.addtag_withtag(tag, item)
+                            canvas.addtag_withtag(segment_tag, item)
+                        shape_box = canvas.bbox(shape_tag)
+                        if shape_box:
+                            sy = shape_box[3] + 12
+                    row_bottom = max(row_bottom, sy)
+                first_event = next((segment["event_index"] for segment in bar["segments"] if segment["event_index"] is not None), None)
+                def show_details(_event: object, index: int | None = first_event) -> None:
+                    """현재 마디에 대응하는 전체 근거 표시 위치를 클릭 시 연다."""
+                    self._show_chart_bar_details(index)
+                canvas.tag_bind(tag, "<Button-1>", show_details)
+            for column, bar in enumerate(row):
+                x = margin + column * (cell_width + gap)
+                rectangle = canvas.create_rectangle(x, y, x + cell_width, row_bottom + 8,
+                                                    outline="#b8c0bb", width=1,
+                                                    tags=(f"chart_bar_{bar['number']}", "chart_bar"))
+                canvas.tag_lower(rectangle)
+            y = row_bottom + 26
+        canvas.configure(scrollregion=(0, 0, page_width, y))
+
+    def _render_chord_chart(self, analysis: dict) -> None:
+        """분석 이벤트는 변경하지 않고 수동 마디 설정에 따른 별도 화면 모델을 만든다."""
+        self.chart_analysis = analysis
+        defaults = initial_chart_settings(self.result or {})
+        if self.chart_settings is None:
+            saved = (self.result or {}).get("chord_chart_settings") or defaults
+            if not isinstance(saved, dict):
+                saved = defaults
+            self.chart_settings = {key: saved.get(key, defaults[key]) for key in ("bpm", "beats_per_bar", "first_downbeat_seconds")}
+        try:
+            self.chart_data = build_chord_chart(analysis, **self.chart_settings, duration_seconds=defaults.get("duration_seconds"))
+        except (TypeError, ValueError, OverflowError):
+            self.chart_settings = {key: defaults[key] for key in ("bpm", "beats_per_bar", "first_downbeat_seconds")}
+            self.chart_data = build_chord_chart(analysis, **self.chart_settings, duration_seconds=defaults.get("duration_seconds"))
+        self.chart_settings = {key: self.chart_data[key] for key in ("bpm", "beats_per_bar", "first_downbeat_seconds")}
+        self.chart_bpm_var.set(f"{self.chart_settings['bpm']:g}")
+        self.chart_meter_var.set(str(self.chart_settings["beats_per_bar"]))
+        self.chart_downbeat_var.set(f"{self.chart_settings['first_downbeat_seconds']:g}")
+        if self.result is not None:
+            self.result["chord_chart_settings"] = dict(self.chart_settings)
+        self.chart_notice_var.set(tr("ui.chart_manual_notice", self.language))
+        self._draw_chart_page()
 
     def _build_harmony_reference_tab(self) -> None:
         """음원 분석과 분리된 코드·스케일 이론 사전을 스크롤 가능한 상위 탭에 만든다."""
@@ -2008,6 +2312,8 @@ class ToneMatchApp:
             and self.workspace_notebook.select() == str(self.stem_tab)
         )
         harmony_workspace_selected = self.workspace_notebook.select() == str(self.harmony_tab)
+        voicing_selected = self.notebook.select() == str(self.voicing_tab)
+        voicing_details_selected = self.voicing_views.select() == str(self.voicing_details_tab)
         self.language = new_language
         if self.result:
             self.result = relocalize_result(self.result, self.language)
@@ -2022,6 +2328,10 @@ class ToneMatchApp:
             self.workspace_notebook.select(self.stem_tab)
         elif harmony_workspace_selected:
             self.workspace_notebook.select(self.harmony_tab)
+        if voicing_selected:
+            self.notebook.select(self.voicing_tab)
+        if voicing_details_selected:
+            self.voicing_views.select(self.voicing_details_tab)
         self._save_settings()
 
     def _change_device(self, _event: object | None = None) -> None:
@@ -2890,6 +3200,9 @@ class ToneMatchApp:
     def _show_result(self, result: dict, reset_notebook: bool = True) -> None:
         """추천 체인 세 개, 기타 stem 진단과 상태를 현재 언어 화면에 표시한다."""
         self.result = result
+        if reset_notebook:
+            self.chart_settings = None
+            self.chart_page_index = 0
         self.analysis_progress_percent = 100.0
         self._finish_analysis_progress()
         self._set_debug_progress(100, tr("progress.complete", self.language))
@@ -2969,7 +3282,10 @@ class ToneMatchApp:
             widget.insert("end", tr("ui.voicing_empty", self.language) + "\n", "warning")
         offset = float(analysis.get("source_start_seconds", 0.0))
         is_mix = analysis.get("analysis_source") == "original_mix"
-        for event in events:
+        for event_index, event in enumerate(events):
+            if hasattr(widget, "mark_set"):
+                widget.mark_set(f"chart_event_{event_index}", "end-1c")
+                widget.mark_gravity(f"chart_event_{event_index}", "left")
             start = self._format_time(offset + float(event["start_seconds"]))
             end = self._format_time(offset + float(event["end_seconds"]))
             if event.get("chord_type", "unknown") == "unknown":
@@ -3017,6 +3333,9 @@ class ToneMatchApp:
         widget.configure(state="disabled")
         widget.see("1.0")
 
+        if hasattr(self, "chart_canvas"):
+            self._render_chord_chart(analysis)
+
     @staticmethod
     def _format_time(seconds: float) -> str:
         """초 단위 위치를 긴 곡에서도 읽기 쉬운 분:초 문자열로 바꾼다."""
@@ -3046,6 +3365,7 @@ class ToneMatchApp:
         if not hasattr(self, "copy_button") or not hasattr(self, "notebook"):
             return
         selected_tab = self.notebook.select()
+        self._update_result_header_layout(selected_tab)
         developer_tabs = {
             str(getattr(self, "debug_tab", "")),
             str(getattr(self, "changelog_tab", "")),
@@ -3057,6 +3377,24 @@ class ToneMatchApp:
         )
         has_content = bool(self.result) or selected_tab in developer_tabs
         self.copy_button.configure(state="normal" if has_content and not busy else "disabled")
+
+    def _update_result_header_layout(self, selected_tab: str) -> None:
+        """코드 보기에서는 톤 레시피 전용 제목·요약을 접고 내보내기와 악보 높이를 보존한다."""
+        if not all(hasattr(self, name) for name in ("result_header", "result_actions", "voicing_tab")):
+            return
+        compact = selected_tab == str(self.voicing_tab)
+        if compact:
+            self.analysis_workspace.configure(padding=(8, 2, 8, 0))
+            self.result_title_label.grid_remove()
+            self.result_summary_label.grid_remove()
+            self.result_header.grid_configure(pady=0)
+            self.result_actions.grid_configure(pady=0)
+        else:
+            self.analysis_workspace.configure(padding=(8, 8, 8, 4))
+            self.result_title_label.grid()
+            self.result_summary_label.grid()
+            self.result_header.grid_configure(pady=(0, 9))
+            self.result_actions.grid_configure(pady=(5, 0))
 
     def _default_export_name(self, suffix: str) -> str:
         """입력 파일명을 안전한 기본 내보내기 파일명으로 바꾼다."""
@@ -3165,7 +3503,7 @@ class ToneMatchApp:
         destination = filedialog.asksaveasfilename(title=tr("dialog.debug_bundle_title", self.language), defaultextension=".zip", initialfile=initial, filetypes=(("ZIP", "*.zip"),))
         if not destination:
             return
-        source_names = ("app.py", "catalog.py", "debug_info.py", "devices.py", "engine.py", "harmony_reference.py", "i18n.py", "native_dsp.py", "native/tonematch_dsp.cpp", "native/tonematch_dsp.h", "recorder.py", "reference_compare.py", "report.py", "separator.py", "spectrum.py", "stem_removal.py", "stem_diagnostics.py", "voicing.py")
+        source_names = ("app.py", "catalog.py", "chord_chart.py", "debug_info.py", "devices.py", "engine.py", "guitar_shapes.py", "harmony_reference.py", "i18n.py", "native_dsp.py", "native/tonematch_dsp.cpp", "native/tonematch_dsp.h", "recorder.py", "reference_compare.py", "report.py", "separator.py", "spectrum.py", "stem_removal.py", "stem_diagnostics.py", "voicing.py")
         diagnostics = {
             "app_version": APP_VERSION,
             "build_date": BUILD_DATE,
@@ -3400,6 +3738,30 @@ def _self_test_harmony_reference() -> dict:
             "automatic_audio_key_detection": False}
 
 
+def _self_test_chord_chart() -> dict:
+    """마디 페이지·변화 보존·미확정·원본 믹스 안전 표시와 확장 운지 모듈을 검사한다."""
+    from guitar_shapes import candidate_shapes
+    shapes = candidate_shapes(0, "maj9", (0, 4, 7, 11, 2))
+    analysis = {"analysis_source": "guitar_stem", "source_start_seconds": 12.0, "events": [
+        {"start_seconds": 0.0, "end_seconds": 1.0, "chord_type": "maj9", "symbol": "Cmaj9/E", "candidate_shapes": shapes},
+        {"start_seconds": 1.0, "end_seconds": 2.0, "chord_type": "unknown", "symbol": "?"},
+        {"start_seconds": 2.0, "end_seconds": 40.0, "chord_type": "major", "symbol": "G"},
+    ]}
+    chart = build_chord_chart(analysis, bpm=120, duration_seconds=40)
+    mix = build_chord_chart({**analysis, "analysis_source": "original_mix"}, bpm=120, duration_seconds=40)
+    first = chart["pages"][0]["bars"][0]
+    first_mix = mix["pages"][0]["bars"][0]
+    pagination_ok = [len(page["bars"]) for page in chart["pages"]] == [16, 4]
+    changes_ok = [segment["label"] for segment in first["segments"]] == ["Cmaj9/E", "?"]
+    source_guard_ok = first_mix["segments"][0]["label"] == "Cmaj9" and not first_mix["segments"][0]["candidate_shapes"]
+    shapes_ok = bool(shapes) and all(shape.get("detected") is False for shape in shapes)
+    return {"ok": bool(pagination_ok and changes_ok and source_guard_ok and shapes_ok),
+            "bar_count": chart["bar_count"], "page_count": len(chart["pages"]),
+            "pagination_ok": pagination_ok, "changes_and_unknowns_ok": changes_ok,
+            "original_mix_guard_ok": source_guard_ok, "theoretical_shapes_ok": shapes_ok,
+            "automatic_downbeat": chart["automatic_downbeat"]}
+
+
 def run_self_test(output_path: str | Path) -> int:
     """합성 기타로 오프라인 분석·한영 변환·개발자 소스와 런타임을 검사한다."""
     destination = Path(output_path).resolve()
@@ -3423,14 +3785,20 @@ def run_self_test(output_path: str | Path) -> int:
         stem_removal_source_ok = "def remove_stems_from_file(" in source_file_path("stem_removal.py").read_text(encoding="utf-8")
         stem_diagnostics_source_ok = "def run_stem_self_test(" in source_file_path("stem_diagnostics.py").read_text(encoding="utf-8")
         harmony_reference_source_ok = "def get_chord_reference(" in source_file_path("harmony_reference.py").read_text(encoding="utf-8")
+        chord_chart_source_ok = "def build_chord_chart(" in source_file_path("chord_chart.py").read_text(encoding="utf-8")
+        guitar_shapes_source_ok = "def candidate_shapes(" in source_file_path("guitar_shapes.py").read_text(encoding="utf-8")
         separator_status = separator_runtime_status()
         native_dsp_status = _self_test_native_dsp()
         chord_voicing_status = _self_test_voicing()
         harmony_reference_status = _self_test_harmony_reference()
+        chord_chart_status = _self_test_chord_chart()
         payload = {
-            "ok": len(result.get("recipes", [])) == 3 and debug_sources_ok and stem_removal_source_ok and stem_diagnostics_source_ok and harmony_reference_source_ok and english.get("language") == "en" and bool(separator_status.get("available")) and reference_compare_ok and native_dsp_status["smoke_ok"] and chord_voicing_status["ok"] and harmony_reference_status["ok"],
+            "ok": len(result.get("recipes", [])) == 3 and debug_sources_ok and stem_removal_source_ok and stem_diagnostics_source_ok and harmony_reference_source_ok and chord_chart_source_ok and guitar_shapes_source_ok and english.get("language") == "en" and bool(separator_status.get("available")) and reference_compare_ok and native_dsp_status["smoke_ok"] and chord_voicing_status["ok"] and harmony_reference_status["ok"] and chord_chart_status["ok"],
             "chord_voicing": chord_voicing_status,
             "harmony_reference": harmony_reference_status,
+            "chord_chart": chord_chart_status,
+            "chord_chart_source_ok": chord_chart_source_ok,
+            "guitar_shapes_source_ok": guitar_shapes_source_ok,
             "app_version": APP_VERSION,
             "ffmpeg_analysis": True,
             "developer_source_blocks": len(PIPELINE_BLOCKS),

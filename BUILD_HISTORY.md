@@ -8,6 +8,7 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 | 버전 | 상태 | 범위 |
 |---|---|---|
+| `0.0.13` | 서명되지 않은 CPU 포터블 개발자 프리릴리스 | 16마디 코드표, 수동 격자 보정, 이론 기타 운지 확대, 긴 타임라인 보존 |
 | `0.0.12` | 서명되지 않은 CPU 포터블 개발자 프리릴리스 | 41종 코드, 12종 음계·장조/자연단조 다이어토닉 사전, 12근음 건반 참고 |
 | `0.0.11` | 서명되지 않은 CPU 포터블 개발자 프리릴리스 | 20종 코드 템플릿·모호성·구성음 근거·역위 보존, 참고용 YouTube UI 제거 |
 | `0.0.10` | 서명되지 않은 CPU 포터블 개발자 프리릴리스 | 악기 제거 상태·경로 보호, 잘린 WAV 거부, CPU·로컬 캐시 전용 실제 모델 CLI 진단 |
@@ -20,6 +21,71 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 | `0.0.03` | 포터블 개발 프리뷰 빌드 완료 | 포터블 개발 ZIP, 한·영 handoff, 로그·빌드 이력, NumPy 코드/보이싱 분석(실험) |
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
+
+## 0.0.13 — 16-bar chord chart and theoretical guitar shapes
+
+- 빌드 기준일 / Build reference date: `2026-10-04 KST`
+- 최종 검증일 / Final verification: `2026-10-05 KST`
+- 상태 / Status: `UNSIGNED CPU PORTABLE DEVELOPER PRERELEASE`
+- Four bars per row, sixteen per page, source labels, explicit unknown spans,
+  every within-bar change, continuations and pickup/pre-roll preserved.
+- Editable constant-tempo BPM, beats per bar and first-downbeat offset. This is
+  a manual guide, not automatic beat/downbeat transcription.
+- Existing 41 audio templates retained. Standard EADGBE theoretical suggestions
+  expanded from six legacy families to 38 qualities × 12 roots. Seven-tone
+  13/maj13/min13 cannot fit six strings and deliberately have no complete shape.
+- Original-mix results continue to suppress guitar shapes and slash-bass claims.
+- Default event cap 96→4096 preserves already detected long-song events; local
+  acoustic classification thresholds and temporal evidence are unchanged.
+- Algorithm research and proposed ground-truth evaluation:
+  `TRANSCRIPTION_RESEARCH_KO.md`. No NNLS or neural transcription engine bundled.
+- Chart-only header compaction, dynamic label spacing, wrapped beat labels and
+  collapsible grid controls preserve the viewport in small high-DPI windows.
+- Applied grid settings are saved in JSON; HTML/clipboard retain the full text
+  timeline rather than paged sheet export.
+
+### 검증 / Verification
+
+- 316 automated tests passed with `-W error` in 128.775 seconds; compileall passed.
+- Source/final EXE self-tests passed for 41 templates, theory, chart pagination,
+  unknown/source guards, theoretical shapes, Reference Compare and C++ ABI 2.
+- Eight new hidden Tk chart tests passed: KO/EN, 960×600/1080×720, 120/150%
+  scaling, expanded/collapsed settings, page/language state and header restoration.
+- Shape checks cover all 492 root/quality pairs: 456 complete theoretical shapes
+  supported and 36 seven-tone combinations deliberately omitted. Search agrees
+  with independent exhaustive enumeration for the tested control.
+- Synthetic baseline v0.0.12/current: both 984/984 expected primary labels and
+  all 36 negative controls rejected, 109.068 seconds. No accuracy gain claimed.
+- Actual 252.61-second Room 335 source smoke: 138.630 seconds including baseline
+  comparison, 75 monotonic updates to 100%, cache only and source unchanged.
+  Weak guitar selected original-mix harmony, whose 165 events (107 known/58 unknown)
+  are all retained versus the former 96-event cap. Window coverage remains .3587.
+- Actual-result hidden UI: 165 event indexes and durations preserved in both
+  languages, 188 manual-grid bars/12 pages/352 displayed segments, no mix guitar
+  shapes. The default 178 BPM is a rough hint, not ground-truth tempo/downbeats.
+- October 5 final EXE full-song removal: 252.6099 seconds, nine chunks,
+  11,140,096 frames stereo 44.1 kHz PCM16, 154.076 seconds elapsed, 238 monotonic
+  updates to 100%, no download. Gain .9171751788 avoids clipping. Source unchanged
+  and temporary/partial audio cleaned. Timings are not speedup claims.
+- Final EXE cancellation: 31-second selection, requested at 60%, observed at
+  61.12684%, 22.074 seconds elapsed; no output/partial files, source unchanged.
+- Fresh extraction: 4,503 manifest files, 56 matching source/build inputs,
+  AMD64 PE32+ DLL and native licenses, new EXE self-test, model/user-audio absence
+  and private-path checks passed. Final QA/docs are repackaged and checked again
+  before publication; no unchanged source retesting is used as substitute evidence.
+- Manual visible GUI inspection/listening, first download, OS network-disabled
+  execution, CUDA, physical capture and signing are not verified.
+
+### 산출물 / Artifacts
+
+- EXE: `ToneMatchTMP-v0.0.13.exe`, 39,616,911 bytes.
+- EXE SHA-256: `3AB4D75E4FF2C329D45ED3BE3E9CAD17E113400B07D69A1515CA1798D39161C0`.
+- ABI-2 DLL: 350,720 bytes; SHA-256
+  `F4D129C73AB015799780B2281909CBB0B793F640655D531E52D851A769854EE5`.
+- ZIP: `ToneMatchTMP-v0.0.13-Windows-x64-Portable-Dev.zip`.
+  Its final hash is in the sibling `ToneMatchTMP-v0.0.13-SHA256SUMS.txt`;
+  `MANIFEST.json` covers internal files without circular ZIP hashes.
+- Prior v0.0.12 results below remain historical and were not reused.
 
 ## 0.0.12 — Expanded chord vocabulary and keyboard theory guide
 

@@ -6,7 +6,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$Version = "0.0.12"
+$Version = "0.0.13"
 $AppBaseName = "ToneMatchTMP-v$Version"
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $PythonExe = [System.IO.Path]::GetFullPath((Join-Path $ProjectDir "..\.venv\Scripts\python.exe"))
@@ -76,7 +76,7 @@ try {
     if (-not $SkipTests) {
         # 이전 build/dist의 수천 개 런타임 파일을 다시 컴파일하지 않고 배포 소스만 검사한다.
         Invoke-LoggedNative "Python compileall" {
-            & $PythonExe -m compileall -q app.py catalog.py debug_info.py devices.py engine.py harmony_reference.py i18n.py native_dsp.py recorder.py reference_compare.py report.py separator.py spectrum.py stem_removal.py stem_diagnostics.py voicing.py tests tools
+            & $PythonExe -m compileall -q app.py catalog.py debug_info.py devices.py engine.py chord_chart.py guitar_shapes.py harmony_reference.py i18n.py native_dsp.py recorder.py reference_compare.py report.py separator.py spectrum.py stem_removal.py stem_diagnostics.py voicing.py tests tools
         }
         Invoke-LoggedNative "Unit tests" { & $PythonExe -W error -m unittest discover -s tests -v }
     }
@@ -106,7 +106,7 @@ try {
 
     foreach ($Name in @(
         "README.md", "README_KO.md", "DEVELOPMENT_KO.md", "FUNCTION_REFERENCE_KO.md",
-        "DEVELOPER_HANDOFF_KO_EN.md", "BUILD_HISTORY.md", "LICENSE.txt",
+        "DEVELOPER_HANDOFF_KO_EN.md", "BUILD_HISTORY.md", "TRANSCRIPTION_RESEARCH_KO.md", "LICENSE.txt",
         "THIRD_PARTY_NOTICES.txt", "THIRD_PARTY_RUNTIME_INVENTORY.txt"
     )) {
         Copy-Item -LiteralPath (Join-Path $ProjectDir $Name) -Destination $DocsRoot -Force
@@ -115,7 +115,7 @@ try {
 
     foreach ($Name in @(
         "app.py", "catalog.py", "debug_info.py", "devices.py", "engine.py",
-        "harmony_reference.py", "i18n.py", "native_dsp.py", "recorder.py", "reference_compare.py", "report.py", "separator.py", "spectrum.py", "stem_removal.py", "stem_diagnostics.py", "voicing.py"
+        "chord_chart.py", "guitar_shapes.py", "harmony_reference.py", "i18n.py", "native_dsp.py", "recorder.py", "reference_compare.py", "report.py", "separator.py", "spectrum.py", "stem_removal.py", "stem_diagnostics.py", "voicing.py"
     )) {
         Copy-Item -LiteralPath (Join-Path $ProjectDir $Name) -Destination $SourceRoot -Force
     }
@@ -128,7 +128,7 @@ try {
     # source 폴더 하나만 복사해도 새 PC에서 테스트와 빌드를 재현할 수 있도록 필수 문서·메타데이터를 함께 둔다.
     foreach ($Name in @(
         "README.md", "README_KO.md", "DEVELOPMENT_KO.md", "FUNCTION_REFERENCE_KO.md",
-        "DEVELOPER_HANDOFF_KO_EN.md", "BUILD_HISTORY.md", "LICENSE.txt",
+        "DEVELOPER_HANDOFF_KO_EN.md", "BUILD_HISTORY.md", "TRANSCRIPTION_RESEARCH_KO.md", "LICENSE.txt",
         "THIRD_PARTY_NOTICES.txt", "THIRD_PARTY_RUNTIME_INVENTORY.txt",
         "ToneMatchTMP.spec", "build.ps1", "requirements.txt", "requirements-cuda126.txt",
         "enable_cuda.ps1", "version_info.txt"
@@ -189,7 +189,7 @@ try {
         throw "Packaged EXE self-test 실패 (exit $($SelfTestProcess.ExitCode))"
     }
     $SelfTest = Get-Content -Raw -LiteralPath $SelfTestPath | ConvertFrom-Json
-    if (-not $SelfTest.ok -or -not $SelfTest.chord_voicing.ok -or -not $SelfTest.harmony_reference.ok -or -not $SelfTest.harmony_reference_source_ok -or $SelfTest.app_version -ne $Version -or -not $SelfTest.stem_removal_source_ok -or -not $SelfTest.stem_diagnostics_source_ok -or -not $SelfTest.native_dsp.available -or -not $SelfTest.native_dsp.parity_ok -or $SelfTest.native_dsp.abi_version -ne 2 -or -not $SelfTest.native_dsp.float32_parity_ok -or -not $SelfTest.native_dsp.stream_stats_ok) {
+    if (-not $SelfTest.ok -or -not $SelfTest.chord_voicing.ok -or -not $SelfTest.harmony_reference.ok -or -not $SelfTest.harmony_reference_source_ok -or -not $SelfTest.chord_chart.ok -or -not $SelfTest.chord_chart_source_ok -or -not $SelfTest.guitar_shapes_source_ok -or $SelfTest.app_version -ne $Version -or -not $SelfTest.stem_removal_source_ok -or -not $SelfTest.stem_diagnostics_source_ok -or -not $SelfTest.native_dsp.available -or -not $SelfTest.native_dsp.parity_ok -or $SelfTest.native_dsp.abi_version -ne 2 -or -not $SelfTest.native_dsp.float32_parity_ok -or -not $SelfTest.native_dsp.stream_stats_ok) {
         throw "패키지 자체 진단 결과가 올바르지 않습니다."
     }
     # 자체 진단 결과를 공유해도 로컬 사용자 폴더가 노출되지 않도록 캐시 경로를 일반화한다.

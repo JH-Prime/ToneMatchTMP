@@ -1,4 +1,4 @@
-ToneMatch TMP 0.0.12 - Third-Party Notices
+ToneMatch TMP 0.0.13 - Third-Party Notices
 ===========================================
 
 ToneMatch TMP application source

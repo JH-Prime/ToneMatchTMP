@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
 
@@ -503,6 +504,27 @@ class VoicingAnalysisTests(unittest.TestCase):
         self.assertEqual(len(shapes), 2)
         self.assertTrue(all(shape["detected"] is False for shape in shapes))
         self.assertTrue(all(len(shape["frets_low_e_to_high_e"]) == 6 for shape in shapes))
+
+    def test_default_timeline_keeps_more_than_96_events(self) -> None:
+        """페이지 표시를 위해 기본 분석 결과는 예전 96개 상한 이상을 보존해야 한다."""
+        from dataclasses import replace
+        template = analyze_voicings(_synth_chord((48, 52, 55)), SAMPLE_RATE).events[0]
+        timeline = [replace(template, start_seconds=float(index), end_seconds=float(index + 1))
+                    for index in range(120)]
+        with patch("voicing._merge_events", return_value=timeline):
+            analysis = analyze_voicings(_synth_chord((48, 52, 55)), SAMPLE_RATE)
+        self.assertEqual(analysis.event_count, 120)
+        self.assertFalse(analysis.diagnostics["events_truncated"])
+        self.assertEqual(analysis.diagnostics["max_events"], 4096)
+        self.assertEqual(analysis.events, tuple(timeline))
+
+    def test_extended_shapes_are_integrated_without_omitted_tones(self) -> None:
+        """확장 코드에도 모든 구성음이 있는 이론 운지를 연결하며 7음 화음은 꾸미지 않는다."""
+        self.assertTrue(candidate_guitar_shapes(0, "sus2"))
+        self.assertTrue(candidate_guitar_shapes(0, "dim7"))
+        self.assertEqual(candidate_guitar_shapes(0, "13"), ())
+        self.assertEqual(candidate_guitar_shapes(None, "major"), ())
+        self.assertEqual(candidate_guitar_shapes(0, "invalid"), ())
 
     def test_silence_is_unknown_and_result_is_deterministic(self) -> None:
         """무음은 unknown이며 같은 입력은 직렬화 결과까지 완전히 같아야 한다."""

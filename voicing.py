@@ -14,6 +14,8 @@ from typing import Iterable
 
 import numpy as np
 
+from guitar_shapes import candidate_shapes
+
 
 NOTE_NAMES = ("C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B")
 CHORD_INTERVALS: dict[str, tuple[int, ...]] = {
@@ -345,7 +347,10 @@ def candidate_guitar_shapes(root_pc: int | None, chord_type: str) -> tuple[dict,
         )
         if shape is not None
     ]
-    return tuple(shapes[:2])
+    if shapes:
+        return tuple(shapes[:2])
+    intervals = CHORD_INTERVALS.get(chord_type)
+    return candidate_shapes(root_pc, chord_type, intervals) if intervals else ()
 
 
 def _classify_window(chroma: np.ndarray, salience: np.ndarray, fundamentals: np.ndarray, rms: float) -> dict:
@@ -591,7 +596,7 @@ def analyze_voicings(
     samples: np.ndarray,
     sample_rate: int,
     tuning_reference_hz: float = 440.0,
-    max_events: int = 96,
+    max_events: int = 4096,
 ) -> VoicingAnalysis:
     """guitar stem 전체에서 시간대별 코드와 보이싱 프로필을 결정론적으로 추정한다."""
     if samples.ndim != 2 or samples.shape[1] < 1 or sample_rate < 8_000:
@@ -651,6 +656,7 @@ def analyze_voicings(
         "tuning_reference_hz": float(tuning_reference_hz),
         "event_count_before_limit": event_count_before_limit,
         "events_truncated": event_count_before_limit > max_events,
+        "max_events": max_events,
         "temporal_policy": "absolute_local_evidence_candidates_pruned_for_adjacent_support_before_path_selection",
         "timeline_limit_policy": "omitted_candidates_become_unknown_without_time_gaps",
         "chord_template_count": len(CHORD_INTERVALS),
