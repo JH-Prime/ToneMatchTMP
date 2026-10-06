@@ -1,9 +1,23 @@
-ToneMatch TMP 0.0.13 - Third-Party Notices
+ToneMatch TMP 0.1.01 - Third-Party Notices
 ===========================================
 
 ToneMatch TMP application source
 --------------------------------
 License: MIT (see LICENSE.txt)
+
+CQT, audio playback and PDF additions
+-------------------------------------
+librosa 0.11.0 and its pinned dependencies (SciPy, numba/llvmlite, soundfile,
+soxr and others): exact license metadata and copied notices are in
+THIRD_PARTY_RUNTIME_INVENTORY.txt and licenses/runtime/.
+Sounddevice 0.5.6 and bundled PortAudio runtime: see copied runtime notices.
+PortAudio's own upstream notice is also preserved in licenses/PortAudio-LICENSE.txt.
+PortAudio source: https://github.com/PortAudio/portaudio
+ReportLab 4.5.1 and Pillow 12.3.0: see copied runtime notices.
+Nanum Gothic Regular is redistributed unmodified under SIL Open Font License 1.1.
+Font notice: licenses/NanumGothic-OFL.txt.
+Font source: https://github.com/google/fonts/tree/main/ofl/nanumgothic
+No code from the Reddit-linked GPL chordid project was copied.
 
 C++ live DSP build/runtime components
 -------------------------------------

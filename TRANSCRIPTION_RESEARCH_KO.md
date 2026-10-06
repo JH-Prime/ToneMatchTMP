@@ -1,4 +1,31 @@
-# 채보 정확도 개선 조사 · v0.0.13
+# 채보 정확도 개선 조사 · v0.1.01
+
+## 2026-10-06 적용 기록
+
+사용자 선택에 따라 실제 librosa CQT를 기본 코드 frontend로 도입했습니다.
+원본 전체 음원 → 채널별 CQT magnitude RMS → 배음/타악기 마스크 →
+옥타브 통합 chroma → 41종 화음 템플릿 → 인접 창의 작은 전이 비용 경로입니다.
+고정 440 Hz 기준이며 자동 조율 추정이나 학습된 Bayesian/HMM은 아닙니다.
+원본 믹스의 slash bass도 후보로 유지하되 실제 베이스 악기의 확정 채보는 아닙니다.
+
+- 합성 246개 (41유형 × 3근음 × 2음색): FFT/CQT 모두 246개 대표 기호 일치.
+  합계 시간 FFT 7.825초, CQT 31.014초. 고정 회귀 검사이지 실곡 정확도가 아닙니다.
+- Room 335 원본 30–90초: CQT 4.974초, FFT 1.014초. 검출 구간 비율은 각각
+  0.2323/0.4242로 다릅니다. 정답 주석이 없어 어느 쪽이 더 정확한지 결론낼 수 없습니다.
+- C6/Am7 등 동일 피치 집합은 근거와 후보를 함께 제공하며 사용자가 직접 고칠 수 있습니다.
+- Reddit 게시물의 CQT/chroma 설명은 댓글 작성자의 경험입니다. Chord AI 내부 구현을
+  입증하지 않으며, 댓글에서 언급한 베이지안 접근도 실제 구현되었다는 뜻이 아닙니다.
+  연결된 GPL 코드는 복사하지 않았습니다.
+
+1차 자료:
+
+- [librosa CQT 0.11](https://librosa.org/doc/0.11.0/generated/librosa.cqt.html)
+- [CQT chroma](https://librosa.org/doc/0.11.0/generated/librosa.feature.chroma_cqt.html)
+- [FMP 화음 템플릿](https://www.audiolabs-erlangen.de/resources/MIR/FMP/C5/C5S2_ChordRec_Templates.html)
+- [FMP HMM 비교](https://www.audiolabs-erlangen.de/resources/MIR/FMP/C5/C5S3_ChordRec_HMM.html)
+- [FMP 배음/타악기 분리](https://audiolabs-erlangen.de/resources/MIR/FMP/C8/C8S1_HPS.html)
+
+## 아래는 v0.0.13 당시 조사 기록 (현행 구현과 구별)
 
 조사일: 2026-10-04. 아래는 1차 자료를 바탕으로 한 구현 방향 검토입니다.
 논문의 실험 성능을 ToneMatch TMP의 성능으로 인용하지 않습니다.

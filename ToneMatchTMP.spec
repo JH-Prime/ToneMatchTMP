@@ -1,6 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-"""ToneMatch TMP 0.0.13 Windows x64 onedir 배포 사양이다.
+"""ToneMatch TMP 0.1.01 Windows x64 onedir 배포 사양이다.
 
 PyTorch와 Demucs는 단일 파일 압축 해제 방식보다 onedir에서 첫 실행과 모델
 로딩이 안정적이다. AI 모델 가중치는 포함하지 않고 첫 분리 시 사용자 캐시에
@@ -10,7 +10,7 @@ PyTorch와 Demucs는 단일 파일 압축 해제 방식보다 onedir에서 첫 �
 from PyInstaller.utils.hooks import collect_all, copy_metadata
 
 
-APP_VERSION = "0.0.13"
+APP_VERSION = "0.1.01"
 APP_BASENAME = f"ToneMatchTMP-v{APP_VERSION}"
 
 source_files = [
@@ -34,6 +34,15 @@ source_files = [
     ("harmony_reference.py", "devsource"),
     ("chord_chart.py", "devsource"),
     ("guitar_shapes.py", "devsource"),
+    ("song_chords.py", "devsource"),
+    ("playback.py", "devsource"),
+    ("playback_ui.py", "devsource"),
+    ("chord_edits.py", "devsource"),
+    ("chord_edit_ui.py", "devsource"),
+    ("stem_mixer.py", "devsource"),
+    ("stem_mixer_ui.py", "devsource"),
+    ("chart_pdf.py", "devsource"),
+    ("music_diagnostics.py", "devsource"),
 ]
 
 notice_files = [
@@ -59,11 +68,16 @@ dynamic_packages = [
     "httpx",
     "httpcore",
     "hf_xet",
+    "librosa",
+    "sounddevice",
+    "reportlab",
 ]
 
 extra_datas = []
 extra_binaries = []
-hidden_imports = []
+# SciPy의 vendored NumPy namespace는 문자열 __import__로 FFT를 불러온다.
+# PyInstaller 정적 탐색에서 누락되므로 실제 CQT frozen 진단으로 함께 검증한다.
+hidden_imports = ["scipy._external.array_api_compat.numpy.fft"]
 for package_name in dynamic_packages:
     package_datas, package_binaries, package_hidden = collect_all(package_name)
     extra_datas += package_datas
@@ -85,12 +99,12 @@ a = Analysis(
     ["app.py"],
     pathex=[],
     binaries=[("resources/ffmpeg.exe", "resources"), ("resources/tonematch_dsp.dll", "resources")] + extra_binaries,
-    datas=source_files + notice_files + extra_datas,
+    datas=source_files + notice_files + [("resources/fonts", "resources/fonts")] + extra_datas,
     hiddenimports=sorted(set(hidden_imports)),
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=["matplotlib", "pandas", "scipy", "torchaudio", "torchvision"],
+    excludes=["matplotlib", "pandas", "torchaudio", "torchvision"],
     noarchive=False,
     optimize=1,
 )

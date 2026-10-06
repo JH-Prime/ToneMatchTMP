@@ -7,6 +7,12 @@ from pathlib import Path
 
 
 SOURCE_NAMES = (
+    "song_chords.py", "playback.py", "playback_ui.py", "chord_edits.py", "chord_edit_ui.py",
+    "stem_mixer.py", "stem_mixer_ui.py", "chart_pdf.py", "music_diagnostics.py",
+    "tests/test_song_chords.py", "tests/test_playback.py", "tests/test_playback_ui.py",
+    "tests/test_chord_edits.py", "tests/test_chord_edit_ui.py", "tests/test_stem_mixer.py",
+    "tests/test_stem_mixer_ui.py", "tests/test_chart_pdf.py", "tests/test_chart_pdf_ui.py",
+    "tests/test_music_diagnostics.py", "tools/compare_chord_frontends.py", "tools/verify_chart_pdf.py",
     "app.py",
     "catalog.py",
     "debug_info.py",
@@ -76,7 +82,7 @@ def _function_rows(path: Path) -> list[tuple[int, str, str]]:
 def generate(project_root: Path, output: Path) -> None:
     """모든 배포 모듈의 함수 설명을 버전이 적힌 단일 문서로 저장한다."""
     lines = [
-        "# ToneMatch TMP 0.0.13 함수 설명서",
+        "# ToneMatch TMP 0.1.01 함수 설명서",
         "",
         "이 문서는 배포 소스의 모든 함수와 한국어 docstring을 자동으로 모은 색인입니다.",
         "앱의 `개발자 옵션`에서는 처리 순서 블록을 클릭해 같은 함수의 실제 소스와 원본 줄 번호를 볼 수 있습니다.",

@@ -8,6 +8,7 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 | 버전 | 상태 | 범위 |
 |---|---|---|
+| `0.1.01` | 개발자 프리릴리스 검증 중 | 전체 음원 CQT 코드, 재생 연동·직접 수정, 6-stem 믹서·WAV, 16마디 PDF |
 | `0.0.13` | 서명되지 않은 CPU 포터블 개발자 프리릴리스 | 16마디 코드표, 수동 격자 보정, 이론 기타 운지 확대, 긴 타임라인 보존 |
 | `0.0.12` | 서명되지 않은 CPU 포터블 개발자 프리릴리스 | 41종 코드, 12종 음계·장조/자연단조 다이어토닉 사전, 12근음 건반 참고 |
 | `0.0.11` | 서명되지 않은 CPU 포터블 개발자 프리릴리스 | 20종 코드 템플릿·모호성·구성음 근거·역위 보존, 참고용 YouTube UI 제거 |
@@ -21,6 +22,33 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 | `0.0.03` | 포터블 개발 프리뷰 빌드 완료 | 포터블 개발 ZIP, 한·영 handoff, 로그·빌드 이력, NumPy 코드/보이싱 분석(실험) |
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
+
+## 0.1.01 — Full-mixture CQT and music workflow
+
+- Build reference: 2026-10-06 KST. Final verification continued 2026-10-07 KST.
+- Status: unsigned CPU developer prerelease candidate; publication follows independent archive verification.
+- Whole original mixture CQT; symbols/evidence/alternatives instead of automatic fingering.
+- Playback/seek/loop with chart following, separate manual corrections and safe JSON reopen.
+- Six-stem disk-backed mixer, original monitoring and safe individual/mix PCM16 WAV export.
+- A4 sixteen-bar PDF, embedded Korean font, dense-event detail pages, explicit viewer-only preview.
+- Nine KO/EN synthetic PDF pages visually reviewed. Source music self-test passed.
+- Final warnings-as-errors suite: 358 tests, 201.559s, OK. Frozen music/C++ self-test passed.
+- 80 source/build inputs in the staged package match the project.
+- Actual source CQT/mixer: 252.6099-second sample, six individual and one mix WAV with
+  11,140,096 aligned stereo PCM16 frames each. Original unchanged; temp cleanup and real
+  inference cancellation passed. CQT 10.870s, mixer prepare 100.867s on this cached CPU run.
+- CQT returned 64 events and 0.1188 reliable-window coverage, NOT an accuracy measurement.
+- Repaired cancellation exception normalization and SciPy's dynamic FFT-module packaging.
+- Final windowed EXE actual cached CPU run: whole 252.6099-second sample in 98.417s,
+  nine chunks, 238 monotonic progress callbacks; requested cancellation in 10.210s.
+  Original preserved, temporary audio and partial outputs cleaned, no model download.
+- EXE SHA-256: `085324080936D8C18D6F590F1A72300241BA56A4F0ACAEE951A56A85E959CB6D`.
+- Final ZIP digest belongs to the sibling SHA256SUMS and independent ARCHIVE-VERIFICATION
+  release asset; it is intentionally not embedded in its own bytes.
+- 246 controlled synthetic labels matched by both FFT and CQT; no real-song accuracy claim.
+- Final suite, frozen execution, actual cached model and archive proof: see QA_REPORT_v0.1.01.json.
+- No audible output, perceptual separation improvement, physical printing, first download,
+  clean-machine, offline, CUDA or signing claim. Later published fixes use 0.1.02.
 
 ## 0.0.13 — 16-bar chord chart and theoretical guitar shapes
 

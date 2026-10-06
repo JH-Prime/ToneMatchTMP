@@ -1,4 +1,32 @@
-# ToneMatch TMP 개발자 안내서 · 0.0.13
+# ToneMatch TMP 개발자 안내서 · 0.1.01
+
+## 현행 0.1.01 계약 (2026-10-06 KST)
+
+이 절과 README·QA_REPORT_v0.1.01.json이 현행 기준입니다. 아래 0.0.x 절은
+이전 구현의 역사 자료이며, 충돌할 때 이 절을 우선합니다.
+
+- song_chords.py: 실제 librosa CQT, 1.2초 창/0.6초 hop, 36 bins/octave,
+  phase-safe 채널 magnitude RMS, 배음/타악기 마스크, chroma와 기존 41유형 비교.
+  최대 20분 입력을 짧은 batch로 처리하고 취소를 확인합니다. FFT 자동 대체는 하지 않습니다.
+- engine.py: 기타 톤/Reference PCM과 원본 코드 PCM을 분리합니다. 코드 실패는
+  unavailable로 표현하며 기타 화성으로 바꿔 원본 화성처럼 표시하지 않습니다.
+- playback.py/playback_ui.py: 관리되는 PCM 수명, 프레임 transport, 단일 출력 작업자,
+  세대별 취소와 늦은 완료 폐기. 명시적 재생, 기본 PortAudio 장치, bounded block.
+- chord_edits.py/chord_edit_ui.py: 원본 보존과 별도 correction map, 수정 코드의 자동
+  근거 제거, 8 MiB 결과 JSON 경계 검증, 재열기 후 명시적 원본 연결.
+- stem_mixer.py/stem_mixer_ui.py: 디스크 기반 정렬 6-stem, 공통 headroom, block 단위
+  gain snapshot, original 비교, no-overwrite PCM16 WAV. 같은 output을 동시에 쓰지 않습니다.
+- chart_pdf.py: ReportLab A4 vector, 16마디 및 overflow detail, embedded Nanum Gothic,
+  임시 파일 후 새 출력 확정, 취소 정리. UI snapshot을 작업자에서 저장합니다.
+- music_diagnostics.py: 실제 CQT/수정/PCM/mixer/PDF/font/PortAudio load 진단.
+  청감·실제 AI 모델·물리 출력 장치를 확인한 것으로 간주하지 않습니다.
+
+C++ ABI 2 실시간 엔진은 유지합니다. CQT 비교는 합성 회귀이지 실곡 정답률이 아니며,
+베이지안 학습 모델·자동 downbeat·새 분리 모델을 구현했다고 표현하지 않습니다.
+테스트 설치는 requirements-dev.txt (pypdf 포함), 앱 런타임은 requirements.txt입니다.
+빌드 버전은 0.1.01이고 게시 후 후속 패치는 0.1.02입니다.
+
+## 이전 구현 기록 · v0.0.13 이하
 
 이 문서는 구현 구조를 빠르게 이해하기 위한 한국어 요약입니다. 모든 함수의
 이름·원본 줄·docstring은 `FUNCTION_REFERENCE_KO.md`, 새 PC 재구성과 릴리스

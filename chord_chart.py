@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from copy import deepcopy
 import math
-import re
 
 
 MAX_BARS = 10_000
@@ -92,8 +91,6 @@ def _normalise_events(voicing: dict) -> list[dict]:
         chord_type = str(event.get("chord_type", "unknown"))
         label = str(event.get("symbol") or "?")
         unknown = chord_type == "unknown" or label == "?"
-        if source_kind == "original_mix":
-            label = re.sub(r"/[A-G](?:[#b♯♭])?$", "", label)
         events.append({
             "start_seconds": start,
             "end_seconds": end,
@@ -101,10 +98,11 @@ def _normalise_events(voicing: dict) -> list[dict]:
             "chord_type": "unknown" if unknown else chord_type,
             "event_index": index,
             "source_kind": source_kind,
-            "candidate_shapes": [] if unknown or source_kind == "original_mix" else deepcopy(event.get("candidate_shapes") or []),
+            "candidate_shapes": [],
             "unknown": unknown,
             "confidence": deepcopy(event.get("confidence")),
             "root_pc": event.get("root_pc"),
+            "manual_edit": bool(event.get('manual_edit')),
         })
     return sorted(events, key=lambda item: (item["start_seconds"], item["end_seconds"], item["event_index"]))
 

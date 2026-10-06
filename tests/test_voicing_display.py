@@ -102,13 +102,12 @@ class VoicingDisplayTests(unittest.TestCase):
         for language in ("ko", "en"):
             with self.subTest(language=language):
                 widget = _render(analysis, language)
-                self.assertIn(f"01:01–01:03   C   {tr('ui.voicing_confidence', language)} 81/100", widget.text("event"))
-                self.assertNotIn("C/E", widget.text())
+                self.assertIn(f"01:01–01:03   C/E   {tr('ui.voicing_confidence', language)} 81/100", widget.text("event"))
                 self.assertNotIn("TEST_SHAPE_ONLY", widget.text())
                 self.assertNotIn("E A D G B e", widget.text())
                 self.assertIn(tr("ui.voicing_source_original_mix", language), widget.text("intro"))
                 self.assertIn(tr("ui.voicing_fallback_selected", language), widget.text("intro"))
-                self.assertIn(tr("ui.voicing_mix_profile", language), widget.text("detail"))
+                self.assertNotIn(tr("ui.voicing_profile", language), widget.text("detail"))
                 self.assertNotIn(tr("ui.playable_shapes", language), widget.text())
         self.assertEqual(analysis, original)
 
@@ -118,8 +117,8 @@ class VoicingDisplayTests(unittest.TestCase):
             with self.subTest(source=source):
                 widget = _render({"analysis_source": source, "events": [_known_event()]})
                 self.assertIn("00:01–00:03   C/E   근거 점수 81/100", widget.text("event"))
-                self.assertIn("TEST_SHAPE_ONLY · E A D G B e = 0 3 2 0 1 0", widget.text("detail"))
-                self.assertIn(tr("ui.playable_shapes", "ko"), widget.text("warning"))
+                self.assertNotIn("TEST_SHAPE_ONLY", widget.text("detail"))
+                self.assertNotIn(tr("ui.playable_shapes", "ko"), widget.text("warning"))
 
     def test_unknown_intervals_have_no_fake_confidence_or_shapes(self) -> None:
         """미확정 이벤트에 잘못 남은 신뢰도·코드·운지도 확정 결과로 표시하지 않아야 한다."""
@@ -156,7 +155,7 @@ class VoicingDisplayTests(unittest.TestCase):
             {"analysis_source": "original_mix", "source_start_seconds": 30.0, "events": [_known_event()]},
             result={"source": {"start_seconds": 120.0}, "source_separation": {"used": False}},
         )
-        self.assertIn("00:31–00:33   C   근거 점수 81/100", widget.text("event"))
+        self.assertIn("00:31–00:33   C/E   근거 점수 81/100", widget.text("event"))
         self.assertIn(tr("ui.voicing_source_original_mix", "ko"), widget.text("intro"))
         self.assertNotIn(tr("ui.voicing_source_provided_audio", "ko"), widget.text("intro"))
 
@@ -257,8 +256,7 @@ class VoicingDisplayTests(unittest.TestCase):
         event["alternatives"] = [{"symbol": "Am7/C"}, {"symbol": "Am7/E"}]
         event["evidence"] = {"ambiguous": True}
         widget = _render({"analysis_source": "original_mix", "events": [event]})
-        self.assertIn("다른 해석 · Am7\n", widget.text("detail"))
-        self.assertNotIn("Am7/", widget.text())
+        self.assertIn("다른 해석 · Am7/C, Am7/E\n", widget.text("detail"))
         event["chord_type"] = "unknown"
         unknown = _render({"events": [event]})
         self.assertNotIn("Am7", unknown.text())
@@ -279,15 +277,13 @@ class VoicingDisplayTests(unittest.TestCase):
                         analysis = {"analysis_source": source, "events": [event]}
                         original = deepcopy(analysis)
                         widget = _render(analysis, language)
-                        expected = symbol.rsplit("/", 1)[0] if source == "original_mix" else symbol
-                        other = alternative.rsplit("/", 1)[0] if source == "original_mix" else alternative
+                        expected = symbol
+                        other = alternative
                         self.assertIn("00:01–00:03   " + expected + "   ", widget.text("event"))
                         self.assertIn(other, widget.text("detail"))
                         self.assertIn("C6/9", widget.text())
                         self.assertIn("Cm6/9", widget.text())
-                        if source == "original_mix":
-                            self.assertNotIn(symbol, widget.text())
-                            self.assertNotIn(alternative, widget.text())
+                        self.assertNotIn("TEST_SHAPE_ONLY", widget.text())
                         self.assertEqual(analysis, original)
 
     def test_score_is_bounded_and_nonfinite_evidence_is_not_shown_as_certainty(self) -> None:

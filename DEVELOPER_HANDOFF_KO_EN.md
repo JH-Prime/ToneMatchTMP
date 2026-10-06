@@ -1,4 +1,47 @@
-# ToneMatch TMP v0.0.13 — 개발 인수인계 / Developer Handoff
+# ToneMatch TMP v0.1.01 — 개발 인수인계 / Developer Handoff
+
+## Current handoff / 현행 인수인계 — 2026-10-06 KST
+
+현행 계약은 이 절·README·QA_REPORT_v0.1.01.json·BUILD_HISTORY.md입니다.
+아래 v0.0.x 본문은 역사 자료이며 이전 버전 명령·검증·기타 우선 화성 동작은
+현행의 증거가 아닙니다. 다음 버그 수정 버전은 0.1.02이며 게시된 자산을 교체하지 않습니다.
+
+This section supersedes the historical v0.0.x text below. Use version 0.1.01,
+requirements-dev.txt for tests, and QA_REPORT_v0.1.01.json for current evidence.
+Future published fixes advance to 0.1.02; never overwrite released artifacts.
+
+1. Original selected mixture always feeds song_chords.py (real librosa CQT).
+   Guitar separation still feeds tone recipes/Reference only. Code symbols retain slash/sus/
+   extensions with evidence/candidates, no automatic fingering or separated-audio controls.
+2. PlaybackSession/WavPlayer own decoded PCM and output-worker lifetimes. No autoplay.
+   Frame-based seek/loop and chart following are not hardware-clock audible synchronization.
+3. chord_edits keeps originals immutable. Manual corrections are separate, clear stale acoustic
+   scores, persist in JSON, and require explicit source relinking after bounded reopen.
+4. StemBank stores six aligned float32 stems on disk, with common headroom. Mixer sessions own
+   bank lifetime across play/export/cancel. Mute wins over solo. Export snapshots controls;
+   original comparison affects monitoring only. Individual exports ignore fader/mute/solo.
+5. chart_pdf exports effective chords as A4 sixteen-bar chart/detail pages with bundled OFL
+   Nanum Gothic. Existing output is never overwritten. Explicit preview opens the viewer only.
+6. C++ ABI 2 remains for live DSP. Source self-test and frozen self-test must include
+   music_workflow.ok (CQT, corrections, PCM/WAV, PDF/font and PortAudio runtime).
+
+Use the README build commands from the source root. build.ps1 checks native parity, all tests,
+licenses, PyInstaller, frozen diagnostics, manifest and archive. The ZIP must include the new
+modules, requirements-dev.txt, resources/fonts and OFL notice. SciPy/numba/LLVM, libsndfile,
+PortAudio and ReportLab must work in the frozen build; source success alone is insufficient.
+No user media/model weights/private paths in source, diagnostics or release assets.
+
+Current validation is recorded explicitly in QA; earlier results are not reused.
+No reference-annotated real-song accuracy, perceptual separation improvement, audible output,
+first download, offline, CUDA, fresh-PC or physical printing claim follows from synthetic tests.
+The selected CQT frontend remains heuristic, not Chord AI replication or trained Bayesian analysis.
+PDF visual review and hidden Tk tests are separate from live interactive listening.
+
+For rollback, keep original results/audio and use a previous release in a separate folder.
+Do not modify old JSON to erase original predictions or migrate caches destructively.
+Runtime logs may include user-selected paths: review before sharing.
+
+## Historical v0.0.13 handoff / 이전 인수인계 (현행 지침 아님)
 
 이 문서는 v0.0.13 개발 스냅샷을 다른 Windows PC나 새 개발 세션에서 이어서
 작업하기 위한 기준 문서입니다. 소스, `QA_REPORT_v0.0.13.json`과

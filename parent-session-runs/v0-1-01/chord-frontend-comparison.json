@@ -1,0 +1,18 @@
+{
+  "scope": "synthetic_regression_not_real_song_accuracy",
+  "case_count": 246,
+  "frontends": {
+    "fft": {
+      "top_one": 246,
+      "candidate_included": 246,
+      "seconds": 7.824974800001655,
+      "failures": []
+    },
+    "cqt": {
+      "top_one": 246,
+      "candidate_included": 246,
+      "seconds": 31.013807600011205,
+      "failures": []
+    }
+  }
+}

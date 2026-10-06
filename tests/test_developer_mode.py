@@ -26,12 +26,27 @@ from reference_compare import build_reference_profile  # noqa: E402
 from spectrum import analyze_spectrum_frame  # noqa: E402
 
 
+def cancel_test_callbacks(root) -> None:
+    """테스트가 만든 Tcl 인터프리터의 예약 작업을 창보다 먼저 제거한다."""
+    for identifier in root.tk.call('after', 'info'):
+        root.after_cancel(identifier)
+
+
 class DeveloperModeTests(unittest.TestCase):
     """개발자 화면이 약속한 코드와 설명을 실제로 제공하는지 확인한다."""
 
+    def test_test_root_cleanup_cancels_pending_callbacks(self) -> None:
+        """테스트용 창을 직접 닫기 전에 남은 예약 콜백까지 회수한다."""
+        root = tk.Tk()
+        root.withdraw()
+        root.after(60000, lambda: None)
+        cancel_test_callbacks(root)
+        self.assertFalse(root.tk.call('after', 'info'))
+        root.destroy()
+
     def test_version_and_latest_changelog_match(self) -> None:
         """앱 버전은 두 자리 패치 규칙이며 최신 변경 기록과 같아야 한다."""
-        self.assertRegex(catalog.APP_VERSION, r"^0\.0\.\d{2}$")
+        self.assertRegex(catalog.APP_VERSION, r"^\d+\.\d+\.\d{2}$")
         self.assertEqual(catalog.CHANGELOG[0]["version"], catalog.APP_VERSION)
         self.assertTrue(catalog.CHANGELOG[0]["changes"])
 
@@ -174,6 +189,7 @@ class DeveloperModeTests(unittest.TestCase):
                 application._drain_events()
                 self.assertEqual(application.progress_var.get(), 100.0)
         finally:
+            cancel_test_callbacks(root)
             root.destroy()
 
     def test_analysis_timer_refreshes_and_stops_on_error_or_cancellation(self) -> None:
@@ -214,6 +230,7 @@ class DeveloperModeTests(unittest.TestCase):
                 application._tick_analysis_progress()
                 schedule.assert_not_called()
         finally:
+            cancel_test_callbacks(root)
             root.destroy()
 
     def test_analysis_completion_preserves_final_elapsed_time(self) -> None:
@@ -251,6 +268,7 @@ class DeveloperModeTests(unittest.TestCase):
                 application._refresh_analysis_progress()
             self.assertIn("Elapsed 01:12", application.progress_detail_var.get())
         finally:
+            cancel_test_callbacks(root)
             root.destroy()
 
     def test_analysis_progress_footer_stays_visible_when_options_scroll(self) -> None:
@@ -321,6 +339,7 @@ class DeveloperModeTests(unittest.TestCase):
                                 original_positions,
                             )
         finally:
+            cancel_test_callbacks(root)
             root.destroy()
 
     def test_initial_window_and_minimum_fit_the_usable_work_area(self) -> None:
@@ -404,6 +423,7 @@ class DeveloperModeTests(unittest.TestCase):
                                     self.assertAlmostEqual(application.status_text.yview()[1], 1.0)
             finally:
                 root.tk.call("tk", "scaling", original_scaling)
+                cancel_test_callbacks(root)
                 root.destroy()
 
     def test_input_scroll_clamps_after_content_becomes_shorter(self) -> None:
@@ -432,6 +452,7 @@ class DeveloperModeTests(unittest.TestCase):
                 application.left_canvas.yview_moveto(1.0)
                 self.assertEqual(application.left_canvas.yview(), (0.0, 1.0))
         finally:
+            cancel_test_callbacks(root)
             root.destroy()
 
     def test_debug_diagram_fits_and_displays_source(self) -> None:
@@ -450,6 +471,7 @@ class DeveloperModeTests(unittest.TestCase):
             self.assertLessEqual(bounds[3], application.debug_canvas.winfo_height())
             self.assertIn("def ", application.debug_code.get("1.0", "end-1c"))
         finally:
+            cancel_test_callbacks(root)
             root.destroy()
 
     def test_live_spectrum_tab_renders_latest_frame_without_hardware(self) -> None:
@@ -479,6 +501,7 @@ class DeveloperModeTests(unittest.TestCase):
             application._offer_latest_spectrum(application.spectrum_session_id, frame)
             self.assertEqual(application.spectrum_frames.qsize(), 1)
         finally:
+            cancel_test_callbacks(root)
             root.destroy()
 
     def test_reference_compare_tab_renders_six_bands_without_hardware(self) -> None:
@@ -550,6 +573,7 @@ class DeveloperModeTests(unittest.TestCase):
             self.assertIsNotNone(application.last_reference_comparison)
             application.spectrum_worker = None
         finally:
+            cancel_test_callbacks(root)
             root.destroy()
 
 

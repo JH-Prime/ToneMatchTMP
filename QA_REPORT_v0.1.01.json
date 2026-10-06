@@ -1,0 +1,49 @@
+{
+  "schema": "tonematch-qa/v1",
+  "app_version": "0.1.01",
+  "build_date": "2026-10-06",
+  "tested_at": "2026-10-07",
+  "status": "passed",
+  "scope": "Original-mixture CQT chords, playback/chart sync, corrections, six-stem mixer and sixteen-bar PDF.",
+  "checks": {
+    "prepackaging_suite": {"tests": 356, "seconds": 169.861, "ok": true, "scope": "Before music diagnostic and version metadata updates"},
+    "music_diagnostic_test": {"tests": 1, "ok": true},
+    "source_self_test": {"ok": true, "music_workflow": true, "cpp_abi": 2, "cpp_parity": true},
+    "pdf_visual_review": {"ok": true, "pages": 9, "languages": ["ko", "en"], "dense_events_and_partial_page": true},
+    "synthetic_frontend_comparison": {"cases": 246, "fft_matches": 246, "cqt_matches": 246, "fft_seconds": 7.824975, "cqt_seconds": 31.013808},
+    "final_suite": {"ok": true, "tests": 358, "seconds": 201.559, "warnings_as_errors": true},
+    "frozen_self_test": {"ok": true, "music_workflow": true, "cpp_abi": 2, "cpp_parity": true, "source_inputs_matching": 80},
+    "actual_source_mixer_cqt": {
+      "ok": true, "duration_seconds": 252.60988662131518,
+      "cqt_seconds": 10.86990660000015, "event_count": 64, "tonal_coverage": 0.1188,
+      "mixer_prepare_seconds": 100.86658740000007, "individual_exports": 6, "mix_exports": 1,
+      "aligned_output_frames": 11140096, "sample_rate": 44100, "sample_format": "stereo_PCM16",
+      "source_unchanged": true, "actual_inference_cancellation": true,
+      "temporary_audio_cleaned": true, "cache_only": true, "progress_monotonic": true,
+      "progress_updates": 65, "common_headroom": 0.3101197453340837,
+      "real_song_accuracy_measured": false, "listening_quality_assessed": false
+    },
+    "actual_cached_model": {
+      "ok": true, "runtime": "final_windowed_EXE", "device": "cpu",
+      "full_song_seconds": 252.60988662131518, "elapsed_seconds": 98.41653579999911,
+      "processed_chunks": 9, "progress_updates": 238, "progress_monotonic": true,
+      "source_unchanged": true, "temporary_audio_cleaned": true,
+      "cancel_elapsed_seconds": 10.210134900000412, "cancelled_output_absent": true,
+      "partial_files_absent": true, "model_downloaded_during_run": false,
+      "listening_quality_assessed": false, "gui_tested": false
+    },
+    "fresh_archive_verification": {"status": "external_release_gate", "report_asset": "ToneMatchTMP-v0.1.01-ARCHIVE-VERIFICATION.json"}
+  },
+  "limitations": {
+    "real_song_accuracy_measured": false,
+    "separation_quality_improvement_measured": false,
+    "audible_output_tested": false,
+    "physical_printing_tested": false,
+    "clean_machine_tested": false,
+    "first_download_tested": false,
+    "offline_tested": false,
+    "cuda_tested": false,
+    "code_signed": false,
+    "automatic_downbeat_detection": false
+  }
+}

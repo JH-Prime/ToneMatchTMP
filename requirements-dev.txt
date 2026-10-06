@@ -1,0 +1,3 @@
+# PDF content regression inspection; not required in the shipped application.
+-r requirements.txt
+pypdf==6.19.0

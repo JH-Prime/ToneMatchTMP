@@ -353,9 +353,11 @@ def candidate_guitar_shapes(root_pc: int | None, chord_type: str) -> tuple[dict,
     return candidate_shapes(root_pc, chord_type, intervals) if intervals else ()
 
 
-def _classify_window(chroma: np.ndarray, salience: np.ndarray, fundamentals: np.ndarray, rms: float) -> dict:
+def _classify_window(chroma: np.ndarray, salience: np.ndarray, fundamentals: np.ndarray, rms: float,
+                     midi: np.ndarray | None = None) -> dict:
     """한 분석창을 코드, 베이스/역위, 음역, 간격과 신뢰도로 분류한다."""
-    midi, _frequencies = _guitar_midi_frequencies()
+    if midi is None:
+        midi, _frequencies = _guitar_midi_frequencies()
     if rms < 1e-5 or float(np.max(chroma)) < 0.10 or int(np.count_nonzero(chroma >= float(np.max(chroma)) * 0.12)) < 2:
         return _unknown_window({})
     bass_pc = _infer_bass_pc(midi, fundamentals)
@@ -484,7 +486,8 @@ def _smooth_labels(windows: list[dict]) -> list[dict]:
     return selected
 
 
-def _merge_events(windows: list[dict], hop_seconds: float, window_seconds: float, duration: float) -> list[VoicingEvent]:
+def _merge_events(windows: list[dict], hop_seconds: float, window_seconds: float, duration: float,
+                  *, include_shapes: bool = True) -> list[VoicingEvent]:
     """연속해서 같은 코드로 분류된 시간창을 하나의 타임라인 이벤트로 합친다."""
     if not windows:
         return []
@@ -549,7 +552,7 @@ def _merge_events(windows: list[dict], hop_seconds: float, window_seconds: float
                 register=representative["register"],
                 spacing=representative["spacing"],
                 confidence=round(confidence, 4),
-                candidate_shapes=candidate_guitar_shapes(representative["root_pc"], representative["chord_type"]),
+                candidate_shapes=candidate_guitar_shapes(representative["root_pc"], representative["chord_type"]) if include_shapes else (),
                 alternatives=tuple(alternatives_by_label.values())[:3],
                 evidence=evidence,
             )

@@ -8,18 +8,46 @@
 from __future__ import annotations
 
 
-APP_VERSION = "0.0.13"
+APP_VERSION = "0.1.01"
 TARGET_FIRMWARE = "1.8.58"
 MODEL_GUIDE_REVISION = "Rev. J (2026-07)"
-BUILD_DATE = "2026-10-04"
+BUILD_DATE = "2026-10-06"
 
 
 # 앱 내부의 변경 기록 화면과 배포 문서가 함께 사용하는 단일 원본이다.
-# 이후 패치는 0.0.02, 0.0.03, 0.0.04처럼 한 단계씩 올리고 최신 항목을 맨 위에 둔다.
+# 기능 버전 0.1.01 이후 수정 릴리스는 0.1.02부터 올리며 공개 산출물을 덮어쓰지 않는다.
 CHANGELOG: list[dict] = [
     {
+        "version": "0.1.01", "date": BUILD_DATE,
+        "status": "개발자 프리릴리스", "status_en": "Developer prerelease",
+        "changes": [
+            "원본 전체 음원을 CQT로 분석하고 코드 기호·근거·후보만 표시",
+            "음원 재생과 16마디 코드표 위치·반복 구간 연동",
+            "코드 직접 수정·되돌리기·원본 복원 및 분석 JSON 다시 열기",
+            "6개 악기 추정음의 음량·음소거·솔로·원본 비교와 개별/믹스 WAV 저장",
+            "한글 글꼴 포함 A4 16마디 PDF와 사용자 요청 문서 열기/인쇄",
+        ],
+        "changes_en": [
+            "CQT harmony analysis of the original mixture with symbols, evidence and candidates",
+            "Audio transport linked to chart selection, following and bar loops",
+            "Manual chord edits, undo/restore and validated analysis JSON reopening",
+            "Six-stem gain/mute/solo, original monitoring and individual/mix WAV export",
+            "A4 sixteen-bar PDF with embedded Korean font and explicit viewer/print action",
+        ],
+        "known_issues": [
+            "CQT 합성 회귀는 실제 곡 정확도 향상을 입증하지 않으며 복잡한 코드가 틀릴 수 있음",
+            "마디는 수동 템포 격자이며 악기 분리에는 누출·아티팩트가 남을 수 있음",
+            "자동 기타 운지는 결과에서 제외; 실청·CUDA·코드 서명·실제 인쇄는 별도 검증",
+        ],
+        "known_issues_en": [
+            "Synthetic CQT regression does not establish real-song accuracy gains",
+            "Bars use a manual tempo grid; separated stems may contain bleed and artifacts",
+            "No automatic fingering in results; listening, CUDA, signing and physical printing are separate checks",
+        ],
+    },
+    {
         "version": "0.0.13",
-        "date": BUILD_DATE,
+        "date": "2026-10-04",
         "status": "공개 개발 프리뷰",
         "status_en": "Public development preview",
         "changes": [

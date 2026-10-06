@@ -29,7 +29,7 @@ from separator import (
     separate_guitar_wav,
     separation_info_dict,
 )
-from voicing import analyze_voicings, voicing_analysis_dict, without_bass_note
+from song_chords import analyze_song_chords, ChordAnalysisCancelled
 
 
 SAMPLE_RATE = 22_050
@@ -830,79 +830,23 @@ def _application_steps(output_mode: str, language: str) -> list[str]:
     ]
 
 
-def _analyze_chord_sources(
-    samples: np.ndarray,
-    sample_rate: int,
-    *,
-    source: str | Path,
-    start_seconds: float,
-    end_seconds: float,
-    language: str,
-    separation_requested: bool,
-    progress: Callable[[float, str], None] | None = None,
-    cancel_requested: Callable[[], bool] | None = None,
-) -> dict:
-    """기타 코드 근거가 약할 때만 원본 화성을 별도 참고로 분석하고 출처를 보존한다."""
-    def check_cancelled() -> None:
-        """추가 화성 분석 때문에 사용자의 취소 요청이 무시되지 않도록 확인한다."""
-        if cancel_requested and cancel_requested():
-            raise AnalysisError(tr("error.cancelled", language))
-
-    check_cancelled()
-    primary = voicing_analysis_dict(analyze_voicings(samples, sample_rate))
-    primary["analysis_source"] = "guitar_stem" if separation_requested else "provided_audio"
-    primary["source_start_seconds"] = float(start_seconds)
-    primary_coverage = float(primary.get("tonal_coverage", 0.0))
-    rms_dbfs = db(math.sqrt(float(np.mean(np.square(samples, dtype=np.float64))))) if samples.size else -240.0
-    needs_fallback = separation_requested and (primary_coverage < 0.10 or rms_dbfs < -50.0)
-    fallback = {
-        "attempted": bool(needs_fallback),
-        "selected": False,
-        "reason": "weak_guitar_stem" if rms_dbfs < -50.0 else "insufficient_chord_evidence" if needs_fallback else "not_needed",
-        "primary_tonal_coverage": primary_coverage,
-        "primary_input_rms_dbfs": round(rms_dbfs, 3),
-    }
-    primary["fallback"] = fallback
-    check_cancelled()
-    if not needs_fallback:
-        return primary
-    if progress:
-        progress(83, tr("progress.voicing_mix", language))
+def _analyze_chords(samples, sample_rate, start_seconds, language, progress=None, cancel_requested=None):
+    """이미 디코딩된 원본만 코드 분석에 쓰고 취소·실패를 명시적으로 전달한다."""
     try:
-        mixture, mixture_rate, _duration = decode_segment(source, start_seconds, end_seconds, None, language)
-        check_cancelled()
-        candidate = voicing_analysis_dict(analyze_voicings(mixture, mixture_rate))
-    except (AnalysisError, ValueError) as exc:
-        check_cancelled()
-        fallback["reason"] = "fallback_unavailable"
-        fallback["error_type"] = type(exc).__name__
-        return primary
-    check_cancelled()
-    coverage = float(candidate.get("tonal_coverage", 0.0))
-    reliable_frames = int(candidate.get("diagnostics", {}).get("reliable_frame_count", 0))
-    mixture_dbfs = db(math.sqrt(float(np.mean(np.square(mixture, dtype=np.float64))))) if mixture.size else -240.0
-    weak_separation = rms_dbfs < -50.0 and mixture_dbfs - rms_dbfs >= 12.0
-    fallback["candidate_tonal_coverage"] = coverage
-    fallback["candidate_input_rms_dbfs"] = round(mixture_dbfs, 3)
-    if coverage >= 0.15 and (weak_separation or coverage >= primary_coverage + 0.05) and reliable_frames >= 3:
-        fallback["selected"] = True
-        candidate["analysis_source"] = "original_mix"
-        candidate["source_start_seconds"] = float(start_seconds)
-        candidate["fallback"] = fallback
-        candidate["primary_diagnostics"] = primary.get("diagnostics", {})
-        # 반주 전체의 화성을 실제 기타 운지 또는 기타의 저음·음역으로 오인하지 않는다.
-        for event in candidate.get("events", []):
-            event["candidate_shapes"] = ()
-            event["register"] = "unknown"
-            event["spacing"] = "unknown"
-            event["bass_pc"] = None
-            event["inversion"] = "unknown"
-            event["symbol"] = without_bass_note(str(event.get("symbol", "?")))
-            for alternative in event.get("alternatives", ()):
-                alternative["symbol"] = without_bass_note(str(alternative.get("symbol", "?")))
-        return candidate
-    fallback["reason"] = "no_better_harmony"
-    return primary
+        result = analyze_song_chords(
+            samples, sample_rate, cancel_requested=cancel_requested,
+            progress=(lambda fraction: progress(82 + 3 * fraction, tr("progress.voicing", language))) if progress else None,
+        )
+    except ChordAnalysisCancelled as exc:
+        raise AnalysisError(tr("error.cancelled", language)) from exc
+    except ValueError:
+        result = {"schema": "tonematch-voicing/v1", "method": "CQT",
+                  "event_count": 0, "events": [], "tonal_coverage": 0,
+                  "diagnostics": {"status": "unavailable", "reason": "invalid_chord_input"},
+                  "limitations": []}
+    result["analysis_source"] = "original_mix"
+    result["source_start_seconds"] = float(start_seconds)
+    return result
 
 
 def analyze_file(
@@ -962,6 +906,9 @@ def analyze_file(
                 raise AnalysisError(str(exc)) from exc
             decode_to_pcm_wav(guitar_wav, 0, 0, analysis_wav, SAMPLE_RATE, None, language)
             samples, sample_rate = read_pcm_wav(analysis_wav, language)
+            chord_wav = temporary / "original_chords.wav"
+            decode_to_pcm_wav(mixture_wav, 0, 0, chord_wav, SAMPLE_RATE, None, language)
+            chord_samples, chord_rate = read_pcm_wav(chord_wav, language)
             separation_data = {"used": True, "mode": mix_code, **separation_info_dict(separation)}
     else:
         samples, sample_rate, duration = decode_segment(
@@ -973,6 +920,7 @@ def analyze_file(
         )
         if progress:
             progress(68, tr("progress.separation_skipped", language))
+        chord_samples, chord_rate = samples, sample_rate
     if progress:
         progress(70, tr("progress.decode_done", language))
         progress(72, tr("progress.features", language))
@@ -981,11 +929,10 @@ def analyze_file(
     if progress:
         progress(80, tr("progress.features_done", language))
         progress(82, tr("progress.voicing", language))
-    voicing_analysis = _analyze_chord_sources(
-        samples, sample_rate, source=source, start_seconds=start_seconds, end_seconds=end_seconds,
-        language=language, separation_requested=separation_requested, progress=progress,
-        cancel_requested=cancel_requested,
+    voicing_analysis = _analyze_chords(
+        chord_samples, chord_rate, start_seconds, language, progress, cancel_requested,
     )
+    del chord_samples
     if progress:
         progress(85, tr("progress.voicing_done", language))
     # 분리를 마친 오디오와 이미 기타 단독인 파일은 모두 isolated 보정을 적용한다.
@@ -1032,7 +979,8 @@ def analyze_file(
             "start_seconds": round(float(start_seconds), 3),
             "end_seconds": round(float(start_seconds) + duration, 3),
             "duration_seconds": round(duration, 3),
-            "analysis_audio": "guitar_stem",
+            "analysis_audio": "guitar_stem" if separation_requested else "provided_audio",
+            "chord_analysis_audio": "original_mix",
         },
         "source_separation": separation_data,
         "input_profile": {

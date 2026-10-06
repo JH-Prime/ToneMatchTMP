@@ -155,233 +155,36 @@ def _voicing_payload(coverage: float, reliable_frames: int = 12) -> dict:
 
 
 class ChordSourcePolicyTests(unittest.TestCase):
-    def setUp(self) -> None:
-        """분리 기타와 원본 믹스가 구별되는 작은 PCM을 준비한다."""
-        self.guitar = np.full((400, 2), 0.1, dtype=np.float32)
-        self.mixture = np.full((400, 2), 0.3, dtype=np.float32)
-
-    def _run_sources(self, primary: dict, candidate: dict | None = None, **kwargs: object) -> tuple[dict, object, object]:
-        """실제 디코딩·DSP 없이 두 소스의 선택과 호출 인자를 검사한다."""
-        samples = kwargs.pop("samples", self.guitar)
-        mixture = kwargs.pop("mixture", self.mixture)
-        separation_requested = kwargs.pop("separation_requested", True)
-        analyses = [copy.deepcopy(primary)]
-        if candidate is not None:
-            analyses.append(copy.deepcopy(candidate))
-        with (
-            patch.object(engine, "analyze_voicings", side_effect=analyses) as analyze,
-            patch.object(engine, "voicing_analysis_dict", side_effect=lambda analysis: analysis),
-            patch.object(engine, "decode_segment", return_value=(mixture, 22_050, 3.0)) as decode,
-        ):
-            result = engine._analyze_chord_sources(
-                samples, 22_050, source="local-test.mp3", start_seconds=37.5,
-                end_seconds=40.5, language="ko", separation_requested=separation_requested, **kwargs,
-            )
-        return result, analyze, decode
-
-    def test_provided_audio_does_not_redecode_for_weak_chord_evidence(self) -> None:
-        """기타 단독으로 지정한 파일은 코드가 약해도 원본 믹스로 바꾸지 않는다."""
-        result, analyze, decode = self._run_sources(_voicing_payload(0.0, 0), separation_requested=False)
-        self.assertEqual(result["analysis_source"], "provided_audio")
-        self.assertEqual(result["source_start_seconds"], 37.5)
-        self.assertFalse(result["fallback"]["attempted"])
-        analyze.assert_called_once()
-        decode.assert_not_called()
-
-    def test_reliable_guitar_stem_does_not_trigger_mix_fallback(self) -> None:
-        """기타에 충분한 코드 근거가 있으면 비용이 큰 원본 재분석을 생략한다."""
-        result, analyze, decode = self._run_sources(_voicing_payload(0.4))
-        self.assertEqual(result["analysis_source"], "guitar_stem")
-        self.assertEqual(result["fallback"]["reason"], "not_needed")
-        analyze.assert_called_once()
-        decode.assert_not_called()
-
-    def test_better_mix_is_selected_and_guitar_voicing_claims_are_removed(self) -> None:
-        """원본 화성이 개선되면 출처를 남기되 기타 운지·음역으로 오인할 정보는 숨긴다."""
-        progress = []
-        result, analyze, decode = self._run_sources(
-            _voicing_payload(0.02, 1), _voicing_payload(0.7), progress=lambda value, message: progress.append(value),
-        )
+    def test_original_pcm_symbols_and_candidates_are_preserved(self):
+        """전체 믹스의 분수코드·대안·근거는 보존하고 출처 시간을 붙인다."""
+        samples = np.full((400, 2), .3, np.float32)
+        payload = _voicing_payload(.7)
+        payload["events"][1]["alternatives"] = [{"symbol": "Am7/C"}]
+        with patch.object(engine, "analyze_song_chords", return_value=copy.deepcopy(payload)) as analyze:
+            result = engine._analyze_chords(samples, 22050, 37.5, "ko")
+        self.assertIs(analyze.call_args.args[0], samples)
         self.assertEqual(result["analysis_source"], "original_mix")
         self.assertEqual(result["source_start_seconds"], 37.5)
-        self.assertTrue(result["fallback"]["attempted"])
-        self.assertTrue(result["fallback"]["selected"])
-        self.assertEqual(result["fallback"]["primary_tonal_coverage"], 0.02)
-        self.assertEqual(result["fallback"]["candidate_tonal_coverage"], 0.7)
-        self.assertEqual(result["primary_diagnostics"]["reliable_frame_count"], 1)
-        self.assertEqual(analyze.call_count, 2)
-        self.assertIs(analyze.call_args_list[0].args[0], self.guitar)
-        self.assertIs(analyze.call_args_list[1].args[0], self.mixture)
-        decode.assert_called_once_with("local-test.mp3", 37.5, 40.5, None, "ko")
-        self.assertEqual(progress, [83])
-        for event in result["events"]:
-            self.assertFalse(event["candidate_shapes"])
-            self.assertEqual(event["register"], "unknown")
-            self.assertEqual(event["spacing"], "unknown")
-            self.assertEqual(event["inversion"], "unknown")
-            self.assertIsNone(event["bass_pc"])
-            self.assertNotIn("/", event["symbol"])
+        self.assertEqual(result["events"][1]["symbol"], "C/E")
+        self.assertEqual(result["events"][1]["alternatives"][0]["symbol"], "Am7/C")
 
-    def test_mix_fallback_alternative_labels_do_not_claim_guitar_bass(self) -> None:
-        """대안 코드에도 믹스의 베이스를 기타 역위로 표시하지 않고 근거 정보는 보존한다."""
-        candidate = _voicing_payload(0.7)
-        candidate["events"][1]["alternatives"] = [{"symbol": "Am7/C", "root_pc": 9, "chord_type": "min7", "score_delta": 0.01}]
-        candidate["events"][1]["evidence"] = {"ambiguous": True, "observed_pitch_classes": (0, 4, 7, 9)}
-        result, _, _ = self._run_sources(_voicing_payload(0.02, 1), candidate)
-        event = result["events"][1]
-        self.assertEqual(event["alternatives"][0]["symbol"], "Am7")
-        self.assertEqual(event["evidence"], candidate["events"][1]["evidence"])
-        self.assertEqual(candidate["events"][1]["alternatives"][0]["symbol"], "Am7/C")
+    def test_chord_failure_is_unavailable_not_guitar_fallback(self):
+        """실패한 곡 코드 분석을 기타 코드로 대체하거나 사적인 예외 내용을 저장하지 않는다."""
+        with patch.object(engine, "analyze_song_chords", side_effect=ValueError("private/path")):
+            result = engine._analyze_chords(np.zeros((400, 2)), 22050, 37.5, "en")
+        self.assertEqual(result["diagnostics"]["status"], "unavailable")
+        self.assertEqual(result["events"], [])
+        self.assertNotIn("private/path", json.dumps(result))
 
-    def test_mix_fallback_preserves_six_nine_names_in_primary_and_alternatives(self) -> None:
-        """믹스 결과의 6/9 본문은 보존하고 주 후보·대안 끝의 실제 베이스 표기만 제거한다."""
-        for quality, symbol, alternative in (("6add9", "C6/9/E", "Cm6/9/E♭"),
-                                              ("min6add9", "Cm6/9/E♭", "C6/9/E")):
-            with self.subTest(quality=quality):
-                candidate = _voicing_payload(0.7)
-                event = candidate["events"][1]
-                event.update(chord_type=quality, symbol=symbol,
-                             alternatives=[{"symbol": alternative}, {"symbol": "C6/9"}, {"symbol": "Cm6/9"}])
-                original = copy.deepcopy(candidate)
-                result, _, _ = self._run_sources(_voicing_payload(0.02, 1), candidate)
-                actual = result["events"][1]
-                self.assertEqual(result["analysis_source"], "original_mix")
-                self.assertEqual(actual["symbol"], symbol.rsplit("/", 1)[0])
-                self.assertEqual([item["symbol"] for item in actual["alternatives"]],
-                                 [alternative.rsplit("/", 1)[0], "C6/9", "Cm6/9"])
-                self.assertIsNone(actual["bass_pc"])
-                self.assertEqual(candidate, original)
-                guitar, _, _ = self._run_sources(candidate)
-                self.assertEqual(guitar["analysis_source"], "guitar_stem")
-                self.assertEqual(guitar["events"][1]["symbol"], symbol)
-                self.assertEqual(guitar["events"][1]["alternatives"], event["alternatives"])
-
-    def test_near_silent_guitar_triggers_fallback_even_with_coverage(self) -> None:
-        """낮은 음량 stem의 그럴듯한 코드 비율만으로 원본 참고 분석을 막지 않는다."""
-        quiet = self.guitar * 0.001
-        result, _, decode = self._run_sources(_voicing_payload(0.3), _voicing_payload(0.5), samples=quiet)
-        self.assertTrue(result["fallback"]["selected"])
-        self.assertEqual(result["fallback"]["reason"], "weak_guitar_stem")
-        self.assertLess(result["fallback"]["primary_input_rms_dbfs"], -50)
-        decode.assert_called_once()
-
-    def test_unconvincing_mix_is_not_selected(self) -> None:
-        """원본 후보도 낮은 커버리지·적은 프레임·미미한 개선이면 기타 결과를 유지한다."""
-        cases = ((0.02, 0.14, 12, self.guitar), (0.02, 0.4, 2, self.guitar), (0.12, 0.16, 12, self.guitar * 0.001))
-        for primary_coverage, candidate_coverage, frames, samples in cases:
-            with self.subTest(primary=primary_coverage, candidate=candidate_coverage, frames=frames):
-                result, _, _ = self._run_sources(
-                    _voicing_payload(primary_coverage), _voicing_payload(candidate_coverage, frames), samples=samples,
-                    mixture=samples,
-                )
-                self.assertEqual(result["analysis_source"], "guitar_stem")
-                self.assertEqual(result["tonal_coverage"], primary_coverage)
-                self.assertFalse(result["fallback"]["selected"])
-                self.assertEqual(result["fallback"]["reason"], "no_better_harmony")
-
-    def test_weak_stem_leak_does_not_outrank_clearer_original_harmony(self) -> None:
-        """아주 작은 분리 누출의 높은 코드 비율보다 충분히 선명한 원본 화성을 우선한다."""
-        result, _, _ = self._run_sources(
-            _voicing_payload(0.7), _voicing_payload(0.4), samples=self.guitar * 0.001,
-        )
-        self.assertEqual(result["analysis_source"], "original_mix")
-        self.assertTrue(result["fallback"]["selected"])
-        self.assertEqual(result["tonal_coverage"], 0.4)
-
-    def test_optional_fallback_decode_error_retains_primary_result(self) -> None:
-        """선택적 원본 디코딩 실패는 정상 기타·톤 결과 전체를 실패시키지 않는다."""
-        primary = _voicing_payload(0.02, 1)
-        with (
-            patch.object(engine, "analyze_voicings", return_value=primary),
-            patch.object(engine, "voicing_analysis_dict", side_effect=lambda analysis: analysis),
-            patch.object(engine, "decode_segment", side_effect=engine.AnalysisError("decode <unavailable>")),
-        ):
-            result = engine._analyze_chord_sources(
-                self.guitar, 22_050, source="local-test.mp3", start_seconds=0.0,
-                end_seconds=3.0, language="ko", separation_requested=True,
-            )
-        self.assertEqual(result["analysis_source"], "guitar_stem")
-        self.assertEqual(result["fallback"]["reason"], "fallback_unavailable")
-        self.assertEqual(result["fallback"]["error_type"], "AnalysisError")
-        self.assertFalse(result["fallback"]["selected"])
-
-    def test_cancellation_during_fallback_is_not_swallowed_as_optional_error(self) -> None:
-        """원본 추가 분석의 취소를 단순 참고 실패로 삼켜 계속 실행하지 않는다."""
-        cancelled = False
-
-        def decode_then_cancel(*args: object) -> tuple[np.ndarray, int, float]:
-            """재디코딩 직후 사용자가 취소한 상황을 재현한다."""
-            nonlocal cancelled
-            cancelled = True
-            return self.mixture, 22_050, 3.0
-
-        with (
-            patch.object(engine, "analyze_voicings", return_value=_voicing_payload(0.02, 1)) as analyze,
-            patch.object(engine, "voicing_analysis_dict", side_effect=lambda analysis: analysis),
-            patch.object(engine, "decode_segment", side_effect=decode_then_cancel),
-        ):
-            with self.assertRaisesRegex(engine.AnalysisError, "취소"):
-                engine._analyze_chord_sources(
-                    self.guitar, 22_050, source="local-test.mp3", start_seconds=0.0,
-                    end_seconds=3.0, language="ko", separation_requested=True,
-                    cancel_requested=lambda: cancelled,
-                )
-        analyze.assert_called_once()
-
-    def test_optional_fallback_analysis_error_does_not_expose_exception_text(self) -> None:
-        """원본 화성의 잘못된 PCM은 기타 결과를 유지하며 예외의 사적인 경로를 저장하지 않는다."""
-        with (
-            patch.object(engine, "analyze_voicings", side_effect=[_voicing_payload(0.02, 1), ValueError("private-source-path")]),
-            patch.object(engine, "voicing_analysis_dict", side_effect=lambda analysis: analysis),
-            patch.object(engine, "decode_segment", return_value=(self.mixture, 22_050, 3.0)),
-        ):
-            result = engine._analyze_chord_sources(
-                self.guitar, 22_050, source="local-test.mp3", start_seconds=37.5,
-                end_seconds=40.5, language="en", separation_requested=True,
-            )
-        self.assertEqual(result["fallback"]["reason"], "fallback_unavailable")
-        self.assertEqual(result["fallback"]["error_type"], "ValueError")
-        self.assertEqual(result["source_start_seconds"], 37.5)
-        self.assertEqual(result["analysis_source"], "guitar_stem")
-        self.assertNotIn("private-source-path", json.dumps(result))
-
-    def test_fallback_does_not_hide_programming_errors(self) -> None:
-        """예상하지 않은 코드 오류는 조용히 선택적 원본 실패로 처리하지 않는다."""
-        with (
-            patch.object(engine, "analyze_voicings", side_effect=[_voicing_payload(0.02, 1), RuntimeError("test-programming-error")]),
-            patch.object(engine, "voicing_analysis_dict", side_effect=lambda analysis: analysis),
-            patch.object(engine, "decode_segment", return_value=(self.mixture, 22_050, 3.0)),
-        ):
-            with self.assertRaisesRegex(RuntimeError, "test-programming-error"):
-                engine._analyze_chord_sources(
-                    self.guitar, 22_050, source="local-test.mp3", start_seconds=0.0,
-                    end_seconds=3.0, language="en", separation_requested=True,
-                )
-
-    def test_cancellation_before_or_after_either_analysis_propagates(self) -> None:
-        """주 분석과 추가 분석 각각의 진입·종료 경계에서 취소가 즉시 전달된다."""
-        for cancel_on_call, expected_analyses in ((1, 0), (2, 1), (4, 2)):
-            with self.subTest(cancel_check=cancel_on_call):
-                check_count = 0
-
-                def requested() -> bool:
-                    """지정한 취소 확인 지점부터 사용자의 취소 상태를 유지한다."""
-                    nonlocal check_count
-                    check_count += 1
-                    return check_count >= cancel_on_call
-
-                with (
-                    patch.object(engine, "analyze_voicings", side_effect=[_voicing_payload(0.02, 1), _voicing_payload(0.7)]) as analyze,
-                    patch.object(engine, "voicing_analysis_dict", side_effect=lambda analysis: analysis),
-                    patch.object(engine, "decode_segment", return_value=(self.mixture, 22_050, 3.0)),
-                ):
-                    with self.assertRaisesRegex(engine.AnalysisError, "cancel"):
-                        engine._analyze_chord_sources(
-                            self.guitar, 22_050, source="local-test.mp3", start_seconds=0.0,
-                            end_seconds=3.0, language="en", separation_requested=True,
-                            cancel_requested=requested,
-                        )
-                self.assertEqual(analyze.call_count, expected_analyses)
+    def test_cancellation_and_programming_errors_are_not_hidden(self):
+        """취소와 예상하지 않은 구현 오류는 코드 없음으로 삼키지 않는다."""
+        from song_chords import ChordAnalysisCancelled
+        with patch.object(engine, "analyze_song_chords", side_effect=ChordAnalysisCancelled()):
+            with self.assertRaisesRegex(engine.AnalysisError, "cancel"):
+                engine._analyze_chords(np.zeros((400, 2)), 22050, 0, "en")
+        with patch.object(engine, "analyze_song_chords", side_effect=RuntimeError("test-error")):
+            with self.assertRaisesRegex(RuntimeError, "test-error"):
+                engine._analyze_chords(np.zeros((400, 2)), 22050, 0, "en")
 
 
 class EngineAnalysisTests(unittest.TestCase):
@@ -485,23 +288,21 @@ class EngineAnalysisTests(unittest.TestCase):
             self.assertTrue(all(block["model"] for block in blocks))
             self.assertTrue(all(block["parameters"] for block in blocks))
 
-    def test_chord_mix_fallback_does_not_replace_tone_or_reference_pcm(self) -> None:
+    def test_original_mix_chords_do_not_replace_tone_or_reference_pcm(self) -> None:
         """코드만 원본 믹스를 사용해도 톤·스펙트럼·레시피 입력은 분리 기타 그대로여야 한다."""
         primary = _voicing_payload(0.02, 1)
         candidate = _voicing_payload(0.7)
         with (
-            patch.object(engine, "analyze_voicings", return_value=copy.deepcopy(primary)),
-            patch.object(engine, "voicing_analysis_dict", side_effect=lambda analysis: analysis),
+            patch.object(engine, "analyze_song_chords", return_value=copy.deepcopy(primary)),
         ):
             baseline = self._analyze_result(self.base)
         with (
             patch.object(engine, "decode_to_pcm_wav", return_value=6.0),
             patch.object(engine, "separate_guitar_wav", return_value=object()),
             patch.object(engine, "separation_info_dict", return_value={"guitar_rms_dbfs": -24.0}),
-            patch.object(engine, "read_pcm_wav", return_value=(self.base, self.sample_rate)),
-            patch.object(engine, "decode_segment", return_value=(self.bright, self.sample_rate, 6.0)),
-            patch.object(engine, "analyze_voicings", side_effect=[copy.deepcopy(primary), copy.deepcopy(candidate)]),
-            patch.object(engine, "voicing_analysis_dict", side_effect=lambda analysis: analysis),
+            patch.object(engine, "read_pcm_wav", side_effect=[(self.base, self.sample_rate), (self.bright, self.sample_rate)]),
+            patch.object(engine, "decode_segment") as decode_original,
+            patch.object(engine, "analyze_song_chords", return_value=copy.deepcopy(candidate)) as chords,
             patch.object(engine, "extract_features", wraps=engine.extract_features) as extract,
             patch.object(engine, "build_reference_profile", wraps=engine.build_reference_profile) as reference,
         ):
@@ -511,6 +312,9 @@ class EngineAnalysisTests(unittest.TestCase):
             )
         self.assertIs(extract.call_args.args[0], self.base)
         self.assertIs(reference.call_args.args[0], self.base)
+        chords.assert_called_once()
+        self.assertIs(chords.call_args.args[0], self.bright)
+        decode_original.assert_not_called()
         self.assertTrue(result["source_separation"]["used"])
         self.assertEqual(result["chord_voicing"]["analysis_source"], "original_mix")
         self.assertEqual(result["chord_voicing"]["source_start_seconds"], 30.0)
@@ -700,16 +504,9 @@ class EngineAnalysisTests(unittest.TestCase):
                     self.assertEqual(json_result["chord_voicing"]["events"][0]["chord_type"], "unknown")
                     for line in report.voicing_context_lines(analysis, language):
                         self.assertIn(report.html.escape(line), html_text)
-                    if analysis_source == "original_mix":
-                        self.assertIn(report.tr("ui.voicing_mix_profile", language), html_text)
-                        self.assertNotIn("test-shape", html_text)
-                        self.assertNotIn("E A D G B e =", html_text)
-                        self.assertNotIn("<b>C/E</b>", html_text)
-                        self.assertIn("<b>C</b>", html_text)
-                    else:
-                        self.assertIn("test-shape", html_text)
-                        self.assertIn("E A D G B e =", html_text)
-                        self.assertIn("<b>C/E</b>", html_text)
+                    self.assertNotIn("test-shape", html_text)
+                    self.assertNotIn("E A D G B e =", html_text)
+                    self.assertIn("<b>C/E</b>", html_text)
 
     def test_chord_evidence_exports_are_explicit_escaped_and_not_probabilities(self) -> None:
         """검출음·해석음·대안·근거 점수를 한영 HTML과 JSON에 확률 오해 없이 보존한다."""
@@ -759,13 +556,11 @@ class EngineAnalysisTests(unittest.TestCase):
                             path = Path(directory) / "six-nine.html"
                             report.save_html(result, path)
                             document = path.read_text(encoding="utf-8")
-                        expected = symbol.rsplit("/", 1)[0] if source == "original_mix" else symbol
-                        other = alternative.rsplit("/", 1)[0] if source == "original_mix" else alternative
+                        expected = symbol
+                        other = alternative
                         self.assertIn(f"<b>{expected}</b>", document)
                         self.assertIn(report.tr("ui.voicing_alternatives", language) + ": " + other + ", C6/9, Cm6/9", document)
-                        if source == "original_mix":
-                            self.assertNotIn(symbol, document)
-                            self.assertNotIn(alternative, document)
+                        self.assertNotIn("E A D G B e =", document)
                         self.assertEqual(result, original)
 
     def test_chord_context_and_event_labels_are_html_escaped(self) -> None:
@@ -787,7 +582,7 @@ class EngineAnalysisTests(unittest.TestCase):
             self.assertNotIn("<script>", html_text)
             self.assertIn("&lt;script&gt;alert(&quot;source&quot;)&lt;/script&gt;", html_text)
             self.assertIn("&lt;C &amp; &quot;major&quot;&gt;", html_text)
-            self.assertIn("&lt;shape &amp; candidate&gt;", html_text)
+            self.assertNotIn("&lt;shape &amp; candidate&gt;", html_text)
 
     def test_legacy_chord_export_infers_consistent_source_and_selected_offset(self) -> None:
         """이전 결과도 출처와 선택 시각을 행·안내에 똑같이 적용하며 원본 딕셔너리는 바꾸지 않는다."""

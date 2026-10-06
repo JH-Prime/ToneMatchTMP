@@ -102,24 +102,24 @@ class ChordChartTests(unittest.TestCase):
         self.assertEqual(chart["diagnostics"]["event_count_before_limit"], 301)
         self.assertEqual(chart["event_count"], 257)
 
-    def test_original_mix_never_claims_guitar_shapes_or_slash_bass(self) -> None:
-        """원본 믹스의 오래된 결과도 기타 운지나 베이스 역위로 오인시키지 않는다."""
+    def test_original_mix_keeps_slash_bass_without_guitar_shapes(self) -> None:
+        """원본 믹스도 분수코드는 보존하고 기타 운지는 표시하지 않는다."""
         event = _event(0, 2, "C6/9/E", "6add9")
         event["candidate_shapes"] = [{"frets_low_e_to_high_e": [-1, 3, 2, 0, 1, 0]}]
         voicing = {"analysis_source": "original_mix", "events": [event]}
         before = copy.deepcopy(voicing)
         segment = _bars(build_chord_chart(voicing, bpm=120))[0]["segments"][0]
-        self.assertEqual(segment["label"], "C6/9")
+        self.assertEqual(segment["label"], "C6/9/E")
         self.assertEqual(segment["candidate_shapes"], [])
         self.assertEqual(segment["source_kind"], "original_mix")
         self.assertEqual(voicing, before)
 
-    def test_guitar_shapes_are_copied_without_mutating_analysis(self) -> None:
-        """기타 후보 운지를 차트에 복사하되 분석 원본 객체를 공유하지 않는다."""
+    def test_legacy_shapes_are_hidden_without_mutating_analysis(self) -> None:
+        """구형 기타 분석도 운지는 숨기고 원본 자료는 보존한다."""
         event = _event(0, 4)
         event["candidate_shapes"] = [{"frets_low_e_to_high_e": [-1, 3, 2, 0, 1, 0], "detected": False}]
         segment = _bars(build_chord_chart({"events": [event]}, bpm=120))[0]["segments"][0]
-        segment["candidate_shapes"][0]["frets_low_e_to_high_e"][1] = 99
+        self.assertEqual(segment["candidate_shapes"], [])
         self.assertEqual(event["candidate_shapes"][0]["frets_low_e_to_high_e"][1], 3)
 
     def test_missing_events_show_unknown_and_empty_results_stay_empty(self) -> None:

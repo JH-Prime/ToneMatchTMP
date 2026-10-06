@@ -6,7 +6,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$Version = "0.0.13"
+$Version = "0.1.01"
 $AppBaseName = "ToneMatchTMP-v$Version"
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $PythonExe = [System.IO.Path]::GetFullPath((Join-Path $ProjectDir "..\.venv\Scripts\python.exe"))
@@ -76,7 +76,7 @@ try {
     if (-not $SkipTests) {
         # 이전 build/dist의 수천 개 런타임 파일을 다시 컴파일하지 않고 배포 소스만 검사한다.
         Invoke-LoggedNative "Python compileall" {
-            & $PythonExe -m compileall -q app.py catalog.py debug_info.py devices.py engine.py chord_chart.py guitar_shapes.py harmony_reference.py i18n.py native_dsp.py recorder.py reference_compare.py report.py separator.py spectrum.py stem_removal.py stem_diagnostics.py voicing.py tests tools
+            & $PythonExe -m compileall -q app.py catalog.py debug_info.py devices.py engine.py chord_chart.py guitar_shapes.py harmony_reference.py i18n.py native_dsp.py recorder.py reference_compare.py report.py separator.py spectrum.py stem_removal.py stem_diagnostics.py voicing.py song_chords.py playback.py playback_ui.py chord_edits.py chord_edit_ui.py stem_mixer.py stem_mixer_ui.py chart_pdf.py music_diagnostics.py tests tools
         }
         Invoke-LoggedNative "Unit tests" { & $PythonExe -W error -m unittest discover -s tests -v }
     }
@@ -91,6 +91,25 @@ try {
     if (-not (Test-Path -LiteralPath $ExePath)) {
         throw "빌드 EXE를 찾지 못했습니다: $ExePath"
     }
+
+    # Windows x64 기본 장치 출력만 배포한다. hook이 수집한 다른 플랫폼/ASIO
+    # PortAudio 바이너리는 이 앱에서 사용하지 않으며 배포 대상에서 제외한다.
+    $PortAudioRoot = Join-Path $DistRoot "_internal\_sounddevice_data\portaudio-binaries"
+    if (Test-Path -LiteralPath $PortAudioRoot) {
+        Get-ChildItem -LiteralPath $PortAudioRoot -File | Where-Object {
+            $_.Name -like "libportaudio*" -and $_.Name -ne "libportaudio64bit.dll"
+        } | ForEach-Object {
+            Assert-ChildPath -Path $_.FullName -Parent $DistRoot
+            Remove-Item -LiteralPath $_.FullName -Force
+        }
+    }
+    # librosa collect_all이 수집할 수 있는 개발 PC의 Numba JIT 캐시는 배포하지 않는다.
+    # 새 압축 해제본의 자체 진단에서 캐시 없는 최초 CQT 실행을 검증한다.
+    Get-ChildItem -LiteralPath (Join-Path $DistRoot "_internal") -Recurse -File |
+        Where-Object { $_.Extension -in @(".nbc", ".nbi") } | ForEach-Object {
+            Assert-ChildPath -Path $_.FullName -Parent $DistRoot
+            Remove-Item -LiteralPath $_.FullName -Force
+        }
 
     Remove-SafeTree -Path $StageRoot -Parent $StageParent
     New-Item -ItemType Directory -Force -Path $StageRoot | Out-Null
@@ -115,6 +134,8 @@ try {
 
     foreach ($Name in @(
         "app.py", "catalog.py", "debug_info.py", "devices.py", "engine.py",
+        "song_chords.py", "playback.py", "playback_ui.py", "chord_edits.py", "chord_edit_ui.py",
+        "stem_mixer.py", "stem_mixer_ui.py", "chart_pdf.py", "music_diagnostics.py",
         "chord_chart.py", "guitar_shapes.py", "harmony_reference.py", "i18n.py", "native_dsp.py", "recorder.py", "reference_compare.py", "report.py", "separator.py", "spectrum.py", "stem_removal.py", "stem_diagnostics.py", "voicing.py"
     )) {
         Copy-Item -LiteralPath (Join-Path $ProjectDir $Name) -Destination $SourceRoot -Force
@@ -130,7 +151,7 @@ try {
         "README.md", "README_KO.md", "DEVELOPMENT_KO.md", "FUNCTION_REFERENCE_KO.md",
         "DEVELOPER_HANDOFF_KO_EN.md", "BUILD_HISTORY.md", "TRANSCRIPTION_RESEARCH_KO.md", "LICENSE.txt",
         "THIRD_PARTY_NOTICES.txt", "THIRD_PARTY_RUNTIME_INVENTORY.txt",
-        "ToneMatchTMP.spec", "build.ps1", "requirements.txt", "requirements-cuda126.txt",
+        "ToneMatchTMP.spec", "build.ps1", "requirements.txt", "requirements-dev.txt", "requirements-cuda126.txt",
         "enable_cuda.ps1", "version_info.txt"
     )) {
         Copy-Item -LiteralPath (Join-Path $ProjectDir $Name) -Destination $SourceRoot -Force
@@ -149,7 +170,7 @@ try {
     }
 
     foreach ($Name in @(
-        "ToneMatchTMP.spec", "build.ps1", "requirements.txt", "requirements-cuda126.txt",
+        "ToneMatchTMP.spec", "build.ps1", "requirements.txt", "requirements-dev.txt", "requirements-cuda126.txt",
         "enable_cuda.ps1", "version_info.txt"
     )) {
         Copy-Item -LiteralPath (Join-Path $ProjectDir $Name) -Destination $BuildRoot -Force
@@ -189,6 +210,9 @@ try {
         throw "Packaged EXE self-test 실패 (exit $($SelfTestProcess.ExitCode))"
     }
     $SelfTest = Get-Content -Raw -LiteralPath $SelfTestPath | ConvertFrom-Json
+    if (-not $SelfTest.music_workflow.ok) {
+        throw "새 CQT/재생/믹서/PDF 배포 자체 진단이 실패했습니다."
+    }
     if (-not $SelfTest.ok -or -not $SelfTest.chord_voicing.ok -or -not $SelfTest.harmony_reference.ok -or -not $SelfTest.harmony_reference_source_ok -or -not $SelfTest.chord_chart.ok -or -not $SelfTest.chord_chart_source_ok -or -not $SelfTest.guitar_shapes_source_ok -or $SelfTest.app_version -ne $Version -or -not $SelfTest.stem_removal_source_ok -or -not $SelfTest.stem_diagnostics_source_ok -or -not $SelfTest.native_dsp.available -or -not $SelfTest.native_dsp.parity_ok -or $SelfTest.native_dsp.abi_version -ne 2 -or -not $SelfTest.native_dsp.float32_parity_ok -or -not $SelfTest.native_dsp.stream_stats_ok) {
         throw "패키지 자체 진단 결과가 올바르지 않습니다."
     }

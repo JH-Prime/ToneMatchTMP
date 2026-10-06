@@ -67,6 +67,7 @@ def hidden_chart_application(data_root: Path, size: tuple[int, int] = (960, 600)
             yield root, application
     finally:
         root.tk.call("tk", "scaling", original_scaling)
+        root.update_idletasks()
         root.destroy()
 
 
@@ -112,9 +113,12 @@ class ChordChartUiTests(unittest.TestCase):
                 self.assertEqual(len(chart_text(application, "chord_label")), sum(len(bar["segments"]) for bar in application.chart_data["pages"][0]["bars"]))
                 self.assertIn("?", chart_text(application, "unknown_chord"))
                 self.assertNotIn("SHOULD_NOT_SHOW", " ".join(chart_text(application)))
-                self.assertTrue(application.chart_canvas.find_withtag("fret_diagram"))
+                self.assertFalse(application.chart_canvas.find_withtag("fret_diagram"))
+                self.assertTrue(application.chart_canvas.find_withtag("chord_evidence"))
+                self.assertGreater(application.chart_canvas.bbox("chord_evidence")[1],
+                                   application.chart_canvas.bbox("chart_bar")[3])
                 application._show_chart_bar_details(6)
-                self.assertEqual(application.voicing_views.select(), str(application.voicing_details_tab))
+                self.assertEqual(application.voicing_views.select(), str(application.chart_tab))
                 self.assertIn("chart_event_6", application.voicing_text.mark_names())
                 self.assertEqual(application.voicing_text.cget("state"), "disabled")
                 application._next_chart_page()
@@ -127,8 +131,8 @@ class ChordChartUiTests(unittest.TestCase):
                 self.assertEqual(application.chart_page_index, 1)
                 self.assertEqual(root.state(), "withdrawn")
 
-    def test_original_mix_hides_shapes_and_bass_but_preserves_six_nine(self) -> None:
-        """믹스의 기타 운지·역위를 숨기되 6/9 화음 기호와 입력 자료는 유지한다."""
+    def test_original_mix_hides_shapes_but_preserves_slash_and_six_nine(self) -> None:
+        """믹스의 운지는 숨기되 분수코드·6/9 기호와 입력 자료는 유지한다."""
         with tempfile.TemporaryDirectory() as temporary:
             with hidden_chart_application(Path(temporary)) as (root, application):
                 result = chart_result("original_mix")
@@ -140,8 +144,7 @@ class ChordChartUiTests(unittest.TestCase):
                     root.update_idletasks()
                     text = chart_text(application)
                     self.assertIn("G6/9", text)
-                    self.assertIn("Cmaj7#11", text)
-                    self.assertNotIn("Cmaj7#11/E", text)
+                    self.assertIn("Cmaj7#11/E", text)
                     self.assertFalse(application.chart_canvas.find_withtag("fret_diagram"))
                     self.assertIn(tr("ui.chart_source_original_mix", language), text)
                     self.assertEqual(application.result["chord_voicing"], original)

@@ -1,4 +1,4 @@
-"""ToneMatch TMP v0.0.13 데스크톱 애플리케이션.
+"""ToneMatch TMP v0.1.01 데스크톱 애플리케이션.
 
 로컬 오디오·영상 또는 Windows PC 재생음 녹음을 받아 AI로 guitar stem만
 분리하고, Tone Master Pro에 수동 적용할 설명 가능한 톤 체인을 추천한다.
@@ -22,6 +22,7 @@ import traceback
 import wave
 import webbrowser
 import zipfile
+from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog, messagebox, font as tkfont
@@ -45,6 +46,8 @@ import numpy as np
 
 from catalog import APP_VERSION, BUILD_DATE, CHANGELOG, MODEL_GUIDE_REVISION, TARGET_FIRMWARE
 from chord_chart import build_chord_chart, initial_chart_settings
+from chord_edits import effective_voicing, set_correction, load_result
+from chord_edit_ui import ChordEditor
 from debug_info import (
     PIPELINE_BLOCKS,
     block_by_id,
@@ -75,6 +78,10 @@ from harmony_reference import (
     get_chord_reference, get_scale_reference, get_diatonic_reference,
 )
 from native_dsp import create_spectrum_engine, native_runtime_info
+from playback import PlaybackSession
+from stem_mixer import MixerSession
+from stem_mixer_ui import MixerWindow
+from playback_ui import PlaybackControls
 from reference_compare import ReferenceCompareError, compare_live_frame
 from recorder import (
     MAX_RECORD_SECONDS,
@@ -89,7 +96,7 @@ from report import recipe_as_text, save_html
 from separator import separator_runtime_status
 from spectrum import SpectrumFrame, analyze_spectrum_frame
 from stem_removal import StemRemovalCancelled, StemRemovalError, remove_stems_from_file
-from voicing import NOTE_NAMES, pitch_class_names, without_bass_note
+from voicing import NOTE_NAMES, pitch_class_names
 
 
 APP_NAME = "ToneMatch TMP"
@@ -219,6 +226,15 @@ class ToneMatchApp:
         self.stem_status_key = "status.stem_ready"
         self.stem_status_values: dict[str, object] = {}
         self.closing = False
+        self.playback = PlaybackSession()
+        self.mixer = MixerSession()
+        self.mixer_window = None
+        self.pdf_worker = None
+        self.pdf_cancel_event = threading.Event()
+        self._analysis_source_path = None
+        self.selected_chart_bar = None
+        self.playing_chart_bar = None
+        self.chord_undo = []
         self.temporary_recordings: set[Path] = set()
         self.capture_devices: list[CaptureDevice] = []
         self.capture_label_map: dict[str, CaptureDevice] = {}
@@ -719,6 +735,15 @@ class ToneMatchApp:
                   background=COLORS["panel_alt"], font=(self.ui_font, 9, "bold")).grid(row=0, column=2, sticky="ew")
         self.chart_next = ttk.Button(pager, text="›", width=3, command=self._next_chart_page, style="Chart.TButton")
         self.chart_next.grid(row=0, column=3)
+        self.chart_tools = ttk.Menubutton(pager, text=tr('edit.tools', self.language), width=5, style='Chart.TButton')
+        self.chart_tools.grid(row=0, column=4, padx=(4, 0))
+        self.chart_tools_menu = tk.Menu(self.chart_tools, tearoff=False)
+        self.chart_tools.configure(menu=self.chart_tools_menu)
+        for key, command in (('edit.title', self._open_chord_editor), ('edit.undo', self._undo_chord_edit),
+                             ('edit.open', self._open_result), ('edit.link_audio', self._link_playback_source),
+                             ('pdf.save', self._export_chart_pdf),
+                             ('pdf.preview', lambda: self._export_chart_pdf(preview=True))):
+            self.chart_tools_menu.add_command(label=tr(key, self.language), command=command)
         if not self.chart_settings_expanded:
             controls.grid_remove()
         viewport = ttk.Frame(self.chart_tab, style="Alt.TFrame")
@@ -731,6 +756,16 @@ class ToneMatchApp:
         self.chart_scrollbar = scrollbar
         scrollbar.grid(row=0, column=1, sticky="ns")
         self.chart_canvas.configure(yscrollcommand=scrollbar.set)
+        self.playback_controls = PlaybackControls(self.chart_tab, self.playback, self.language,
+                                                  can_play=self._can_play_audio, follow=self._follow_playback,
+                                                  selected_bar=lambda: self.selected_chart_bar)
+        self.playback_controls.grid(row=3, column=0, sticky='ew')
+        if self.chart_settings_expanded:
+            self.playback_controls.grid_remove()
+        self.chart_canvas.configure(takefocus=True)
+        self.chart_canvas.bind('<Left>', lambda event: self._step_chart_bar(-1))
+        self.chart_canvas.bind('<Right>', lambda event: self._step_chart_bar(1))
+        self.chart_canvas.bind('<Return>', lambda event: self._open_chord_editor())
         self.chart_canvas.bind("<Configure>", self._resize_chart)
         viewport.bind("<Configure>", self._resize_chart)
         self.chart_canvas.bind("<MouseWheel>", self._scroll_chart)
@@ -763,9 +798,12 @@ class ToneMatchApp:
         """좁은 창의 코드표 높이를 확보하면서 필요할 때만 수동 마디 설정을 펼친다."""
         self.chart_settings_expanded = not self.chart_settings_expanded
         if self.chart_settings_expanded:
+            self.playback.stop()
+            self.playback_controls.grid_remove()
             self.chart_controls.grid()
         else:
             self.chart_controls.grid_remove()
+            self.playback_controls.grid()
 
     def _scroll_chart(self, event: object) -> str:
         """악보 위의 휠만 해당 세로 스크롤로 전달해 다른 입력 패널과 충돌하지 않게 한다."""
@@ -803,9 +841,14 @@ class ToneMatchApp:
             self.result["chord_chart_settings"] = dict(candidate)
         self.chart_data = chart
         self.chart_page_index = 0
+        self.selected_chart_bar = None
+        self.playing_chart_bar = None
+        self.playback.set_loop()
+        self.playback_controls.loop_var.set(False)
         self.chart_notice_var.set(tr("ui.chart_manual_notice", self.language))
         self.chart_settings_expanded = False
         self.chart_controls.grid_remove()
+        self.playback_controls.grid()
         self.chart_canvas.yview_moveto(0)
         self._draw_chart_page()
 
@@ -822,12 +865,12 @@ class ToneMatchApp:
         self._draw_chart_page()
 
     def _show_chart_bar_details(self, event_index: int | None) -> None:
-        """마디의 첫 검출 이벤트에 해당하는 기존 전체 근거·대안 해석을 연다."""
-        self.voicing_views.select(self.voicing_details_tab)
-        mark = f"chart_event_{event_index}" if event_index is not None else "1.0"
-        if mark != "1.0" and mark not in self.voicing_text.mark_names():
-            mark = "1.0"
-        self.voicing_text.see(mark)
+        """코드표 아래의 해당 근거·후보로 이동하고 동일한 작업 화면을 유지한다."""
+        self.voicing_views.select(self.chart_tab)
+        box = self.chart_canvas.bbox(f"chord_evidence_{event_index}")
+        region = self.chart_canvas.bbox("all")
+        if box and region:
+            self.chart_canvas.yview_moveto(max(0, box[1] - 10) / max(1, region[3]))
 
     def _draw_chart_shape(self, shape: dict, x: float, y: float, tag: str) -> None:
         """이론상 후보의 6현·프렛·개방현·뮤트를 그리고 추정하지 않은 손가락 번호는 생략한다."""
@@ -911,8 +954,8 @@ class ToneMatchApp:
                     segment_tag = f"{tag}_segment_{segment_index}"
                     unknown = segment["unknown"]
                     label = "?" if unknown else segment["label"]
-                    if source == "original_mix":
-                        label = without_bass_note(label)
+                    if segment.get('manual_edit'):
+                        label += ' *'
                     continuation = "↳ " if segment.get("continues_from_previous") else ""
                     label_font = tkfont.Font(root=self.root, family=self.ui_font, size=12, weight="bold")
                     while label_font.measure(continuation + label) > cell_width - 14 and label_font.cget("size") > 7:
@@ -925,22 +968,10 @@ class ToneMatchApp:
                                                    anchor="nw", fill="#64716b", font=(self.ui_font, 7),
                                                    tags=(tag, segment_tag, "chart_beat"))
                     sy = canvas.bbox(beat_item)[3] + 10
-                    shapes = segment.get("candidate_shapes", ()) if not unknown and source != "original_mix" else ()
-                    if shapes:
-                        shape_tag = f"{segment_tag}_shape"
-                        self._draw_chart_shape(shapes[0], x + max(20, (cell_width - 45) / 2), sy + 12, shape_tag)
-                        for item in canvas.find_withtag(shape_tag):
-                            canvas.addtag_withtag(tag, item)
-                            canvas.addtag_withtag(segment_tag, item)
-                        shape_box = canvas.bbox(shape_tag)
-                        if shape_box:
-                            sy = shape_box[3] + 12
                     row_bottom = max(row_bottom, sy)
                 first_event = next((segment["event_index"] for segment in bar["segments"] if segment["event_index"] is not None), None)
-                def show_details(_event: object, index: int | None = first_event) -> None:
-                    """현재 마디에 대응하는 전체 근거 표시 위치를 클릭 시 연다."""
-                    self._show_chart_bar_details(index)
-                canvas.tag_bind(tag, "<Button-1>", show_details)
+                canvas.tag_bind(tag, '<Button-1>', lambda event, selected=bar: self._select_chart_bar(selected))
+                canvas.tag_bind(tag, '<Double-Button-1>', lambda event, index=first_event: self._show_chart_bar_details(index))
             for column, bar in enumerate(row):
                 x = margin + column * (cell_width + gap)
                 rectangle = canvas.create_rectangle(x, y, x + cell_width, row_bottom + 8,
@@ -948,7 +979,179 @@ class ToneMatchApp:
                                                     tags=(f"chart_bar_{bar['number']}", "chart_bar"))
                 canvas.tag_lower(rectangle)
             y = row_bottom + 26
+        heading = canvas.create_text(margin, y, text=tr("ui.chart_details", self.language),
+                                     anchor="nw", fill="#185e55", font=(self.ui_font, 12, "bold"))
+        y = canvas.bbox(heading)[3] + 12
+        indices = list(dict.fromkeys(segment["event_index"] for bar in page["bars"]
+                                      for segment in bar["segments"] if segment["event_index"] is not None))
+        event_count = len(self.chart_analysis.get("events", []))
+        for index in indices:
+            end = f"chart_event_{index + 1}" if index + 1 < event_count else "end-1c"
+            detail = self.voicing_text.get(f"chart_event_{index}", end).strip()
+            item = canvas.create_text(margin, y, text=detail, anchor="nw", width=page_width - margin * 2,
+                                      fill="#29443c", font=(self.ui_font, 9),
+                                      tags=("chord_evidence", f"chord_evidence_{index}"))
+            y = canvas.bbox(item)[3] + 16
         canvas.configure(scrollregion=(0, 0, page_width, y))
+        self._highlight_chart_bars()
+
+    def _can_play_audio(self, *, allow_mixer=False) -> bool:
+        """녹음·AI·장치 진단과 원본 재생이 장치를 동시에 잡지 않게 한다."""
+        mixer = getattr(self, 'mixer', None)
+        snapshot = mixer.player.snapshot() if mixer and mixer.player else {}
+        mixer_output = snapshot.get('output_active') or snapshot.get('state') in ('playing', 'draining')
+        return not (self.closing or (mixer_output and not allow_mixer) or (self.worker and self.worker.is_alive())
+                    or (self.record_worker and self.record_worker.is_alive())
+                    or self._stem_is_running() or self._spectrum_is_running() or self.hardware_probe_active)
+
+    def _open_chord_editor(self):
+        """현재 마디의 이벤트를 편집하며 자동 추정과 사용자의 입력을 분리한다."""
+        if not self.result or not self._can_play_audio() or not self._suspend_playback():
+            return None
+        pages = self.chart_data.get('pages', [])
+        bar = self.selected_chart_bar or (pages[self.chart_page_index]['bars'][0] if pages else None)
+        indices = list(dict.fromkeys(segment['event_index'] for segment in bar['segments']
+                                    if segment['event_index'] is not None)) if bar else []
+        if not indices:
+            messagebox.showinfo(APP_NAME, tr('ui.voicing_empty', self.language))
+            return None
+        return ChordEditor(self.root, self.result, indices, self.language, self._apply_chord_edit, self._undo_chord_edit)
+
+    def _apply_chord_edit(self, event_index: int, symbol: str | None) -> dict:
+        """검증된 수정 지도만 반영하고 제한된 되돌리기 이력을 보존한다."""
+        candidate = set_correction(self.result, event_index, symbol)
+        previous = dict(self.result.get('chord_corrections', {}))
+        if candidate['chord_corrections'] != previous:
+            self.chord_undo = (self.chord_undo + [previous])[-50:]
+        self.result = candidate
+        self._render_voicing(effective_voicing(candidate))
+        return candidate
+
+    def _undo_chord_edit(self) -> dict | None:
+        """원본 분석은 건드리지 않고 가장 최근 수정 지도만 복원한다."""
+        if self.result and self.chord_undo:
+            self.result = {**self.result, 'chord_corrections': self.chord_undo.pop()}
+            self._render_voicing(effective_voicing(self.result))
+        return self.result
+
+    def _open_result(self) -> None:
+        """검증을 마친 로컬 결과만 열고 이전 오디오 연결과 되돌리기 이력은 지운다."""
+        if not self._can_play_audio() or not self._suspend_playback():
+            return
+        path = filedialog.askopenfilename(title=tr('edit.open', self.language), filetypes=(('JSON', '*.json'),))
+        if not path:
+            return
+        try:
+            candidate = load_result(path, self.language)
+        except (OSError, ValueError) as exc:
+            messagebox.showerror(APP_NAME, str(exc))
+            return
+        self._analysis_source_path = None
+        self.playback.clear()
+        self._show_result(candidate)
+        self.notebook.select(self.voicing_tab)
+
+    def _link_playback_source(self) -> None:
+        """사용자가 직접 고른 원본만 재생 구간에 연결하고 자동 재생하지 않는다."""
+        if not self.result or not self._can_play_audio() or not self._suspend_playback():
+            return
+        path = filedialog.askopenfilename(title=tr('edit.link_notice', self.language))
+        if path:
+            source = self.result['source']
+            start = float(source.get('start_seconds', 0))
+            self._analysis_source_path = path
+            self.playback.set_source(path, start, start + float(source['duration_seconds']))
+            self.playback_controls.refresh()
+
+    def _suspend_playback(self) -> bool:
+        """장치 작업 진입 전에 재생을 멈추고 남은 출력의 종료 여부를 반환한다."""
+        session = getattr(self, 'playback', None)
+        mixer = getattr(self, 'mixer', None)
+        playback_ready = session.suspend() if session else True
+        mixer_ready = mixer.suspend() if mixer else True
+        return playback_ready and mixer_ready
+
+    def _open_mixer(self):
+        """코드표와 별도 창에서 악기별 레벨과 WAV 저장을 제공한다."""
+        view = getattr(self, 'mixer_window', None)
+        if view and view.winfo_exists():
+            view.lift()
+            return view
+        if not self._can_play_audio():
+            return None
+        try:
+            request = (self.stem_source_var.get().strip().strip('"'),
+                       float(self.stem_start_var.get().strip() or '0'),
+                       float(self.stem_end_var.get().strip() or '0'),
+                       self.stem_compute_backend_code)
+        except ValueError:
+            messagebox.showwarning(APP_NAME, tr('error.time_number', self.language))
+            return None
+        self.mixer_window = MixerWindow(self.root, self.mixer, request, self.language, COLORS,
+                                       self._can_start_mixer)
+        return self.mixer_window
+
+    def _can_start_mixer(self):
+        """믹서 자신의 재생은 유지하되 다른 장치·모델 작업과 충돌하지 않게 한다."""
+        if not self._can_play_audio(allow_mixer=True):
+            return False
+        return self.playback.suspend()
+
+    def _select_chart_bar(self, bar: dict) -> None:
+        """마디를 선택하고 원본 오프셋을 중복 더하지 않은 위치로 탐색한다."""
+        self.selected_chart_bar = bar
+        self.playback.seek(bar['start_seconds'])
+        self.chart_canvas.focus_set()
+        if self.playback_controls.loop_var.get():
+            self.playback_controls.change_loop()
+        self._highlight_chart_bars()
+
+    def _step_chart_bar(self, step: int) -> str:
+        """키보드 좌우로 마디를 선택해 마우스 없이 탐색·반복할 수 있게 한다."""
+        bars = [bar for page in self.chart_data.get('pages', []) for bar in page['bars']]
+        if bars:
+            current = self.selected_chart_bar['number'] - 1 if self.selected_chart_bar else -1
+            index = max(0, min(len(bars) - 1, current + step))
+            self.chart_page_index = index // 16
+            self._select_chart_bar(bars[index])
+            self._draw_chart_page()
+        return 'break'
+
+    def _follow_playback(self, seconds: float, follow_page: bool) -> None:
+        """재생 중 현재 마디와 페이지를 샘플 기반 위치에서 찾는다."""
+        for page_index, page in enumerate(self.chart_data.get('pages', [])):
+            for bar in page['bars']:
+                if bar['start_seconds'] <= seconds < bar['end_seconds']:
+                    changed = self.playing_chart_bar != bar['number']
+                    self.playing_chart_bar = bar['number']
+                    if follow_page and self.chart_page_index != page_index:
+                        self.chart_page_index = page_index
+                        self._draw_chart_page()
+                    elif changed:
+                        self._highlight_chart_bars()
+                    if follow_page and changed:
+                        box = self.chart_canvas.bbox(f"chart_bar_{bar['number']}")
+                        region = self.chart_canvas.bbox('all')
+                        if box and region:
+                            self.chart_canvas.yview_moveto(max(0, box[1] - 12) / max(1, region[3]))
+                    return
+
+    def _highlight_chart_bars(self) -> None:
+        """코드 글자는 보존하고 테두리·태그로 선택과 재생 마디를 구분한다."""
+        canvas = self.chart_canvas
+        canvas.dtag('all', 'selected_bar')
+        canvas.dtag('all', 'playing_bar')
+        selected = self.selected_chart_bar['number'] if self.selected_chart_bar else None
+        for item in canvas.find_withtag('chart_bar'):
+            tags = canvas.gettags(item)
+            playing = f'chart_bar_{self.playing_chart_bar}' in tags
+            chosen = f'chart_bar_{selected}' in tags
+            canvas.itemconfigure(item, fill='#d9eee6' if playing else '', outline='#185e94' if chosen else '#b8c0bb',
+                                 width=3 if chosen else 1, dash=(4, 2) if chosen else ())
+            if playing:
+                canvas.addtag_withtag('playing_bar', item)
+            if chosen:
+                canvas.addtag_withtag('selected_bar', item)
 
     def _render_chord_chart(self, analysis: dict) -> None:
         """분석 이벤트는 변경하지 않고 수동 마디 설정에 따른 별도 화면 모델을 만든다."""
@@ -1237,6 +1440,8 @@ class ToneMatchApp:
         self.stem_source_button.grid(row=1, column=1)
         self.stem_use_analysis_button = ttk.Button(source, text=tr("ui.stem_use_analysis_source", self.language), command=self._use_analysis_source_for_stem)
         self.stem_use_analysis_button.grid(row=2, column=0, columnspan=2, sticky="e", pady=(5, 0))
+        self.mixer_open_button = ttk.Button(source, text=tr("mixer.open", self.language), command=self._open_mixer)
+        self.mixer_open_button.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(6, 0))
 
         destination = ttk.Frame(content, style="Alt.TFrame")
         destination.grid(row=3, column=0, sticky="ew", pady=(8, 0))
@@ -2039,6 +2244,8 @@ class ToneMatchApp:
 
     def _toggle_spectrum_monitor(self, require_reference: bool = False) -> None:
         """선택한 장치의 공용 실시간 스펙트럼 또는 레퍼런스 비교를 토글한다."""
+        if not self._suspend_playback():
+            return
         if self._spectrum_is_running():
             if self.spectrum_stop_event is not None:
                 self.spectrum_stop_event.set()
@@ -2287,7 +2494,8 @@ class ToneMatchApp:
     def _change_language(self, _event: object | None = None) -> None:
         """선택값과 결과 수치를 보존한 채 전체 화면을 새 언어와 글꼴로 다시 만든다."""
         if (
-            (self.worker and self.worker.is_alive())
+            not self._suspend_playback()
+            or (self.worker and self.worker.is_alive())
             or (self.record_worker and self.record_worker.is_alive())
             or self._stem_is_running()
             or self._spectrum_is_running()
@@ -2347,6 +2555,8 @@ class ToneMatchApp:
 
     def _start_hardware_probe(self) -> None:
         """PyTorch·CUDA 확인을 UI 밖의 스레드에서 시작해 창 멈춤을 방지한다."""
+        if not self._suspend_playback():
+            return
         if (
             self.hardware_probe_active
             or (self.worker and self.worker.is_alive())
@@ -2541,6 +2751,8 @@ class ToneMatchApp:
 
     def _toggle_recording(self) -> None:
         """현재 상태에 따라 PC 재생음 녹음을 시작하거나 중지 요청을 보낸다."""
+        if not self._suspend_playback():
+            return
         if self.record_worker and self.record_worker.is_alive():
             self.record_stop_event.set()
             self.status_var.set(tr("status.recording_stopped", self.language))
@@ -2720,7 +2932,8 @@ class ToneMatchApp:
 
     def _stem_is_running(self) -> bool:
         """작업자의 종료 이벤트를 UI가 반영할 때까지 새 작업 시작을 막는다."""
-        return getattr(self, "stem_worker", None) is not None
+        mixer = getattr(self, "mixer", None)
+        return getattr(self, "stem_worker", None) is not None or bool(mixer and mixer.busy)
 
     def _set_stem_status(self, key: str, **values: object) -> None:
         """언어 전환 뒤에도 다시 만들 수 있도록 악기 제거 상태 키와 값을 보존한다."""
@@ -2891,6 +3104,8 @@ class ToneMatchApp:
 
     def _start_stem_removal(self) -> None:
         """검증된 악기 제거 요청을 UI 밖의 작업 스레드에서 시작한다."""
+        if not self._suspend_playback():
+            return
         if self._stem_is_running():
             return
         other_busy = bool(
@@ -3030,6 +3245,8 @@ class ToneMatchApp:
 
     def _start_analysis(self) -> None:
         """검증된 요청을 별도 스레드에서 시작하고 취소·내보내기 상태를 설정한다."""
+        if not self._suspend_playback():
+            return
         if self.worker and self.worker.is_alive():
             return
         if (self.record_worker and self.record_worker.is_alive()) or self._stem_is_running() or self._spectrum_is_running() or self.hardware_probe_active:
@@ -3045,6 +3262,8 @@ class ToneMatchApp:
         self.output_code = choice_code("output", self.output_var.get())
         self.compute_backend_code = choice_code("compute", self.compute_var.get())
         self.result = None
+        self.playback.clear()
+        self._analysis_source_path = path
         self.completed_debug_blocks = {"boot"}
         self.active_debug_block = "input"
         self._draw_debug_diagram()
@@ -3106,6 +3325,14 @@ class ToneMatchApp:
         """백그라운드 분석·녹음·스펙트럼 제어 이벤트를 Tk 메인 스레드에서 처리한다."""
         if self.closing:
             return
+        if hasattr(self, 'playback_controls'):
+            self.playback_controls.refresh()
+        mixer = getattr(self, 'mixer', None)
+        if mixer:
+            mixer.poll()
+        view = getattr(self, 'mixer_window', None)
+        if view and view.winfo_exists():
+            view.refresh()
         try:
             while True:
                 event = self.events.get_nowait()
@@ -3144,6 +3371,21 @@ class ToneMatchApp:
                     self._show_stem_result(event[1])
                 elif event[0] == "stem_error":
                     self._show_stem_error(event[1], event[2])
+                elif event[0] == "pdf_done":
+                    self.pdf_worker = None
+                    self.status_var.set(tr("pdf.saved", self.language, path=event[1]["path"]))
+                    if event[2]:
+                        try:
+                            os.startfile(event[1]["path"])
+                        except OSError as exc:
+                            messagebox.showerror(APP_NAME, tr("dialog.save_failed", self.language, error=exc))
+                elif event[0] == "pdf_error":
+                    self.pdf_worker = None
+                    self.status_var.set(tr("pdf.failed", self.language))
+                    messagebox.showerror(APP_NAME, tr("dialog.save_failed", self.language, error=event[1]))
+                elif event[0] == "pdf_cancelled":
+                    self.pdf_worker = None
+                    self.status_var.set(tr("pdf.cancelled", self.language))
                 elif event[0] == "hardware_status":
                     self._apply_hardware_status(event[1])
                 elif event[0] == "spectrum_backend":
@@ -3203,6 +3445,15 @@ class ToneMatchApp:
         if reset_notebook:
             self.chart_settings = None
             self.chart_page_index = 0
+            self.chord_undo = []
+            self.selected_chart_bar = None
+            self.playing_chart_bar = None
+            source = result.get('source', {})
+            start = float(source.get('start_seconds', 0))
+            duration = float(source.get('duration_seconds', 0))
+            self.playback.set_source(self._analysis_source_path, start, start + duration)
+            self.playback_controls.loop_var.set(False)
+            self.playback_controls.refresh()
         self.analysis_progress_percent = 100.0
         self._finish_analysis_progress()
         self._set_debug_progress(100, tr("progress.complete", self.language))
@@ -3214,7 +3465,7 @@ class ToneMatchApp:
         for index, recipe in enumerate(result["recipes"]):
             self._render_recipe(self.recipe_texts[index], recipe)
             self.notebook.tab(index, text=f"{tr('ui.recipe_tab', self.language, rank=index + 1)} · {recipe['match_percent']}%")
-        self._render_voicing(result.get("chord_voicing", {}))
+        self._render_voicing(effective_voicing(result))
         separation = result.get("source_separation", {})
         if separation.get("used"):
             self._append_debug_log(
@@ -3281,13 +3532,15 @@ class ToneMatchApp:
         if not reliable:
             widget.insert("end", tr("ui.voicing_empty", self.language) + "\n", "warning")
         offset = float(analysis.get("source_start_seconds", 0.0))
-        is_mix = analysis.get("analysis_source") == "original_mix"
         for event_index, event in enumerate(events):
             if hasattr(widget, "mark_set"):
                 widget.mark_set(f"chart_event_{event_index}", "end-1c")
                 widget.mark_gravity(f"chart_event_{event_index}", "left")
             start = self._format_time(offset + float(event["start_seconds"]))
             end = self._format_time(offset + float(event["end_seconds"]))
+            if event.get('manual_edit'):
+                widget.insert('end', tr('edit.manual', self.language) + ' · '
+                              + tr('edit.original', self.language, symbol=event.get('original_symbol', '?')) + '\n', 'warning')
             if event.get("chord_type", "unknown") == "unknown":
                 widget.insert("end", f"{start}–{end}   {tr('ui.voicing_unknown', self.language)}\n", "warning")
                 continue
@@ -3296,13 +3549,10 @@ class ToneMatchApp:
             except (TypeError, ValueError):
                 confidence = math.nan
             score = f"{max(0, min(100, round(confidence * 100)))}/100" if math.isfinite(confidence) else "—"
-            symbol = without_bass_note(str(event["symbol"])) if is_mix else event["symbol"]
+            symbol = str(event["symbol"])
             widget.insert("end", f"{start}–{end}   {symbol}   {tr('ui.voicing_confidence', self.language)} {score}\n", "event")
             evidence = event.get("evidence") or {}
             notes = pitch_class_names(evidence.get("observed_pitch_classes", event.get("pitch_classes", ()))) or "—"
-            register = tr(f"voicing.register.{event.get('register', 'unknown')}", self.language)
-            spacing = tr(f"voicing.spacing.{event.get('spacing', 'unknown')}", self.language)
-            inversion = tr(f"voicing.inversion.{event.get('inversion', 'unknown')}", self.language)
             notes_label = "ui.voicing_observed_notes" if "observed_pitch_classes" in evidence else "ui.voicing_template_notes"
             widget.insert("end", f"{tr(notes_label, self.language)} · {notes}\n", "detail")
             if "observed_pitch_classes" in evidence and evidence.get("required_pitch_classes"):
@@ -3314,21 +3564,12 @@ class ToneMatchApp:
             alternatives = []
             for candidate in event.get("alternatives", ()):
                 alternative = str(candidate.get("symbol", ""))
-                alternative = without_bass_note(alternative) if is_mix else alternative
                 if alternative and alternative != symbol and alternative not in alternatives:
                     alternatives.append(alternative)
             if alternatives:
                 widget.insert("end", f"{tr('ui.voicing_alternatives', self.language)} · {', '.join(alternatives)}\n", "detail")
             if evidence.get("ambiguous"):
                 widget.insert("end", tr("ui.voicing_ambiguous", self.language) + "\n", "warning")
-            profile = tr("ui.voicing_mix_profile", self.language) if is_mix else f"{register} · {spacing} · {inversion}"
-            widget.insert("end", f"{tr('ui.voicing_profile', self.language)} · {profile}\n", "detail")
-            shapes = event.get("candidate_shapes", [])
-            if shapes and not is_mix:
-                widget.insert("end", tr("ui.playable_shapes", self.language) + "\n", "warning")
-                for shape in shapes:
-                    frets = " ".join(str(value) for value in shape["frets_low_e_to_high_e"])
-                    widget.insert("end", f"    {shape['label']} · E A D G B e = {frets}\n", "detail")
         widget.insert("end", "\n" + tr("ui.voicing_limit", self.language), "warning")
         widget.configure(state="disabled")
         widget.see("1.0")
@@ -3437,6 +3678,35 @@ class ToneMatchApp:
         key = "status.json_saved" if kind == "JSON" else "status.html_saved"
         self.status_var.set(tr(key, self.language, path=path))
 
+    def _export_chart_pdf(self, *, preview=False):
+        """유효 코드표 사본을 저장하고 명시적 미리보기 요청만 OS 문서 뷰어로 연다."""
+        if not self.result or self.closing or self.pdf_worker is not None:
+            return
+        path = filedialog.asksaveasfilename(
+            title=tr("pdf.save", self.language), defaultextension=".pdf",
+            initialfile="ToneMatchTMP-chords.pdf", filetypes=(("PDF", "*.pdf"),))
+        if not path:
+            return
+        snapshot = deepcopy(self.result)
+        self.pdf_cancel_event = threading.Event()
+        self.status_var.set(tr("pdf.working", self.language))
+        self.pdf_worker = threading.Thread(
+            target=self._run_chart_pdf_export, args=(snapshot, path, preview, self.pdf_cancel_event),
+            name="ToneMatchPDF", daemon=True)
+        self.pdf_worker.start()
+
+    def _run_chart_pdf_export(self, snapshot, path, preview, cancel):
+        """PDF 작업자는 Tk에 접근하지 않고 완료·취소·오류만 전달한다."""
+        try:
+            from chart_pdf import save_chart_pdf, PdfExportCancelled
+            metadata = save_chart_pdf(snapshot, path, cancel_requested=cancel.is_set)
+            self.events.put(("pdf_done", metadata, preview))
+        except Exception as exc:
+            if cancel.is_set():
+                self.events.put(("pdf_cancelled",))
+            else:
+                self.events.put(("pdf_error", str(exc)))
+
     def _copy_recipe(self) -> None:
         """현재 선택한 결과·진단·개발자 탭의 표시 내용을 클립보드에 복사한다."""
         selected_tab = self.notebook.select()
@@ -3503,7 +3773,7 @@ class ToneMatchApp:
         destination = filedialog.asksaveasfilename(title=tr("dialog.debug_bundle_title", self.language), defaultextension=".zip", initialfile=initial, filetypes=(("ZIP", "*.zip"),))
         if not destination:
             return
-        source_names = ("app.py", "catalog.py", "chord_chart.py", "debug_info.py", "devices.py", "engine.py", "guitar_shapes.py", "harmony_reference.py", "i18n.py", "native_dsp.py", "native/tonematch_dsp.cpp", "native/tonematch_dsp.h", "recorder.py", "reference_compare.py", "report.py", "separator.py", "spectrum.py", "stem_removal.py", "stem_diagnostics.py", "voicing.py")
+        source_names = ("app.py", "catalog.py", "chord_chart.py", "debug_info.py", "devices.py", "engine.py", "guitar_shapes.py", "harmony_reference.py", "i18n.py", "native_dsp.py", "native/tonematch_dsp.cpp", "native/tonematch_dsp.h", "recorder.py", "reference_compare.py", "report.py", "separator.py", "spectrum.py", "stem_removal.py", "stem_diagnostics.py", "voicing.py", "song_chords.py", "playback.py", "playback_ui.py", "chord_edits.py", "chord_edit_ui.py", "stem_mixer.py", "stem_mixer_ui.py", "chart_pdf.py", "music_diagnostics.py")
         diagnostics = {
             "app_version": APP_VERSION,
             "build_date": BUILD_DATE,
@@ -3537,6 +3807,12 @@ class ToneMatchApp:
     def _on_close(self) -> None:
         """모든 작업에 중지 신호를 보내고 임시 녹음을 정리한 뒤 창을 닫는다."""
         self.closing = True
+        if getattr(self, 'playback', None):
+            self.playback.clear()
+        if getattr(self, 'mixer', None):
+            self.mixer.clear()
+        if getattr(self, 'pdf_cancel_event', None):
+            self.pdf_cancel_event.set()
         self.analysis_cancel_event.set()
         self.record_stop_event.set()
         self.stem_cancel_event.set()
@@ -3550,7 +3826,11 @@ class ToneMatchApp:
     def _finish_close_after_stem_cleanup(self) -> None:
         """악기 제거 작업이 임시 음원을 정리할 때까지 숨은 메인 루프를 유지한다."""
         worker = getattr(self, "stem_worker", None)
-        if worker is not None and worker.is_alive():
+        playback = getattr(self, 'playback', None)
+        mixer = getattr(self, 'mixer', None)
+        pdf_worker = getattr(self, 'pdf_worker', None)
+        if ((worker is not None and worker.is_alive()) or (playback and not playback.is_closed())
+                or (mixer and not mixer.is_closed()) or (pdf_worker and pdf_worker.is_alive())):
             self.root.after(80, self._finish_close_after_stem_cleanup)
             return
         self._save_settings()
@@ -3753,7 +4033,7 @@ def _self_test_chord_chart() -> dict:
     first_mix = mix["pages"][0]["bars"][0]
     pagination_ok = [len(page["bars"]) for page in chart["pages"]] == [16, 4]
     changes_ok = [segment["label"] for segment in first["segments"]] == ["Cmaj9/E", "?"]
-    source_guard_ok = first_mix["segments"][0]["label"] == "Cmaj9" and not first_mix["segments"][0]["candidate_shapes"]
+    source_guard_ok = first_mix["segments"][0]["label"] == "Cmaj9/E" and not first_mix["segments"][0]["candidate_shapes"]
     shapes_ok = bool(shapes) and all(shape.get("detected") is False for shape in shapes)
     return {"ok": bool(pagination_ok and changes_ok and source_guard_ok and shapes_ok),
             "bar_count": chart["bar_count"], "page_count": len(chart["pages"]),
@@ -3792,8 +4072,11 @@ def run_self_test(output_path: str | Path) -> int:
         chord_voicing_status = _self_test_voicing()
         harmony_reference_status = _self_test_harmony_reference()
         chord_chart_status = _self_test_chord_chart()
+        from music_diagnostics import run_music_self_test
+        music_workflow_status = run_music_self_test()
         payload = {
-            "ok": len(result.get("recipes", [])) == 3 and debug_sources_ok and stem_removal_source_ok and stem_diagnostics_source_ok and harmony_reference_source_ok and chord_chart_source_ok and guitar_shapes_source_ok and english.get("language") == "en" and bool(separator_status.get("available")) and reference_compare_ok and native_dsp_status["smoke_ok"] and chord_voicing_status["ok"] and harmony_reference_status["ok"] and chord_chart_status["ok"],
+            "ok": len(result.get("recipes", [])) == 3 and debug_sources_ok and stem_removal_source_ok and stem_diagnostics_source_ok and harmony_reference_source_ok and chord_chart_source_ok and guitar_shapes_source_ok and english.get("language") == "en" and bool(separator_status.get("available")) and reference_compare_ok and native_dsp_status["smoke_ok"] and chord_voicing_status["ok"] and harmony_reference_status["ok"] and chord_chart_status["ok"] and music_workflow_status["ok"],
+            "music_workflow": music_workflow_status,
             "chord_voicing": chord_voicing_status,
             "harmony_reference": harmony_reference_status,
             "chord_chart": chord_chart_status,
