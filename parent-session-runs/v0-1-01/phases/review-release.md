@@ -34,3 +34,7 @@ retaining only libportaudio64bit.dll. Verify the filtered package with a fresh E
 2026-10-07 01:27:45 KST: final archive passed 5438 hashes, 80 source/build inputs and
 fresh cold CQT/music/C++ self-test after development JIT caches were excluded.
 No additional product-code defect remains. Ready for immutable developer-prerelease publication.
+
+2026-10-07 01:30:55 KST: source/tag f327015 pushed atomically. GitHub v0.1.01 release
+is published (not draft) and marked prerelease. ZIP/checksums/receipt remote sizes and SHA256
+match. Delivery accepted under the declared developer-preview limits. Published assets immutable.

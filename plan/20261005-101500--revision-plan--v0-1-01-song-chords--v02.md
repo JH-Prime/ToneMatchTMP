@@ -3,15 +3,15 @@
 Plan Type: revision-plan
 Workstream: Full-song chord analysis, playback, corrections, stem mixer, and printable sixteen-bar charts
 Version: 02
-Status: Approved; implementation in progress
+Status: Delivered as verified developer prerelease v0.1.01
 Created: 2026-10-05 10:15:00 KST (Asia/Seoul)
-Last Updated: 2026-10-05 21:12:34 KST (Asia/Seoul)
+Last Updated: 2026-10-07 01:30:55 KST (Asia/Seoul)
 Supersedes: plan/20261005-093310--work-plan--v0-1-01-music-workflow--v01.md
-Current Completion State: Playback, corrections and default CQT full-mixture/symbol-only analysis passed a complete 342-test checkpoint. Independent mixer backend, asynchronous session and six-channel UI are implemented; bounded output-exclusion repair verification is active. PDF, integrated/frozen QA and release remain pending.
-Completed So Far: Global skills installation; original and revised user approvals; playback transport and chart linkage; correction model tests; current-source inspection.
-Remaining Work: Mixer repair verification and full QA, separation quality evidence, PDF/print, frozen dependency verification, documentation, package and release.
-Current Blockers: No implementation blocker. Human listening, independent reference annotations, physical printer and clean-machine/signing evidence are not assumed available.
-Next Step: Verify mixer output exclusion and lifecycle; rerun full tests, then implement printable sixteen-bar charts.
+Current Completion State: All approved feature slices implemented; 358 tests, PDF render review, actual cached CPU processing/cancellation, frozen self-test and cold fresh ZIP verification passed. Source and tag pushed; three GitHub release assets published and digest-verified.
+Completed So Far: Full-mixture CQT, symbol/evidence/candidate UI, playback/chart linkage, correction/undo/reopen, six-stem mixer/WAV, PDF/viewer print flow, packaging and developer prerelease.
+Remaining Work: None for this delivery. Musical correctness/listening and clean-machine/hardware launch gates remain explicit limitations, not claimed successes.
+Current Blockers: None for delivered prerelease; independent annotations, listening, physical printer, first-download/offline, CUDA and signing evidence are still unavailable.
+Next Step: User validation; scope reported defects as 0.1.02 rather than replacing 0.1.01.
 
 ## Approval and user intent
 
@@ -91,15 +91,16 @@ Use the user's exact feature version 0.1.01. Later published bugfix releases adv
 
 ## Scoreboard
 
-Current Score: 43/100
+Current Score: 45/100
 Score Source: provisional; not a numeric user rating or accuracy metric
-Last Updated: 2026-10-07 01:27:45 KST (Asia/Seoul)
+Last Updated: 2026-10-07 01:30:55 KST (Asia/Seoul)
 Rationale: All four feature slices, actual cached CPU, frozen dependencies and cold fresh archive now pass. Real-song accuracy and listening remain unmeasured.
 What Improved: Full-mixture CQT, symbol-first display, corrections/reopen, playback synchronization, six-stem mixer/export and Korean PDF are implemented.
-What Remains Unsatisfactory: Real-song correctness and perceptual separation quality are unmeasured; publication remains.
-Next Actions: Publish the verified developer prerelease with explicit remaining limitations and verify remote asset digests.
+What Remains Unsatisfactory: Real-song correctness and perceptual separation quality are unmeasured; this is not a production-quality accuracy claim.
+Next Actions: Preserve published assets and collect user validation for a separately scoped 0.1.02.
 
 Score History:
+- 2026-10-07 01:30:55 KST: Provisional 45/100 after verified GitHub publication. Delivery complete, not a user score or musical-accuracy metric.
 - 2026-10-07 01:27:45 KST: Provisional 43/100 after cold fresh-archive proof. Not a user score or musical accuracy measurement.
 - 2026-10-06 20:10:00 KST: Provisional 38/100 after 357 warnings-as-errors tests, source self-test and nine-page PDF visual QA. Not an accuracy or user score.
 - 2026-10-05 09:33:10 KST: Provisional 15/100 after original approval and baseline inspection.
@@ -109,6 +110,8 @@ Score History:
 - 2026-10-05 20:58:09 KST: Provisional 28/100 after default CQT, source isolation, and symbol-only UI work. This is a delivery-progress estimate, not an accuracy metric or user score.
 
 ## Progress log
+
+- 2026-10-07 01:30:55 KST: Published https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.01 from f327015ebef2ef806de8d0a0cb64f1dbbe22db98. GitHub draft=false/prerelease=true and all three asset sizes/SHA256 match. No force push or old-release replacement. Delivery complete; remaining listening/accuracy/hardware limitations are explicit.
 
 - 2026-10-07 01:27:45 KST: Final ZIP 349399545 bytes verified: 5438 manifest hashes, 80 matching source/build inputs, native/font/license parity, no private paths/media/weights/development JIT caches, fresh EXE and cold CQT successful. SHA256 5F3C455044DC7132833B0CD55CEBAD01384FDB1AAD39A3E677B1F70B9ABAAD2F. Publish ZIP/checksums/independent receipt as an immutable developer prerelease; no runtime source changes remain.
 
