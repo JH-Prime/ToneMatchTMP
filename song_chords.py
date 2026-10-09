@@ -19,7 +19,49 @@ def _check_cancelled(cancel_requested):
         raise ChordAnalysisCancelled()
 
 
-def _cqt_magnitudes(audio, sample_rate, midi):
+def _estimate_tuning(samples, sample_rate, cancel_requested=None):
+    """앞·중간·끝 최대 12초의 일관된 피크만 튜닝 근거로 사용한다."""
+    import librosa
+    length = min(len(samples), sample_rate * 4)
+    if length < sample_rate // 4:
+        return 0.0, 'insufficient_tonal_evidence'
+    clips = []
+    for start in sorted({0, (len(samples) - length) // 2, len(samples) - length}):
+        _check_cancelled(cancel_requested)
+        clip = samples[start:start + length]
+        # 가장 강한 채널을 고르되 역상 채널을 더해서 지우지 않는다.
+        channel = int(np.argmax(np.sum(clip.astype(np.float64) ** 2, axis=0)))
+        mono = np.ascontiguousarray(clip[:, channel], dtype=np.float32)
+        if sample_rate > 22050:
+            mono = librosa.resample(mono, orig_sr=sample_rate, target_sr=22050)
+        clips.append(mono)
+    audio = np.concatenate(clips)
+    if np.max(np.abs(audio)) < 1e-5:
+        return 0.0, 'insufficient_tonal_evidence'
+    rate = min(sample_rate, 22050)
+    n_fft = min(8192, 2 ** int(math.log2(len(audio))))
+    pitches, magnitudes = librosa.piptrack(y=audio, sr=rate, n_fft=n_fft,
+                                         fmin=65, fmax=min(2000, rate * .45), threshold=.2)
+    strong = magnitudes > 0
+    if np.count_nonzero(strong) < 12:
+        return 0.0, 'insufficient_tonal_evidence'
+    strong &= magnitudes >= np.median(magnitudes[strong])
+    notes = 69 + 12 * np.log2(pitches[strong] / 440)
+    residual = (notes + .5) % 1 - .5
+    weights = magnitudes[strong].astype(np.float64)
+    histogram, _ = np.histogram(residual, bins=100, range=(-.5, .5), weights=weights)
+    center = (int(np.argmax(histogram)) + .5) / 100 - .5
+    delta = (residual - center + .5) % 1 - .5
+    consistent = np.abs(delta) <= .08
+    if float(np.sum(weights[consistent])) < .55 * float(np.sum(weights)):
+        return 0.0, 'diffuse_pitch_peaks'
+    offset = center + float(np.average(delta[consistent], weights=weights[consistent]))
+    cents = ((offset + .5) % 1 - .5) * 100
+    # 표준 튜닝 근처의 작은 측정 편차는 기존 CQT 격자를 유지한다.
+    return (0.0 if abs(cents) < 3 else round(cents, 2)), 'estimated'
+
+
+def _cqt_magnitudes(audio, sample_rate, midi, tuning_cents=0.0):
     """위상이 반대인 채널도 소실시키지 않는 실제 상수 Q 스펙트럼을 만든다."""
     import librosa
     # 최저음의 긴 필터와 재귀 다운샘플링에 필요한 길이를 보장한다.
@@ -28,7 +70,7 @@ def _cqt_magnitudes(audio, sample_rate, midi):
     spectrum = librosa.cqt(
         np.ascontiguousarray(padded.T, dtype=np.float32), sr=sample_rate,
         hop_length=512, fmin=frequency, n_bins=len(midi) * 3,
-        bins_per_octave=36, tuning=0, scale=False, sparsity=0.01,
+        bins_per_octave=36, tuning=tuning_cents * 36 / 1200, scale=False, sparsity=0.01,
     )
     return np.sqrt(np.mean(np.abs(spectrum) ** 2, axis=0))
 
@@ -67,6 +109,7 @@ def analyze_song_chords(
     windows = []
     active = 0
     input_rms = math.sqrt(float(np.einsum("ij,ij->", samples, samples, dtype=np.float64)) / samples.size)
+    tuning_cents, tuning_status = _estimate_tuning(samples, sample_rate, cancel_requested)
     for offset in range(0, len(starts), 10):
         _check_cancelled(cancel_requested)
         batch = starts[offset:offset + 10]
@@ -76,7 +119,7 @@ def analyze_song_chords(
         audio = samples[left:right]
         magnitude = None
         if np.max(np.abs(audio)) >= 1e-5:
-            magnitude = _pitch_profile(_cqt_magnitudes(audio, sample_rate, midi))
+            magnitude = _pitch_profile(_cqt_magnitudes(audio, sample_rate, midi, tuning_cents))
         for start in batch:
             _check_cancelled(cancel_requested)
             clip = samples[start:min(len(samples), start + window_frames)]
@@ -131,6 +174,8 @@ def analyze_song_chords(
             "score_semantics": "heuristic_evidence_not_accuracy_probability",
             "chord_template_count": len(CHORD_INTERVALS), "cqt_bins_per_octave": 36,
             "pitch_range_midi": [int(midi[0]), int(midi[-1])],
+            "tuning_cents": tuning_cents, "tuning_status": tuning_status,
+            "tuning_policy": "bounded_12s_pitch_peak_consensus_55pct_with_zero_fallback",
             "channel_policy": "channel_magnitude_rms_no_phase_cancellation",
             "temporal_policy": "locally_supported_candidates_with_transition_cost",
         },

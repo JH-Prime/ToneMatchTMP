@@ -16,6 +16,27 @@ def chord_audio(notes, duration=3.0, sample_rate=22050, amplitudes=None):
 
 
 class SongChordTests(unittest.TestCase):
+    def test_detuned_major_minor_and_sus_keep_their_harmonic_identity(self):
+        for notes, symbol in (([48, 52, 55], 'C'), ([45, 48, 52], 'Am'), ([50, 55, 57], 'Dsus4')):
+            for cents in (-45, -30, 30, 45):
+                with self.subTest(symbol=symbol, cents=cents):
+                    audio = chord_audio([note + cents / 100 for note in notes])
+                    result = analyze_song_chords(audio, 22050)
+                    longest = max(result['events'], key=lambda e: e['end_seconds'] - e['start_seconds'])
+                    self.assertEqual(longest['symbol'], symbol)
+                    self.assertAlmostEqual(result['diagnostics']['tuning_cents'], cents, delta=5)
+
+    def test_tuning_is_bounded_and_weak_evidence_falls_back(self):
+        from song_chords import _estimate_tuning
+        silent = np.zeros((22050 * 3, 2), np.float32)
+        cents, status = _estimate_tuning(silent, 22050)
+        self.assertEqual(cents, 0)
+        self.assertEqual(status, 'insufficient_tonal_evidence')
+        noise = np.random.default_rng(2).normal(0, .02, silent.shape).astype(np.float32)
+        cents, status = _estimate_tuning(noise, 22050)
+        self.assertEqual(cents, 0)
+        self.assertNotEqual(status, 'estimated')
+
     def test_major_minor_suspended_and_slash_chords(self):
         """기타 운지 없이 기본·서스펜디드·저음 전위 기호를 보존한다."""
         cases = [([48, 52, 55], "C"), ([45, 48, 52], "Am"),
