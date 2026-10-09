@@ -1,0 +1,41 @@
+{
+  "schema": "tonematch-qa/v1",
+  "app_version": "0.1.02",
+  "build_date": "2026-10-09",
+  "tested_at": "2026-10-09",
+  "status": "passed",
+  "scope": "Native Quad Cortex starting points and offline inventory, independent original-mixture chords and bounded CQT tuning.",
+  "checks": {
+    "initial_suite": {"tests": 374, "failures": 1, "reason": "Missing Korean docstrings, repaired and 16 developer tests passed"},
+    "tuning_regression": {"ok": true, "tests": 7, "detuned_cases": 12, "seconds": 68.358},
+    "mode_regression": {"ok": true, "tests": 5, "seconds": 15.553},
+    "actual_chords": {
+      "ok": true, "full_duration_seconds": 252.60988662131518,
+      "full_events": 64, "full_tonal_coverage": 0.1188, "full_elapsed_seconds": 11.715,
+      "excerpt_start": 30, "excerpt_end": 90, "excerpt_events": 28,
+      "excerpt_tonal_coverage": 0.2323, "excerpt_elapsed_seconds": 2.097,
+      "coverage_changed_from_v101": false, "source_unchanged": true,
+      "json_edit_reopen_html_pdf": true, "progress_monotonic": true, "cancellation": true
+    },
+    "source_suite": {"ok": true, "tests": 375, "seconds": 168.627, "warnings_as_errors": true},
+    "prebuild_suite": {"ok": true, "tests": 375, "seconds": 177.227, "warnings_as_errors": true},
+    "coros_compatibility": {"ok": true, "tests": 8, "seconds": 0.202, "optional_delay_omitted_on_older_firmware": true},
+    "synthetic_frontend_comparison": {"ok": true, "cases": 246, "fft_matches": 246, "cqt_matches": 246,
+      "fft_seconds": 8.7485302, "cqt_seconds": 36.1882322, "performance_note": "Concurrent with build tests, not a controlled performance comparison"},
+    "native_ui_visual": {"ok": true, "scope": "Synthetic chords-only chart and 689-entry catalog; no audio output"},
+    "html_browser_visual": {"ok": false, "reason": "Browser policy denied file URL; no workaround attempted. HTML generation and content assertions passed."},
+    "final_suite": {"ok": true, "tests": 376, "seconds": 174.624, "warnings_as_errors": true},
+    "frozen_self_test": {"ok": true, "music_workflow": true, "qc_catalog": true,
+      "qc_recipes": true, "chords_only_reopen": true, "cqt_detuned": true,
+      "cpp_abi": 2, "cpp_parity": true, "float32_parity": true},
+    "build_warnings": {"present": true, "scope": "Optional tensorboard/TBB and legacy hook imports; exercised runtime self-tests pass"},
+    "fresh_archive_verification": {"status": "external_release_gate", "required_before_publication": true,
+      "report_asset": "ToneMatchTMP-v0.1.02-ARCHIVE-VERIFICATION.json"}
+  },
+  "limitations": {
+    "qc_measured_model_matching": false, "qc_numeric_controls_verified": false,
+    "real_song_accuracy_measured": false, "separation_quality_improvement_measured": false,
+    "audible_output_tested": false, "physical_printing_tested": false,
+    "clean_machine_tested": false, "cuda_tested": false, "code_signed": false
+  }
+}

@@ -8,6 +8,7 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 | 버전 | 상태 | 범위 |
 |---|---|---|
+| `0.1.02` | 소스·EXE 검증 완료, 압축 배포 별도 gate | Quad Cortex 목록·내장 추천, AI 독립 코드 모드, CQT 튜닝 보정 |
 | `0.1.01` | 개발자 프리릴리스 검증 중 | 전체 음원 CQT 코드, 재생 연동·직접 수정, 6-stem 믹서·WAV, 16마디 PDF |
 | `0.0.13` | 서명되지 않은 CPU 포터블 개발자 프리릴리스 | 16마디 코드표, 수동 격자 보정, 이론 기타 운지 확대, 긴 타임라인 보존 |
 | `0.0.12` | 서명되지 않은 CPU 포터블 개발자 프리릴리스 | 41종 코드, 12종 음계·장조/자연단조 다이어토닉 사전, 12근음 건반 참고 |
@@ -22,6 +23,28 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 | `0.0.03` | 포터블 개발 프리뷰 빌드 완료 | 포터블 개발 ZIP, 한·영 handoff, 로그·빌드 이력, NumPy 코드/보이싱 분석(실험) |
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
+
+## v0.1.02 — 2026-10-09 KST
+
+Official inventory snapshot 2026-10-07: 689 entries, with native/capture/plugin/announced separation.
+Six curated native QC templates, selected CorOS filtering, no fabricated numeric control values.
+Independent original-mixture chord analysis bypasses AI; purpose-aware UI, loader, localization and HTML.
+Bounded tuning consensus corrects 12 controlled detuned C/Am/Dsus4 cases; no classifier threshold weakening.
+Room 335: 252.6099 seconds, 64 events, 0.1188 coverage, 11.715 seconds wall time.
+30–90 second excerpt: 28 events, 0.2323 coverage, 2.097 seconds. Coverage unchanged from v0.1.01.
+Progress/cancel, source preservation, JSON edit/reopen and HTML/PDF export passed.
+Real-song accuracy is unmeasured. Archive verification is a separate required release gate.
+Final warnings-as-errors suite: 376 tests passed in 174.624s. Eight catalog tests include
+all listed firmware/output routes; unavailable optional Digital Delay is omitted with an explanation.
+Synthetic comparison: all 246 primary labels retained by FFT and CQT, not a real-song accuracy test.
+Native visual check covered the silent synthetic chord-only chart and offline inventory.
+HTML content/export passed; browser visual check was blocked by the browser file-URL policy.
+Frozen windowed EXE self-test passed: real CQT, detuned CQT, QC catalog/recipes, chord-only
+decode/JSON reopen, edits, PCM reader, mixer export, PDF font and PortAudio loading.
+C++ ABI 2 / float32 parity passed. Optional-library build warnings are retained in the sanitized log.
+EXE SHA256: `D93F511D5C1C1651BE56AA36DE3237CE0127D8D293DA636AE9D346D62AA8F284`.
+The release must include `ToneMatchTMP-v0.1.02-ARCHIVE-VERIFICATION.json` with a successful
+fresh-extract run and matching ZIP digest; ZIP hashes are external to avoid self-referential manifests.
 
 ## 0.1.01 — Full-mixture CQT and music workflow
 

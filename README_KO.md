@@ -1,9 +1,27 @@
-# ToneMatch TMP 0.1.01
+# ToneMatch TMP 0.1.02
 
 권한 있는 로컬 오디오·영상 또는 Windows 녹음을 분석하는 비공식 Windows 도구입니다.
-전체 음원 코드표와 Fender Tone Master Pro용 시작점 톤 레시피 3개를 제공합니다.
-빌드 기준일: 2026-10-06 KST. 서명되지 않은 CPU 개발자 프리릴리스이며,
-검증 범위는 [QA 보고서](QA_REPORT_v0.1.01.json)와 [빌드 이력](BUILD_HISTORY.md)을 확인하세요.
+전체 음원 코드표와 Fender Tone Master Pro 또는 Quad Cortex용 시작점 톤 레시피 3개를 제공합니다.
+빌드 기준일: 2026-10-09 KST. 서명되지 않은 CPU 개발자 프리릴리스이며,
+검증 범위는 [QA 보고서](QA_REPORT_v0.1.02.json)와 [빌드 이력](BUILD_HISTORY.md)을 확인하세요.
+
+## 0.1.02 추가 사항
+
+- **코드만 분석**을 켜면 기타 분리·AI 다운로드·멀티이펙터 선택 없이 전체 음원을 분석합니다.
+- Quad Cortex와 장비의 CorOS를 선택하면 6개 내장 모델 시작점 중 3개를 추천합니다.
+  장비 기본값에서 시작하세요. 미검증 노브 수치를 만들거나 TMP 수치를 옮기지 않습니다.
+  구형 펌웨어는 목록의 이전 이름을 사용할 수 있으며, 없는 선택적 딜레이는 이유와 함께 제외합니다.
+- **QC 공식 모델 목록**에서 2026-10-07 [공식 목록](https://neuraldsp.com/device-list)을
+  오프라인 검색합니다. 내장 318, 공장 Capture 164, 플러그인 150, 미출시 57개입니다.
+  689개 목록 전체를 실측 매칭한다는 의미는 아니며, 라이선스 필요·미출시 항목은 기본 추천에서 제외됩니다.
+- CQT는 앞·중간·끝 최대 12초의 피크 합의로 전체 튜닝 편차를 보정하고 근거가 약하면 0으로 유지합니다.
+  ±30/45센트 합성 C·Am·Dsus4 12개 사례는 통과했지만 곡 중간 튜닝 변화는 추적하지 않습니다.
+- Room 335의 코드 검출 비율은 전체 11.88%, 30–90초 구간 23.23%로 이전과 같습니다.
+  **이는 정확도가 아닙니다.** 실제 곡 정답률 상승은 검증하지 못했습니다.
+- QC·코드 전용 결과의 JSON 재열기·언어 변경·HTML 내보내기를 지원합니다.
+
+문제가 생기면 보관한 v0.1.01 폴더로 돌아갈 수 있습니다. 새 결과 형식은 구버전에서 열리지
+않을 수 있으므로 이전 결과 원본을 보존하고 새 이름으로 저장하세요.
 
 ## 이번 버전
 
@@ -24,7 +42,7 @@
 ## 설치와 분석
 
 1. 개발자 ZIP을 새 폴더에 **전부 압축 해제**하고 SHA-256을 확인합니다.
-   `ToneMatchTMP-v0.1.01.exe`를 실행합니다. EXE만 옮기지 마세요.
+   `ToneMatchTMP-v0.1.02.exe`를 실행합니다. EXE만 옮기지 마세요.
 2. `톤 분석`에서 로컬 오디오/영상 또는 권한 있는 PC 재생음 녹음을 선택합니다.
 3. 시작/끝 초를 정합니다. 최소 3초, 최대 20분이며 끝 `0`은 파일 끝까지입니다.
 4. 풀믹스는 AI 기타 분리, 이미 기타만 있는 파일은 분리 생략을 선택합니다.
@@ -107,7 +125,7 @@ py -3.12 -m venv ..\.venv
 & ..\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 & ..\.venv\Scripts\python.exe tools\build_native.py --zig C:\Tools\zig-0.15.2\zig.exe
 & ..\.venv\Scripts\python.exe -W error -m unittest discover -s tests -v
-& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.1.01.json
+& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.1.02.json
 & .\build.ps1 -ZigPath C:\Tools\zig-0.15.2\zig.exe
 ```
 
@@ -119,9 +137,10 @@ CUDA 소스 개발은 `enable_cuda.ps1`와 별도 호환 GPU 환경을 사용하
 실제로 스피커를 울리거나 AI 모델을 실행하지 않습니다.
 실제 캐시 모델 검사는 `--stem-self-test-source`와 `--stem-self-test-output` CLI를 사용합니다.
 
-현재 버전은 0.1.01, 게시 후 버그 수정은 0.1.02부터 진행하며 기존 릴리스를 교체하지 않습니다.
+현재 버전은 0.1.02, 게시 후 버그 수정은 0.1.03부터 진행하며 기존 릴리스를 교체하지 않습니다.
 인수인계는 [DEVELOPER_HANDOFF_KO_EN.md](DEVELOPER_HANDOFF_KO_EN.md),
 알고리즘 근거는 [TRANSCRIPTION_RESEARCH_KO.md](TRANSCRIPTION_RESEARCH_KO.md)를 확인하세요.
 
 앱 소스는 MIT. 제3자 라이선스는 `THIRD_PARTY_NOTICES.txt`·`licenses/`에 있습니다.
-Fender/Tone Master는 각 권리자의 상표이며 이 프로젝트는 Fender와 제휴·승인 관계가 없습니다.
+Fender/Tone Master/Neural DSP/Quad Cortex는 각 권리자의 상표이며
+이 프로젝트는 Fender 또는 Neural DSP와 제휴·승인 관계가 없습니다.

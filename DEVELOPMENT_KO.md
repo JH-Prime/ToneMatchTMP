@@ -1,6 +1,20 @@
-# ToneMatch TMP 개발자 안내서 · 0.1.01
+# ToneMatch TMP 개발자 안내서 · 0.1.02
 
-## 현행 0.1.01 계약 (2026-10-06 KST)
+## 현행 0.1.02 계약 (2026-10-09 KST)
+
+이 절과 README·QA_REPORT_v0.1.02.json이 아래 역사 기록보다 우선합니다.
+quad_cortex.py는 6개 휴리스틱 시작점을 공식 JSON의 native/CorOS 조건으로 필터링합니다.
+qc_catalog_ui.py는 전체 목록을 검색하지만 Capture·plugin·announced를 추천에 혼합하지 않습니다.
+공식 목록은 파라미터 범위를 제공하지 않으므로 QC 블록 parameters는 비어 있고 기본값 확인 안내를 표시합니다.
+import_quad_cortex.py의 --retrieved 날짜는 검토자가 사용자 시간대 기준으로 명시합니다.
+engine.analyze_file의 analysis_kind='chords'는 decode → 원본 CQT만 수행합니다.
+결과의 features/recipes는 비어 있고 목적별 loader·화면·HTML이 이를 처리합니다.
+song_chords.py의 튜닝 추정은 최대 12초만 사용하며 합의가 부족하면 0 보정을 유지합니다.
+기존 C++ ABI 2, 분리 가중치, 오디오 재생·믹서·PDF 구현은 변경하지 않았습니다.
+배포에는 resources/quad_cortex_catalog.json 및 새 모듈을 포함하고 music_workflow 자체 진단으로 검사합니다.
+실제 곡 정확도·실청·실제 장비 노브 값은 미검증입니다. 테스트 통과를 정확도 주장으로 쓰지 마세요.
+
+## 이전 0.1.01 계약 (2026-10-06 KST)
 
 이 절과 README·QA_REPORT_v0.1.01.json이 현행 기준입니다. 아래 0.0.x 절은
 이전 구현의 역사 자료이며, 충돌할 때 이 절을 우선합니다.

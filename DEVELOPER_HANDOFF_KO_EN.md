@@ -1,4 +1,21 @@
-# ToneMatch TMP v0.1.01 — 개발 인수인계 / Developer Handoff
+# ToneMatch TMP v0.1.02 — 개발 인수인계 / Developer Handoff
+
+## Current v0.1.02 / 현행 — 2026-10-09 KST
+
+Use README, QA_REPORT_v0.1.02.json and the newest BUILD_HISTORY entry for current evidence.
+Below v0.1.01/v0.0.x facts are historical. Do not overwrite published tags or assets.
+QC inventory: 689 official factual entries (318 native, 164 capture, 150 plugin, 57 announced).
+Only eligible native devices appear in six curated manual-setup templates; never invent QC knob values.
+Chords-only bypasses AI and tone extraction; preserve empty features/recipes across reopening/localization.
+Tuning repair passes 12 controlled detuned cases. Room 335 coverage is unchanged, not measured accuracy.
+Verify with warnings-as-errors unittest discovery, build.ps1, frozen music_workflow and a fresh ZIP extraction.
+tools/verify_qc_chords.py accepts an authorized private source and emits only aggregate diagnostics.
+No user audio or weights belong in Git or release assets. Existing C++ ABI 2 is unchanged.
+Next published repair version is 0.1.03. Roll back by reopening the preserved v0.1.01 portable folder;
+keep old analysis JSONs because new purpose/device types need v0.1.02.
+
+현행 근거는 v0.1.02 QA와 최신 빌드 이력입니다. 아래 이전 릴리스의 검증을 새 검증으로 인용하지 마세요.
+코드 정확도·장비별 노브 값·분리 품질 개선은 입증되지 않았으며, 신규 UI와 경로의 동작을 검증합니다.
 
 ## Current handoff / 현행 인수인계 — 2026-10-06 KST
 
