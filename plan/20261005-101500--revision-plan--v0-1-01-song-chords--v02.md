@@ -3,7 +3,7 @@
 Plan Type: revision-plan
 Workstream: Full-song chord analysis, playback, corrections, stem mixer, and printable sixteen-bar charts
 Version: 02
-Status: Delivered as verified developer prerelease v0.1.01
+Status: Delivered as verified developer prerelease v0.1.01; superseded as active work by plan/20261007-200507--work-plan--v0-1-02-quad-cortex--v01.md
 Created: 2026-10-05 10:15:00 KST (Asia/Seoul)
 Last Updated: 2026-10-07 01:30:55 KST (Asia/Seoul)
 Supersedes: plan/20261005-093310--work-plan--v0-1-01-music-workflow--v01.md
