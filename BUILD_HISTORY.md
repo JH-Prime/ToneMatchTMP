@@ -8,7 +8,7 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 | 버전 | 상태 | 범위 |
 |---|---|---|
-| `0.1.02` | 소스·EXE 검증 완료, 압축 배포 별도 gate | Quad Cortex 목록·내장 추천, AI 독립 코드 모드, CQT 튜닝 보정 |
+| `0.1.02` | 검증 완료·개발자 프리릴리스 게시 | Quad Cortex 목록·내장 추천, AI 독립 코드 모드, CQT 튜닝 보정 |
 | `0.1.01` | 개발자 프리릴리스 검증 중 | 전체 음원 CQT 코드, 재생 연동·직접 수정, 6-stem 믹서·WAV, 16마디 PDF |
 | `0.0.13` | 서명되지 않은 CPU 포터블 개발자 프리릴리스 | 16마디 코드표, 수동 격자 보정, 이론 기타 운지 확대, 긴 타임라인 보존 |
 | `0.0.12` | 서명되지 않은 CPU 포터블 개발자 프리릴리스 | 41종 코드, 12종 음계·장조/자연단조 다이어토닉 사전, 12근음 건반 참고 |
@@ -23,6 +23,25 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 | `0.0.03` | 포터블 개발 프리뷰 빌드 완료 | 포터블 개발 ZIP, 한·영 handoff, 로그·빌드 이력, NumPy 코드/보이싱 분석(실험) |
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
+
+## v0.1.02 publication record — 2026-10-09 KST
+
+Published 15:27:07 KST; independently read back and verified at 20:59:10 KST.
+Release: https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.02
+Tag commit: `96b579d2c670c9929b1e1a898b4e7f5026ac2000`. Unsigned developer prerelease.
+The final ZIP was freshly extracted: 5448 manifest entries and 88 source inputs matched;
+cold EXE music workflow and C++ parity passed. GitHub sizes and SHA-256 digests match all three local assets.
+
+| Asset | Bytes | SHA-256 |
+|---|---:|---|
+| `ToneMatchTMP-v0.1.02-Windows-x64-Portable-Dev.zip` | 349494192 | `51813FE64515E5B390EB9E3BEDD6BF732C90175EFA197ADAF6F2036833CF960A` |
+| `ToneMatchTMP-v0.1.02-SHA256SUMS.txt` | 468 | `AF02F251A0E717F3B0879896BEAF6C9C8ED1455805CA85EA6A62F7697754EE92` |
+| `ToneMatchTMP-v0.1.02-ARCHIVE-VERIFICATION.json` | 542 | `4890FA39F8DC33BEEDF82BF8C1F0BC07715CA7CD0075AF8F974C65BCB247BCED` |
+
+This post-publication record is main-only: the published tag and packaged documentation stay immutable.
+The lost local process-session handle was not treated as an upload failure; public release state was
+inspected before any retry. No duplicate upload or published-asset replacement occurred.
+Known accuracy, device-control and environment limitations remain as recorded in the release QA.
 
 ## v0.1.02 — 2026-10-09 KST
 
