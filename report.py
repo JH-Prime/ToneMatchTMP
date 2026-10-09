@@ -170,6 +170,16 @@ def save_html(result: dict, path: str | Path) -> None:
     font_family = '"Arial Narrow",Arial,sans-serif' if language == "en" else '"Malgun Gothic","Noto Sans KR",sans-serif'
     source = result["source"]
     features = result["features"]
+    chord_only = result.get('analysis_kind') == 'chords'
+    subtitle = tr('analysis.chords', language) if chord_only else (
+        'Quad Cortex · ' + ('native starting points' if language == 'en' else '내장 모델 추천')
+        if result.get('device_id') == 'quad_cortex' else _rt('subtitle', language))
+    footer = _rt('footer', language)
+    if result.get('device_id') == 'quad_cortex':
+        footer = 'Quad Cortex / Neural DSP: respective trademarks. Unofficial, unaffiliated manual-setup aid.'
+    if chord_only:
+        footer = ('코드는 오디오 기반 추정이며 근거·후보를 확인하고 직접 수정할 수 있습니다.'
+                  if language == 'ko' else 'Chords are audio estimates. Review evidence and candidates, and edit as needed.')
     recipes_html = []
     for rank, recipe in enumerate(result["recipes"], start=1):
         blocks_html = []
@@ -223,12 +233,22 @@ def save_html(result: dict, path: str | Path) -> None:
             (tr("feature.contamination", language), "mix_contamination"),
             (tr("feature.confidence", language), "analysis_confidence"),
         ]
+        if key in features
     )
     diagnostics = "".join(
         f"<tr><th>{html.escape(label)}</th><td>{html.escape(value)}</td></tr>"
-        for label, value in human_feature_rows(features, language)
+        for label, value in (human_feature_rows(features, language) if features else ())
     )
     isolation_text = _rt("isolated", language) if result.get("source_separation", {}).get("used") else _rt("skipped", language)
+    device_meta = '' if chord_only else f"{_rt('firmware', language)} {html.escape(result['target_firmware'])}<br>"
+    tone_rows = '' if chord_only else (
+        f"<tr><th>{_rt('input', language)}</th><td>{html.escape(result['input_profile']['pickup_label'])}</td></tr>"
+        f"<tr><th>{_rt('output', language)}</th><td>{html.escape(result['input_profile']['output_mode_label'])}</td></tr>"
+        f"<tr><th>{_rt('isolation', language)}</th><td>{html.escape(isolation_text)}</td></tr>")
+    fingerprint_card = '' if chord_only else f'<section class="card"><h2>{_rt("fingerprint", language)}</h2>{feature_bars}</section>'
+    steps_card = '' if chord_only else f'<section class="card"><h2>{_rt("steps", language)}</h2><ol>{steps}</ol></section>'
+    diagnostics_card = '' if chord_only else f'<section class="card"><h2>{_rt("diagnostics", language)}</h2><table>{diagnostics}</table></section>'
+    grid_style = ' style="grid-template-columns:1fr"' if chord_only else ''
     reference_compare_html = _reference_compare_html(result, language)
     voicing_analysis = effective_voicing(result)
     voicing_analysis.setdefault("source_start_seconds", source.get("start_seconds", 0.0))
@@ -304,19 +324,19 @@ table{{width:100%;border-collapse:collapse}} th,td{{padding:7px 9px;border-botto
 </style>
 </head>
 <body><main class="wrap">
-<header><div><div class="eyebrow">Unofficial Tone Recipe</div><h1>ToneMatch TMP</h1><p>{_rt('subtitle', language)}</p></div><div class="meta">{_rt('firmware', language)} {html.escape(result['target_firmware'])}<br>{html.escape(result['model_guide'])}</div></header>
-<div class="grid">
-  <section class="card"><h2>{_rt('source', language)}</h2><table><tr><th>{_rt('file', language)}</th><td>{html.escape(source['file_name'])}</td></tr><tr><th>{_rt('range', language)}</th><td>{source['start_seconds']:.1f}s – {source['end_seconds']:.1f}s</td></tr>{reference_row}<tr><th>{_rt('input', language)}</th><td>{html.escape(result['input_profile']['pickup_label'])}</td></tr><tr><th>{_rt('output', language)}</th><td>{html.escape(result['input_profile']['output_mode_label'])}</td></tr><tr><th>{_rt('isolation', language)}</th><td>{html.escape(isolation_text)}</td></tr></table></section>
-  <section class="card"><h2>{_rt('fingerprint', language)}</h2>{feature_bars}</section>
+<header><div><div class="eyebrow">Unofficial Audio Analysis</div><h1>ToneMatch TMP</h1><p>{html.escape(subtitle)}</p></div><div class="meta">{device_meta}{html.escape(result['model_guide'])}</div></header>
+<div class="grid"{grid_style}>
+  <section class="card"><h2>{_rt('source', language)}</h2><table><tr><th>{_rt('file', language)}</th><td>{html.escape(source['file_name'])}</td></tr><tr><th>{_rt('range', language)}</th><td>{source['start_seconds']:.1f}s – {source['end_seconds']:.1f}s</td></tr>{reference_row}{tone_rows}</table></section>
+  {fingerprint_card}
 </div>
 {reference_compare_html}
 {''.join(recipes_html)}
 <section class="card recipe"><div class="rank">{tr('ui.voicing_tab', language)}</div><h2>{tr('ui.voicing_chord', language)}</h2>{voicing_context}<table><thead><tr><th>{tr('ui.voicing_time', language)}</th><th>{tr('ui.voicing_chord', language)}</th></tr></thead><tbody>{voicing_body}</tbody></table><p class="correction">{tr('ui.voicing_limit', language)}</p></section>
-<div class="grid">
+<div class="grid"{grid_style}>
   <section class="card warning"><h2>{_rt('warnings', language)}</h2><ul>{warnings}</ul></section>
-  <section class="card"><h2>{_rt('steps', language)}</h2><ol>{steps}</ol></section>
+  {steps_card}
 </div>
-<section class="card"><h2>{_rt('diagnostics', language)}</h2><table>{diagnostics}</table></section>
-<footer>{_rt('footer', language)}</footer>
+{diagnostics_card}
+<footer>{html.escape(footer)}</footer>
 </main></body></html>"""
     Path(path).write_text(document, encoding="utf-8")

@@ -65,6 +65,7 @@ class DeveloperModeTests(unittest.TestCase):
         """배포 소스의 모든 함수가 개발자에게 보이는 한글 설명을 갖는지 검사한다."""
         korean = re.compile(r"[가-힣]")
         source_files = (
+            "quad_cortex.py", "qc_catalog_ui.py", "tools/import_quad_cortex.py",
             "app.py",
             "catalog.py",
             "debug_info.py",

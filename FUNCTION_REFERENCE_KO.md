@@ -1,16 +1,53 @@
-# ToneMatch TMP 0.1.01 함수 설명서
+# ToneMatch TMP 0.1.02 함수 설명서
 
 이 문서는 배포 소스의 모든 함수와 한국어 docstring을 자동으로 모은 색인입니다.
 앱의 `개발자 옵션`에서는 처리 순서 블록을 클릭해 같은 함수의 실제 소스와 원본 줄 번호를 볼 수 있습니다.
+
+## `quad_cortex.py`
+
+| 줄 | 함수 | 설명 |
+|---:|---|---|
+| 25 | `load_catalog` | 소스·포터블 실행 위치에서 출처가 포함된 공식 목록을 읽는다. |
+| 34 | `validate_firmware` | CorOS 버전 형식을 검사하고 비교 가능한 세 정수로 반환한다. |
+| 41 | `eligible_native` | 해당 펌웨어의 내장 장치만 추천 대상으로 허용한다. |
+| 48 | `instructions` | 실측하지 않은 노브 값을 꾸미지 않고 수동 적용 안내를 반환한다. |
+| 61 | `recipes` | 네이티브 모델과 출력 경로에 맞는 휴리스틱 시작점 세 개를 고른다. |
+
+## `qc_catalog_ui.py`
+
+| 줄 | 함수 | 설명 |
+|---:|---|---|
+| 9 | `CatalogWindow.__init__` | 네트워크 연결 없이 검색 가능한 모델·라이선스 목록 창을 만든다. |
+| 55 | `CatalogWindow.refresh` | 검색어에 맞는 모델만 표시하고 전체 대비 개수를 갱신한다. |
+| 68 | `CatalogWindow._select` | 선택 항목의 변경 이력과 공식 출처를 별도로 표시한다. |
+
+## `tools/import_quad_cortex.py`
+
+| 줄 | 함수 | 설명 |
+|---:|---|---|
+| 17 | `_Tables.__init__` | 공식 표의 셀과 구역 이름만 수집하는 파서를 초기화한다. |
+| 27 | `_Tables.handle_starttag` | 표·행·셀의 시작을 추적한다. |
+| 38 | `_Tables.handle_data` | 현재 셀 안의 텍스트만 모은다. |
+| 43 | `_Tables.handle_endtag` | 완성된 셀과 행을 정리하고 표를 보관한다. |
+| 58 | `parse_device_list` | 공식 목록을 검증하여 네이티브·캡처·플러그인·미출시 항목으로 나눈다. |
+
+## `tools/verify_qc_chords.py`
+
+| 줄 | 함수 | 설명 |
+|---:|---|---|
+| 22 | `digest` | 원본 보존 여부만 비교하며 해시 자체는 보고서에 공개하지 않는다. |
+| 28 | `verify` | 전체 곡·발췌·실제 취소와 저장 호환성을 검사한다. |
+| 62 | `verify.<local>.progress` | 첫 CQT 진행 알림 뒤 취소를 요청한다. |
 
 ## `song_chords.py`
 
 | 줄 | 함수 | 설명 |
 |---:|---|---|
 | 16 | `_check_cancelled` | 작은 분석 작업 사이에서 취소를 전달한다. |
-| 22 | `_cqt_magnitudes` | 위상이 반대인 채널도 소실시키지 않는 실제 상수 Q 스펙트럼을 만든다. |
-| 36 | `_pitch_profile` | 국소 잡음 바닥을 낮추되 작은 구성음을 평균 문턱으로 삭제하지 않는다. |
-| 46 | `analyze_song_chords` | 최대 20분 원본 PCM을 겹치는 구간으로 처리하고 근거·대안을 남긴다. |
+| 22 | `_estimate_tuning` | 앞·중간·끝 최대 12초의 일관된 피크만 튜닝 근거로 사용한다. |
+| 64 | `_cqt_magnitudes` | 위상이 반대인 채널도 소실시키지 않는 실제 상수 Q 스펙트럼을 만든다. |
+| 78 | `_pitch_profile` | 국소 잡음 바닥을 낮추되 작은 구성음을 평균 문턱으로 삭제하지 않는다. |
+| 88 | `analyze_song_chords` | 최대 20분 원본 PCM을 겹치는 구간으로 처리하고 근거·대안을 남긴다. |
 
 ## `playback.py`
 
@@ -158,18 +195,20 @@
 
 | 줄 | 함수 | 설명 |
 |---:|---|---|
-| 18 | `run_music_self_test` | CQT·수정·파일 기반 믹싱·한글 PDF·PortAudio 로딩을 실제 실행한다. |
+| 19 | `run_music_self_test` | CQT·수정·파일 기반 믹싱·한글 PDF·PortAudio 로딩을 실제 실행한다. |
 
 ## `tests/test_song_chords.py`
 
 | 줄 | 함수 | 설명 |
 |---:|---|---|
 | 9 | `chord_audio` | 옥타브·상대 음량을 지정한 결정론적 화음 PCM을 만든다. |
-| 19 | `SongChordTests.test_major_minor_suspended_and_slash_chords` | 기타 운지 없이 기본·서스펜디드·저음 전위 기호를 보존한다. |
-| 32 | `SongChordTests.test_identical_pitch_collections_keep_alternative_interpretations` | C6와 Am7의 구성음이 같아도 하나를 유일한 정답으로 표시하지 않는다. |
-| 42 | `SongChordTests.test_silence_noise_and_single_note_do_not_fabricate_chords` | 무음·비주기 잡음·단음에서 화음을 만들어 내지 않는다. |
-| 51 | `SongChordTests.test_stereo_antiphase_and_quiet_defining_tone` | 역상 채널을 합쳐 지우거나 평균보다 작은 장3도를 버리지 않는다. |
-| 58 | `SongChordTests.test_progress_cancellation_and_input_bounds` | 분할 처리의 진행률·취소와 유한 입력 경계를 검사한다. |
+| 19 | `SongChordTests.test_detuned_major_minor_and_sus_keep_their_harmonic_identity` | 설명 누락 |
+| 29 | `SongChordTests.test_tuning_is_bounded_and_weak_evidence_falls_back` | 설명 누락 |
+| 40 | `SongChordTests.test_major_minor_suspended_and_slash_chords` | 기타 운지 없이 기본·서스펜디드·저음 전위 기호를 보존한다. |
+| 53 | `SongChordTests.test_identical_pitch_collections_keep_alternative_interpretations` | C6와 Am7의 구성음이 같아도 하나를 유일한 정답으로 표시하지 않는다. |
+| 63 | `SongChordTests.test_silence_noise_and_single_note_do_not_fabricate_chords` | 무음·비주기 잡음·단음에서 화음을 만들어 내지 않는다. |
+| 72 | `SongChordTests.test_stereo_antiphase_and_quiet_defining_tone` | 역상 채널을 합쳐 지우거나 평균보다 작은 장3도를 버리지 않는다. |
+| 79 | `SongChordTests.test_progress_cancellation_and_input_bounds` | 분할 처리의 진행률·취소와 유한 입력 경계를 검사한다. |
 
 ## `tests/test_playback.py`
 
@@ -300,179 +339,180 @@
 | 176 | `_input_method_label` | 입력 방법의 안정적인 코드에 대응하는 언어별 화면 라벨을 만든다. |
 | 181 | `_input_method_code` | 한국어 또는 영어 입력 방법 라벨을 안정적인 코드로 되돌린다. |
 | 192 | `ToneMatchApp.__init__` | 영구 상태를 준비하고 전체 Tkinter 화면과 이벤트 루프를 구성한다. |
-| 301 | `ToneMatchApp.ui_font` | 현재 언어에 맞춰 사용자가 지정한 기본 UI 글꼴을 반환한다. |
-| 305 | `ToneMatchApp._load_settings` | 이전 실행의 언어·장치·연산 백엔드 선택을 읽되 손상된 파일은 무시한다. |
-| 320 | `ToneMatchApp._save_settings` | 다음 실행에서도 유지할 언어·장치·연산 백엔드 선택을 작은 JSON으로 저장한다. |
-| 332 | `ToneMatchApp._configure_style` | 현재 언어 글꼴과 어두운 색상표를 모든 공통 위젯 스타일에 적용한다. |
-| 372 | `ToneMatchApp._panel` | 공통 배경과 여백을 가진 카드형 패널을 만들어 즉시 배치한다. |
-| 379 | `ToneMatchApp._field_label` | 입력 필드 위의 작은 설명 라벨을 지정한 그리드 위치에 배치한다. |
-| 383 | `ToneMatchApp._sync_left_scroll_region` | 입력 내용이 짧아져도 빈 영역을 스크롤하지 않도록 범위와 현재 위치를 제한한다. |
-| 395 | `ToneMatchApp._resize_left_scroll_content` | 창 너비가 바뀌어도 입력 카드 내부 프레임이 캔버스 폭을 정확히 채우게 한다. |
-| 401 | `ToneMatchApp._refresh_status_text` | 긴 상태 메시지를 고정 높이의 읽기 전용 스크롤 영역에 표시한다. |
-| 409 | `ToneMatchApp._resize_result_labels` | 긴 결과 제목과 요약을 실제 결과 패널 너비에 맞춰 줄바꿈한다. |
-| 415 | `ToneMatchApp._enable_left_mousewheel` | 포인터가 입력 카드 위에 있을 때 휠을 해당 세로 스크롤에 연결한다. |
-| 419 | `ToneMatchApp._disable_left_mousewheel` | 포인터가 입력 카드를 벗어나면 다른 화면의 휠 동작을 방해하지 않게 연결을 푼다. |
-| 423 | `ToneMatchApp._scroll_left_panel` | Windows 마우스 휠 회전량을 입력 카드의 세로 이동 단위로 변환한다. |
-| 428 | `ToneMatchApp._build_ui` | 입력·결과·개발자·변경 기록과 하단 상태를 현재 언어로 구성한다. |
-| 684 | `ToneMatchApp._build_voicing_tab` | 16마디 악보형 보기와 기존 전체 근거 타임라인을 같은 분석 탭에 만든다. |
-| 790 | `ToneMatchApp._resize_chart` | 네 마디 열은 유지하고 좁은 화면의 설명 줄바꿈과 종이 폭을 다시 계산한다. |
-| 797 | `ToneMatchApp._toggle_chart_settings` | 좁은 창의 코드표 높이를 확보하면서 필요할 때만 수동 마디 설정을 펼친다. |
-| 808 | `ToneMatchApp._scroll_chart` | 악보 위의 휠만 해당 세로 스크롤로 전달해 다른 입력 패널과 충돌하지 않게 한다. |
-| 820 | `ToneMatchApp._apply_chart_settings` | 입력한 일정 템포·마디당 박 수·첫 마디 위치를 검증한 뒤 음원 재분석 없이 재배치한다. |
-| 855 | `ToneMatchApp._previous_chart_page` | 16마디씩 이전 묶음으로 이동하고 세로 위치를 맨 위로 돌린다. |
-| 861 | `ToneMatchApp._next_chart_page` | 16마디씩 다음 묶음으로 이동하되 마지막 페이지를 넘지 않는다. |
-| 867 | `ToneMatchApp._show_chart_bar_details` | 코드표 아래의 해당 근거·후보로 이동하고 동일한 작업 화면을 유지한다. |
-| 875 | `ToneMatchApp._draw_chart_shape` | 이론상 후보의 6현·프렛·개방현·뮤트를 그리고 추정하지 않은 손가락 번호는 생략한다. |
-| 903 | `ToneMatchApp._draw_chart_page` | 모든 코드 변화를 생략하지 않는 네 열 악보와 출처·미확정·이론 운지 안내를 그린다. |
-| 998 | `ToneMatchApp._can_play_audio` | 녹음·AI·장치 진단과 원본 재생이 장치를 동시에 잡지 않게 한다. |
-| 1007 | `ToneMatchApp._open_chord_editor` | 현재 마디의 이벤트를 편집하며 자동 추정과 사용자의 입력을 분리한다. |
-| 1020 | `ToneMatchApp._apply_chord_edit` | 검증된 수정 지도만 반영하고 제한된 되돌리기 이력을 보존한다. |
-| 1030 | `ToneMatchApp._undo_chord_edit` | 원본 분석은 건드리지 않고 가장 최근 수정 지도만 복원한다. |
-| 1037 | `ToneMatchApp._open_result` | 검증을 마친 로컬 결과만 열고 이전 오디오 연결과 되돌리기 이력은 지운다. |
-| 1054 | `ToneMatchApp._link_playback_source` | 사용자가 직접 고른 원본만 재생 구간에 연결하고 자동 재생하지 않는다. |
-| 1066 | `ToneMatchApp._suspend_playback` | 장치 작업 진입 전에 재생을 멈추고 남은 출력의 종료 여부를 반환한다. |
-| 1074 | `ToneMatchApp._open_mixer` | 코드표와 별도 창에서 악기별 레벨과 WAV 저장을 제공한다. |
-| 1094 | `ToneMatchApp._can_start_mixer` | 믹서 자신의 재생은 유지하되 다른 장치·모델 작업과 충돌하지 않게 한다. |
-| 1100 | `ToneMatchApp._select_chart_bar` | 마디를 선택하고 원본 오프셋을 중복 더하지 않은 위치로 탐색한다. |
-| 1109 | `ToneMatchApp._step_chart_bar` | 키보드 좌우로 마디를 선택해 마우스 없이 탐색·반복할 수 있게 한다. |
-| 1120 | `ToneMatchApp._follow_playback` | 재생 중 현재 마디와 페이지를 샘플 기반 위치에서 찾는다. |
-| 1139 | `ToneMatchApp._highlight_chart_bars` | 코드 글자는 보존하고 테두리·태그로 선택과 재생 마디를 구분한다. |
-| 1156 | `ToneMatchApp._render_chord_chart` | 분석 이벤트는 변경하지 않고 수동 마디 설정에 따른 별도 화면 모델을 만든다. |
-| 1179 | `ToneMatchApp._build_harmony_reference_tab` | 음원 분석과 분리된 코드·스케일 이론 사전을 스크롤 가능한 상위 탭에 만든다. |
-| 1197 | `ToneMatchApp._build_harmony_reference_tab.<local>.label` | 가변 폭의 이론 설명 라벨을 만들고 창 너비에 맞춰 줄바꿈하도록 등록한다. |
-| 1258 | `ToneMatchApp._populate_harmony_types` | 현재 분류의 이론 목록을 번역해 채우되 언어 전환 시 선택 코드를 보존한다. |
-| 1271 | `ToneMatchApp._change_harmony_root` | 사전 기준음을 바꾸고 화음·음계 및 건반 표시를 함께 갱신한다. |
-| 1276 | `ToneMatchApp._change_harmony_category` | 코드·스케일·다이어토닉 분류를 전환하고 각각의 이전 선택을 복원한다. |
-| 1281 | `ToneMatchApp._change_harmony_type` | 종류 선택을 언어와 무관한 키로 저장하고 이론 정보를 갱신한다. |
-| 1286 | `ToneMatchApp._change_harmony_size` | 다이어토닉 건반 예시를 삼화음 또는 7화음으로 전환한다. |
-| 1291 | `ToneMatchApp._select_harmony_degree` | 선택한 다이어토닉 도수의 화음을 표시하되 분석 결과는 변경하지 않는다. |
-| 1298 | `ToneMatchApp._refresh_harmony_reference` | 사전 데이터만 읽어 이론 설명과 건반을 갱신하며 음원 분석을 호출하지 않는다. |
-| 1319 | `ToneMatchApp._show_harmony_degree` | 다이어토닉 행의 이론적 철자를 유지하며 선택 화음의 표시 데이터를 만든다. |
-| 1327 | `ToneMatchApp._display_harmony_tones` | 음정과 구성음을 실제 검출 결과가 아닌 이론 건반 예시로 표시한다. |
-| 1336 | `ToneMatchApp._draw_harmony_keyboard` | 선택 화음·스케일의 실제 음정 위치만 두세 옥타브 건반에 색칠한다. |
-| 1366 | `ToneMatchApp._resize_harmony_content` | 사전 내용 폭과 설명 줄바꿈을 실제 탭 폭에 맞춰 가로 넘침을 막는다. |
-| 1373 | `ToneMatchApp._sync_harmony_scroll_region` | 작은 창에서도 이론 설명과 다이어토닉 표 전체를 세로 스크롤로 제공한다. |
-| 1379 | `ToneMatchApp._bind_harmony_mousewheel` | 사전 내부 컨트롤에서만 휠을 연결해 다른 작업 탭의 스크롤을 보존한다. |
-| 1385 | `ToneMatchApp._scroll_harmony_reference` | 사전 페이지의 세로 위치만 바꾸고 콤보박스 선택은 휠로 변경하지 않는다. |
-| 1390 | `ToneMatchApp._build_stem_removal_tab` | 원본과 분리된 악기 선택을 받는 독립적인 스크롤 탭을 만든다. |
-| 1539 | `ToneMatchApp._sync_stem_scroll_region` | 내용 전체와 현재 뷰포트 중 큰 높이를 악기 제거 탭 스크롤 범위로 사용한다. |
-| 1547 | `ToneMatchApp._resize_stem_scroll_content` | 창 폭이 달라져도 악기 제거 폼이 탭의 가로 공간을 채우게 한다. |
-| 1557 | `ToneMatchApp._bind_stem_mousewheel` | 캔버스 안의 자식 위젯 위에서도 폼을 스크롤할 수 있게 연결한다. |
-| 1563 | `ToneMatchApp._refresh_stem_status_text` | 긴 단계 안내가 고정 하단 영역의 높이를 늘리지 않게 표시한다. |
-| 1573 | `ToneMatchApp._scroll_stem_tab` | 악기 제거 탭 위의 Windows 마우스 휠을 해당 캔버스에만 적용한다. |
-| 1579 | `ToneMatchApp._build_debug_tab` | 처리 순서도, 클릭형 실제 소스, 런타임 로그와 디버그 번들 버튼을 만든다. |
-| 1622 | `ToneMatchApp._build_changelog_tab` | 패치 버전·변경사항·알려진 제한을 현재 언어로 읽는 탭을 만든다. |
-| 1633 | `ToneMatchApp._build_spectrum_tab` | 선택한 입력 장치의 파형·주파수·레벨을 보여주는 실시간 탭을 만든다. |
-| 1744 | `ToneMatchApp._build_reference_compare_tab` | 분석한 기준 스펙트럼과 실시간 입력의 레벨 정규화 차이 탭을 만든다. |
-| 1858 | `ToneMatchApp._spectrum_is_running` | 실시간 스펙트럼 세션이 종료 이벤트 처리 전까지 활성인지 반환한다. |
-| 1863 | `ToneMatchApp._spectrum_plot_x` | 20 Hz~20 kHz 로그 축의 주파수를 캔버스 가로 좌표로 바꾼다. |
-| 1872 | `ToneMatchApp._spectrum_plot_y` | -120~0 dBFS 레벨을 스펙트럼 캔버스 세로 좌표로 바꾼다. |
-| 1879 | `ToneMatchApp._spectrum_canvas_resized` | 스펙트럼 탭 크기가 바뀌면 축과 마지막 측정 프레임을 다시 그린다. |
-| 1889 | `ToneMatchApp._draw_waveform_grid` | 파형 캔버스에 기준 레벨과 시간 방향 보조선을 그린다. |
-| 1909 | `ToneMatchApp._draw_spectrum_grid` | 주파수 캔버스에 로그 주파수축과 dBFS 기준선을 그린다. |
-| 1943 | `ToneMatchApp._draw_waveform` | 최신 PCM 파형을 현재 캔버스 폭에 맞춰 줄여 그린다. |
-| 1966 | `ToneMatchApp._draw_spectrum` | 평활화된 FFT 레벨과 스펙트럼 중심을 로그 주파수축에 그린다. |
-| 2009 | `ToneMatchApp._reference_plot_y` | ±18 dB 비교 차이를 캔버스 세로 좌표로 제한해 변환한다. |
-| 2016 | `ToneMatchApp._reference_canvas_resized` | 비교 탭 크기가 바뀌면 차이 축과 마지막 유효 곡선을 다시 그린다. |
-| 2024 | `ToneMatchApp._draw_reference_grid` | 레퍼런스 차이 캔버스에 로그 주파수축과 ±18 dB 기준선을 그린다. |
-| 2048 | `ToneMatchApp._draw_reference_difference` | 현재−기준의 주파수별 정규화 dB 차이를 로그 축에 그린다. |
-| 2079 | `ToneMatchApp._format_frequency_range` | 대역 경계를 Hz 또는 kHz가 섞인 짧은 화면 문자열로 바꾼다. |
-| 2081 | `ToneMatchApp._format_frequency_range.<local>.compact` | 한 주파수 값을 읽기 쉬운 Hz/kHz 숫자로 축약한다. |
-| 2091 | `ToneMatchApp._reference_band_level` | 프로필 밴드의 버전 호환 레벨 키를 유한 실수로 읽는다. |
-| 2097 | `ToneMatchApp._populate_reference_rows` | 기준 프로필 또는 최신 비교를 Reference·Current·Δ 여섯 행으로 표시한다. |
-| 2133 | `ToneMatchApp._refresh_reference_profile` | 현재 분석 결과의 기준 파일·밴드·상태를 비교 탭에 반영한다. |
-| 2165 | `ToneMatchApp._apply_spectrum_frame` | 최신 스펙트럼 프레임의 수치와 두 캔버스를 Tk 메인 스레드에서 갱신한다. |
-| 2194 | `ToneMatchApp._clear_spectrum_frame_queue` | 새 세션 전에 남아 있는 이전 스펙트럼 화면 프레임을 버린다. |
-| 2202 | `ToneMatchApp._offer_latest_spectrum` | 최신 프레임과 같은 입력 시점의 숫자 진단을 원자적으로 bounded 큐 하나에 남긴다. |
-| 2219 | `ToneMatchApp._drain_spectrum_frames` | bounded 큐의 최신 측정치만 꺼내 메인 스레드에서 화면에 반영한다. |
-| 2245 | `ToneMatchApp._toggle_spectrum_monitor` | 선택한 장치의 공용 실시간 스펙트럼 또는 레퍼런스 비교를 토글한다. |
-| 2301 | `ToneMatchApp._spectrum_monitor_worker` | 단일 장치의 PCM을 스트리밍 DSP로 처리하고 최신 결과와 상태만 큐에 넣는다. |
-| 2314 | `ToneMatchApp._spectrum_monitor_worker.<local>.handle_block` | 첫 PCM에서 엔진을 만들고 임의 길이 블록을 고정 FFT 구간으로 누적한다. |
-| 2370 | `ToneMatchApp._spectrum_backend_text` | 실제 선택된 DSP와 대체 사유를 개인 경로 없는 짧은 한 줄로 만든다. |
-| 2384 | `ToneMatchApp._spectrum_diagnostics_text` | 마지막 push 시간과 엔진 내부 창·대기 프레임 수를 높이 고정 한 줄로 표시한다. |
-| 2405 | `ToneMatchApp._apply_spectrum_backend` | 현재 활성 세션의 DSP 선택 이벤트만 Tk 스레드에서 화면과 진단에 반영한다. |
-| 2419 | `ToneMatchApp._finish_spectrum_monitor` | 현재 세션의 종료·오류를 반영하고 잠근 컨트롤을 안전하게 복구한다. |
-| 2446 | `ToneMatchApp._update_spectrum_availability` | 다른 작업과 장치 상태를 보고 실시간 스펙트럼 컨트롤을 잠그거나 푼다. |
-| 2494 | `ToneMatchApp._change_language` | 선택값과 결과 수치를 보존한 채 전체 화면을 새 언어와 글꼴로 다시 만든다. |
-| 2545 | `ToneMatchApp._change_device` | 멀티이펙터 선택을 갱신하고 미구현 장치에서는 분석을 비활성화한다. |
-| 2556 | `ToneMatchApp._start_hardware_probe` | PyTorch·CUDA 확인을 UI 밖의 스레드에서 시작해 창 멈춤을 방지한다. |
-| 2575 | `ToneMatchApp._hardware_probe_worker` | Demucs와 GPU 런타임을 검사하고 메인 UI 큐로 결과를 전달한다. |
-| 2583 | `ToneMatchApp._apply_hardware_status` | 하드웨어 검사 결과를 저장하고 가능한 선택값·진단표·로그를 갱신한다. |
-| 2607 | `ToneMatchApp._change_compute_backend` | 표시된 AI 가속 선택을 안정적인 auto·cuda·cpu 코드로 저장한다. |
-| 2615 | `ToneMatchApp._set_compute_controls_enabled` | 하드웨어 검사·분석 상태에 맞춰 가속 선택과 재검사 버튼을 함께 잠그거나 푼다. |
-| 2630 | `ToneMatchApp._format_bytes` | 바이트 값을 진단표에서 읽기 쉬운 MiB 또는 GiB 문자열로 바꾼다. |
-| 2642 | `ToneMatchApp._populate_diagnostics` | 하드웨어·AI 분리 벤치마크·DSP 특징을 한 진단표에 순서대로 표시한다. |
-| 2649 | `ToneMatchApp._populate_diagnostics.<local>.add` | 번역된 항목명과 문자열 값을 진단표 끝에 추가한다. |
-| 2693 | `ToneMatchApp._change_input_method` | 로컬 파일과 PC 재생음 녹음 모드에 맞춰 관련 컨트롤 상태를 바꾼다. |
-| 2719 | `ToneMatchApp._refresh_capture_devices` | Windows 오디오 장치를 다시 열거하고 기존 선택이 가능하면 유지한다. |
-| 2746 | `ToneMatchApp._capture_device_changed` | 녹음 콤보박스의 표시 라벨을 실제 장치 식별자로 저장한다. |
-| 2752 | `ToneMatchApp._toggle_recording` | 현재 상태에 따라 PC 재생음 녹음을 시작하거나 중지 요청을 보낸다. |
-| 2796 | `ToneMatchApp._recording_worker` | 오디오 녹음을 백그라운드에서 실행하고 UI 큐에 상태를 전달한다. |
-| 2798 | `ToneMatchApp._recording_worker.<local>.progress` | 녹음 경과 시간을 메인 UI가 읽는 이벤트로 바꾼다. |
-| 2808 | `ToneMatchApp._toggle_developer_mode` | 개발자 순서도와 변경 기록 탭을 표시하거나 숨긴다. |
-| 2822 | `ToneMatchApp._draw_debug_diagram` | 실제 실행 순서대로 클릭 가능한 세로 블록과 연결 화살표를 그린다. |
-| 2853 | `ToneMatchApp._select_debug_block` | 선택한 처리 블록의 언어별 설명과 연결된 실제 함수 원문을 표시한다. |
-| 2881 | `ToneMatchApp._append_debug_log` | 시각 포함 이벤트를 화면과 EXE 옆 일별 UTF-8 로그 파일에 함께 남긴다. |
-| 2899 | `ToneMatchApp._set_debug_progress` | 진행률로 활성·완료 블록을 계산하고 순서도와 로그를 갱신한다. |
-| 2909 | `ToneMatchApp._refresh_analysis_progress` | 실제 콜백의 전체 단계 진행률과 독립적인 경과 시간을 표시한다. |
-| 2917 | `ToneMatchApp._tick_analysis_progress` | 분석·악기 제거 콜백을 기다리는 동안에도 각 경과 시간을 계속 갱신한다. |
-| 2928 | `ToneMatchApp._finish_analysis_progress` | 완료·오류·취소 시 마지막 진행률과 소요 시간을 화면에 보존한다. |
-| 2933 | `ToneMatchApp._stem_is_running` | 작업자의 종료 이벤트를 UI가 반영할 때까지 새 작업 시작을 막는다. |
-| 2938 | `ToneMatchApp._set_stem_status` | 언어 전환 뒤에도 다시 만들 수 있도록 악기 제거 상태 키와 값을 보존한다. |
-| 2944 | `ToneMatchApp._localized_stem_names` | 코어가 반환한 안정적인 stem 코드를 현재 언어의 쉼표 목록으로 바꾼다. |
-| 2950 | `ToneMatchApp._render_stem_summary` | 마지막 출력 파일과 제거·유지 항목, 처리 장치를 한영 요약으로 표시한다. |
-| 2970 | `ToneMatchApp._refresh_stem_localization` | 재구성된 탭의 상태·결과·가속 라벨을 현재 언어에 맞춰 복원한다. |
-| 2977 | `ToneMatchApp._refresh_stem_progress` | AI 콜백 진행률과 별개로 악기 제거 작업의 실제 경과 시간을 표시한다. |
-| 2987 | `ToneMatchApp._finish_stem_progress` | 완료·실패·취소 시 마지막 악기 제거 경과 시간을 고정한다. |
-| 2992 | `ToneMatchApp._change_stem_compute_backend` | 악기 제거 전용 가속 선택을 auto·cuda·cpu 코드로 보존한다. |
-| 2998 | `ToneMatchApp._default_stem_destination` | 원본 옆에서 기존 파일과 충돌하지 않는 새 WAV 기본 이름을 찾는다. |
-| 3009 | `ToneMatchApp._set_stem_source` | 유휴 상태에서 입력을 선택하면 이전 결과를 비우고 새 출력 기본값을 채운다. |
-| 3024 | `ToneMatchApp._choose_stem_source` | 악기 제거 전용 로컬 오디오·영상 입력을 파일 선택기로 받는다. |
-| 3031 | `ToneMatchApp._use_analysis_source_for_stem` | 현재 톤 분석 입력이 실제 로컬 파일일 때 악기 제거 입력으로 복사한다. |
-| 3039 | `ToneMatchApp._choose_stem_destination` | 개별 stem이 아닌 최종 혼합 WAV의 새 저장 경로를 선택한다. |
-| 3053 | `ToneMatchApp._parse_stem_removal_inputs` | 악기 제거 입력·출력·시간·선택을 검증하고 코어 호출 인자로 바꾼다. |
-| 3105 | `ToneMatchApp._start_stem_removal` | 검증된 악기 제거 요청을 UI 밖의 작업 스레드에서 시작한다. |
-| 3143 | `ToneMatchApp._cancel_stem_removal` | 현재 AI 조각 경계에서 악기 제거를 멈추도록 취소 신호를 보낸다. |
-| 3151 | `ToneMatchApp._stem_removal_worker` | 코어 분리를 실행하고 Tk에서 처리할 진행·결과 이벤트만 큐에 넣는다. |
-| 3153 | `ToneMatchApp._stem_removal_worker.<local>.progress` | 코어 진행 콜백을 Tk 메인 스레드용 불변 이벤트로 복사한다. |
-| 3167 | `ToneMatchApp._show_stem_result` | 완료된 출력과 처리 요약을 표시하고 모든 공통 컨트롤을 복구한다. |
-| 3184 | `ToneMatchApp._show_stem_error` | 악기 제거 실패·취소를 구분해 표시하고 작업 전 컨트롤 상태로 돌아간다. |
-| 3196 | `ToneMatchApp._update_stem_availability` | 다른 모든 장시간 작업과 악기 제거 컨트롤을 상호 배타적으로 잠근다. |
-| 3216 | `ToneMatchApp._choose_audio` | 파일 선택 창에서 오디오 또는 영상 경로를 받아 입력 상태를 갱신한다. |
-| 3224 | `ToneMatchApp._parse_inputs` | 화면 문자열을 분석 요청으로 바꾸고 파일·시간·장치 조건을 검증한다. |
-| 3246 | `ToneMatchApp._start_analysis` | 검증된 요청을 별도 스레드에서 시작하고 취소·내보내기 상태를 설정한다. |
-| 3304 | `ToneMatchApp._cancel_analysis` | 다운로드 또는 Demucs 내부 처리 구간 경계에서 멈추도록 취소 신호를 보낸다. |
-| 3312 | `ToneMatchApp._analysis_worker` | 전체 기타 분석을 실행하고 결과 또는 오류를 메인 UI 큐에 전달한다. |
-| 3314 | `ToneMatchApp._analysis_worker.<local>.progress` | 엔진 콜백을 Tk 메인 스레드용 진행 이벤트로 변환한다. |
-| 3324 | `ToneMatchApp._drain_events` | 백그라운드 분석·녹음·스펙트럼 제어 이벤트를 Tk 메인 스레드에서 처리한다. |
-| 3405 | `ToneMatchApp._recording_completed` | 완료된 임시 녹음을 현재 분석 파일로 연결하고 버튼 상태를 복구한다. |
-| 3418 | `ToneMatchApp._recording_failed` | 녹음 실패 메시지와 상세 로그를 남기고 UI를 다시 사용할 수 있게 한다. |
-| 3428 | `ToneMatchApp._show_error` | 분석 실패 상태를 복구하고 사용자 메시지와 영구 개발 로그를 남긴다. |
-| 3442 | `ToneMatchApp._show_result` | 추천 체인 세 개, 기타 stem 진단과 상태를 현재 언어 화면에 표시한다. |
-| 3491 | `ToneMatchApp._render_recipe` | 한 추천 체인의 모델·순서·파라미터·이유를 읽기 쉬운 서식으로 그린다. |
-| 3517 | `ToneMatchApp._render_voicing` | 코드·보이싱 타임라인의 근거와 대안 해석 및 연주 후보를 구분해 표시한다. |
-| 3581 | `ToneMatchApp._format_time` | 초 단위 위치를 긴 곡에서도 읽기 쉬운 분:초 문자열로 바꾼다. |
-| 3587 | `ToneMatchApp._update_analysis_availability` | 장치 지원과 분석·녹음·스펙트럼 상태를 보고 공통 컨트롤을 갱신한다. |
-| 3604 | `ToneMatchApp._update_copy_availability` | 현재 탭에 복사할 표시 내용이 있고 작업 중이 아닐 때만 복사 버튼을 켠다. |
-| 3622 | `ToneMatchApp._update_result_header_layout` | 코드 보기에서는 톤 레시피 전용 제목·요약을 접고 내보내기와 악보 높이를 보존한다. |
-| 3640 | `ToneMatchApp._default_export_name` | 입력 파일명을 안전한 기본 내보내기 파일명으로 바꾼다. |
-| 3646 | `ToneMatchApp._export_json` | 현재 전체 분석 데이터와 분리 진단을 UTF-8 JSON으로 저장한다. |
-| 3658 | `ToneMatchApp._export_html` | 현재 결과를 외부 자원이 없는 한·영 HTML 리포트로 저장하고 선택 시 연다. |
-| 3672 | `ToneMatchApp._mark_export` | 내보내기 단계를 순서도에 표시하고 상태와 영구 로그를 갱신한다. |
-| 3681 | `ToneMatchApp._export_chart_pdf` | 유효 코드표 사본을 저장하고 명시적 미리보기 요청만 OS 문서 뷰어로 연다. |
-| 3698 | `ToneMatchApp._run_chart_pdf_export` | PDF 작업자는 Tk에 접근하지 않고 완료·취소·오류만 전달한다. |
-| 3710 | `ToneMatchApp._copy_recipe` | 현재 선택한 결과·진단·개발자 탭의 표시 내용을 클립보드에 복사한다. |
-| 3770 | `ToneMatchApp._export_debug_bundle` | 다른 PC에서 진단·개발을 이어갈 소스, 로그, 이력, 환경 정보를 ZIP으로 묶는다. |
-| 3807 | `ToneMatchApp._on_close` | 모든 작업에 중지 신호를 보내고 임시 녹음을 정리한 뒤 창을 닫는다. |
-| 3826 | `ToneMatchApp._finish_close_after_stem_cleanup` | 악기 제거 작업이 임시 음원을 정리할 때까지 숨은 메인 루프를 유지한다. |
-| 3851 | `_write_self_test_audio` | 패키지 자체 진단에 사용할 재현 가능한 기타 유사 스테레오 WAV를 만든다. |
-| 3881 | `_self_test_native_dsp` | 실제 DLL 또는 명시적 대체 경로에서 합성 PCM 누적·위상·평활화·초기화를 검증한다. |
-| 3976 | `_self_test_voicing` | 동결 EXE의 확장화음·모호성 근거와 단음 거부를 모델 다운로드 없이 확인한다. |
-| 3982 | `_self_test_voicing.<local>.analyze_notes` | 작은 합성 신호를 실제 코드 분석기에 전달한다. |
-| 4003 | `_self_test_harmony_reference` | 동결 앱의 이론 사전이 확장음·음이름·펜타토닉·다이어토닉 자료를 실제 계산하는지 확인한다. |
-| 4021 | `_self_test_chord_chart` | 마디 페이지·변화 보존·미확정·원본 믹스 안전 표시와 확장 운지 모듈을 검사한다. |
-| 4045 | `run_self_test` | 합성 기타로 오프라인 분석·한영 변환·개발자 소스와 런타임을 검사한다. |
-| 4108 | `main` | 자체 진단 인수를 처리하거나 한·영 데스크톱 GUI 이벤트 루프를 시작한다. |
+| 303 | `ToneMatchApp.ui_font` | 현재 언어에 맞춰 사용자가 지정한 기본 UI 글꼴을 반환한다. |
+| 307 | `ToneMatchApp._load_settings` | 이전 실행의 언어·장치·연산 백엔드 선택을 읽되 손상된 파일은 무시한다. |
+| 322 | `ToneMatchApp._save_settings` | 다음 실행에서도 유지할 언어·장치·연산 백엔드 선택을 작은 JSON으로 저장한다. |
+| 334 | `ToneMatchApp._configure_style` | 현재 언어 글꼴과 어두운 색상표를 모든 공통 위젯 스타일에 적용한다. |
+| 374 | `ToneMatchApp._panel` | 공통 배경과 여백을 가진 카드형 패널을 만들어 즉시 배치한다. |
+| 381 | `ToneMatchApp._field_label` | 입력 필드 위의 작은 설명 라벨을 지정한 그리드 위치에 배치한다. |
+| 385 | `ToneMatchApp._sync_left_scroll_region` | 입력 내용이 짧아져도 빈 영역을 스크롤하지 않도록 범위와 현재 위치를 제한한다. |
+| 397 | `ToneMatchApp._resize_left_scroll_content` | 창 너비가 바뀌어도 입력 카드 내부 프레임이 캔버스 폭을 정확히 채우게 한다. |
+| 403 | `ToneMatchApp._refresh_status_text` | 긴 상태 메시지를 고정 높이의 읽기 전용 스크롤 영역에 표시한다. |
+| 411 | `ToneMatchApp._resize_result_labels` | 긴 결과 제목과 요약을 실제 결과 패널 너비에 맞춰 줄바꿈한다. |
+| 417 | `ToneMatchApp._enable_left_mousewheel` | 포인터가 입력 카드 위에 있을 때 휠을 해당 세로 스크롤에 연결한다. |
+| 421 | `ToneMatchApp._disable_left_mousewheel` | 포인터가 입력 카드를 벗어나면 다른 화면의 휠 동작을 방해하지 않게 연결을 푼다. |
+| 425 | `ToneMatchApp._scroll_left_panel` | Windows 마우스 휠 회전량을 입력 카드의 세로 이동 단위로 변환한다. |
+| 430 | `ToneMatchApp._build_ui` | 입력·결과·개발자·변경 기록과 하단 상태를 현재 언어로 구성한다. |
+| 700 | `ToneMatchApp._build_voicing_tab` | 16마디 악보형 보기와 기존 전체 근거 타임라인을 같은 분석 탭에 만든다. |
+| 806 | `ToneMatchApp._resize_chart` | 네 마디 열은 유지하고 좁은 화면의 설명 줄바꿈과 종이 폭을 다시 계산한다. |
+| 813 | `ToneMatchApp._toggle_chart_settings` | 좁은 창의 코드표 높이를 확보하면서 필요할 때만 수동 마디 설정을 펼친다. |
+| 824 | `ToneMatchApp._scroll_chart` | 악보 위의 휠만 해당 세로 스크롤로 전달해 다른 입력 패널과 충돌하지 않게 한다. |
+| 836 | `ToneMatchApp._apply_chart_settings` | 입력한 일정 템포·마디당 박 수·첫 마디 위치를 검증한 뒤 음원 재분석 없이 재배치한다. |
+| 871 | `ToneMatchApp._previous_chart_page` | 16마디씩 이전 묶음으로 이동하고 세로 위치를 맨 위로 돌린다. |
+| 877 | `ToneMatchApp._next_chart_page` | 16마디씩 다음 묶음으로 이동하되 마지막 페이지를 넘지 않는다. |
+| 883 | `ToneMatchApp._show_chart_bar_details` | 코드표 아래의 해당 근거·후보로 이동하고 동일한 작업 화면을 유지한다. |
+| 891 | `ToneMatchApp._draw_chart_shape` | 이론상 후보의 6현·프렛·개방현·뮤트를 그리고 추정하지 않은 손가락 번호는 생략한다. |
+| 919 | `ToneMatchApp._draw_chart_page` | 모든 코드 변화를 생략하지 않는 네 열 악보와 출처·미확정·이론 운지 안내를 그린다. |
+| 1014 | `ToneMatchApp._can_play_audio` | 녹음·AI·장치 진단과 원본 재생이 장치를 동시에 잡지 않게 한다. |
+| 1023 | `ToneMatchApp._open_chord_editor` | 현재 마디의 이벤트를 편집하며 자동 추정과 사용자의 입력을 분리한다. |
+| 1036 | `ToneMatchApp._apply_chord_edit` | 검증된 수정 지도만 반영하고 제한된 되돌리기 이력을 보존한다. |
+| 1046 | `ToneMatchApp._undo_chord_edit` | 원본 분석은 건드리지 않고 가장 최근 수정 지도만 복원한다. |
+| 1053 | `ToneMatchApp._open_result` | 검증을 마친 로컬 결과만 열고 이전 오디오 연결과 되돌리기 이력은 지운다. |
+| 1070 | `ToneMatchApp._link_playback_source` | 사용자가 직접 고른 원본만 재생 구간에 연결하고 자동 재생하지 않는다. |
+| 1082 | `ToneMatchApp._suspend_playback` | 장치 작업 진입 전에 재생을 멈추고 남은 출력의 종료 여부를 반환한다. |
+| 1090 | `ToneMatchApp._open_mixer` | 코드표와 별도 창에서 악기별 레벨과 WAV 저장을 제공한다. |
+| 1110 | `ToneMatchApp._can_start_mixer` | 믹서 자신의 재생은 유지하되 다른 장치·모델 작업과 충돌하지 않게 한다. |
+| 1116 | `ToneMatchApp._select_chart_bar` | 마디를 선택하고 원본 오프셋을 중복 더하지 않은 위치로 탐색한다. |
+| 1125 | `ToneMatchApp._step_chart_bar` | 키보드 좌우로 마디를 선택해 마우스 없이 탐색·반복할 수 있게 한다. |
+| 1136 | `ToneMatchApp._follow_playback` | 재생 중 현재 마디와 페이지를 샘플 기반 위치에서 찾는다. |
+| 1155 | `ToneMatchApp._highlight_chart_bars` | 코드 글자는 보존하고 테두리·태그로 선택과 재생 마디를 구분한다. |
+| 1172 | `ToneMatchApp._render_chord_chart` | 분석 이벤트는 변경하지 않고 수동 마디 설정에 따른 별도 화면 모델을 만든다. |
+| 1195 | `ToneMatchApp._build_harmony_reference_tab` | 음원 분석과 분리된 코드·스케일 이론 사전을 스크롤 가능한 상위 탭에 만든다. |
+| 1213 | `ToneMatchApp._build_harmony_reference_tab.<local>.label` | 가변 폭의 이론 설명 라벨을 만들고 창 너비에 맞춰 줄바꿈하도록 등록한다. |
+| 1274 | `ToneMatchApp._populate_harmony_types` | 현재 분류의 이론 목록을 번역해 채우되 언어 전환 시 선택 코드를 보존한다. |
+| 1287 | `ToneMatchApp._change_harmony_root` | 사전 기준음을 바꾸고 화음·음계 및 건반 표시를 함께 갱신한다. |
+| 1292 | `ToneMatchApp._change_harmony_category` | 코드·스케일·다이어토닉 분류를 전환하고 각각의 이전 선택을 복원한다. |
+| 1297 | `ToneMatchApp._change_harmony_type` | 종류 선택을 언어와 무관한 키로 저장하고 이론 정보를 갱신한다. |
+| 1302 | `ToneMatchApp._change_harmony_size` | 다이어토닉 건반 예시를 삼화음 또는 7화음으로 전환한다. |
+| 1307 | `ToneMatchApp._select_harmony_degree` | 선택한 다이어토닉 도수의 화음을 표시하되 분석 결과는 변경하지 않는다. |
+| 1314 | `ToneMatchApp._refresh_harmony_reference` | 사전 데이터만 읽어 이론 설명과 건반을 갱신하며 음원 분석을 호출하지 않는다. |
+| 1335 | `ToneMatchApp._show_harmony_degree` | 다이어토닉 행의 이론적 철자를 유지하며 선택 화음의 표시 데이터를 만든다. |
+| 1343 | `ToneMatchApp._display_harmony_tones` | 음정과 구성음을 실제 검출 결과가 아닌 이론 건반 예시로 표시한다. |
+| 1352 | `ToneMatchApp._draw_harmony_keyboard` | 선택 화음·스케일의 실제 음정 위치만 두세 옥타브 건반에 색칠한다. |
+| 1382 | `ToneMatchApp._resize_harmony_content` | 사전 내용 폭과 설명 줄바꿈을 실제 탭 폭에 맞춰 가로 넘침을 막는다. |
+| 1389 | `ToneMatchApp._sync_harmony_scroll_region` | 작은 창에서도 이론 설명과 다이어토닉 표 전체를 세로 스크롤로 제공한다. |
+| 1395 | `ToneMatchApp._bind_harmony_mousewheel` | 사전 내부 컨트롤에서만 휠을 연결해 다른 작업 탭의 스크롤을 보존한다. |
+| 1401 | `ToneMatchApp._scroll_harmony_reference` | 사전 페이지의 세로 위치만 바꾸고 콤보박스 선택은 휠로 변경하지 않는다. |
+| 1406 | `ToneMatchApp._build_stem_removal_tab` | 원본과 분리된 악기 선택을 받는 독립적인 스크롤 탭을 만든다. |
+| 1555 | `ToneMatchApp._sync_stem_scroll_region` | 내용 전체와 현재 뷰포트 중 큰 높이를 악기 제거 탭 스크롤 범위로 사용한다. |
+| 1563 | `ToneMatchApp._resize_stem_scroll_content` | 창 폭이 달라져도 악기 제거 폼이 탭의 가로 공간을 채우게 한다. |
+| 1573 | `ToneMatchApp._bind_stem_mousewheel` | 캔버스 안의 자식 위젯 위에서도 폼을 스크롤할 수 있게 연결한다. |
+| 1579 | `ToneMatchApp._refresh_stem_status_text` | 긴 단계 안내가 고정 하단 영역의 높이를 늘리지 않게 표시한다. |
+| 1589 | `ToneMatchApp._scroll_stem_tab` | 악기 제거 탭 위의 Windows 마우스 휠을 해당 캔버스에만 적용한다. |
+| 1595 | `ToneMatchApp._build_debug_tab` | 처리 순서도, 클릭형 실제 소스, 런타임 로그와 디버그 번들 버튼을 만든다. |
+| 1638 | `ToneMatchApp._build_changelog_tab` | 패치 버전·변경사항·알려진 제한을 현재 언어로 읽는 탭을 만든다. |
+| 1649 | `ToneMatchApp._build_spectrum_tab` | 선택한 입력 장치의 파형·주파수·레벨을 보여주는 실시간 탭을 만든다. |
+| 1760 | `ToneMatchApp._build_reference_compare_tab` | 분석한 기준 스펙트럼과 실시간 입력의 레벨 정규화 차이 탭을 만든다. |
+| 1874 | `ToneMatchApp._spectrum_is_running` | 실시간 스펙트럼 세션이 종료 이벤트 처리 전까지 활성인지 반환한다. |
+| 1879 | `ToneMatchApp._spectrum_plot_x` | 20 Hz~20 kHz 로그 축의 주파수를 캔버스 가로 좌표로 바꾼다. |
+| 1888 | `ToneMatchApp._spectrum_plot_y` | -120~0 dBFS 레벨을 스펙트럼 캔버스 세로 좌표로 바꾼다. |
+| 1895 | `ToneMatchApp._spectrum_canvas_resized` | 스펙트럼 탭 크기가 바뀌면 축과 마지막 측정 프레임을 다시 그린다. |
+| 1905 | `ToneMatchApp._draw_waveform_grid` | 파형 캔버스에 기준 레벨과 시간 방향 보조선을 그린다. |
+| 1925 | `ToneMatchApp._draw_spectrum_grid` | 주파수 캔버스에 로그 주파수축과 dBFS 기준선을 그린다. |
+| 1959 | `ToneMatchApp._draw_waveform` | 최신 PCM 파형을 현재 캔버스 폭에 맞춰 줄여 그린다. |
+| 1982 | `ToneMatchApp._draw_spectrum` | 평활화된 FFT 레벨과 스펙트럼 중심을 로그 주파수축에 그린다. |
+| 2025 | `ToneMatchApp._reference_plot_y` | ±18 dB 비교 차이를 캔버스 세로 좌표로 제한해 변환한다. |
+| 2032 | `ToneMatchApp._reference_canvas_resized` | 비교 탭 크기가 바뀌면 차이 축과 마지막 유효 곡선을 다시 그린다. |
+| 2040 | `ToneMatchApp._draw_reference_grid` | 레퍼런스 차이 캔버스에 로그 주파수축과 ±18 dB 기준선을 그린다. |
+| 2064 | `ToneMatchApp._draw_reference_difference` | 현재−기준의 주파수별 정규화 dB 차이를 로그 축에 그린다. |
+| 2095 | `ToneMatchApp._format_frequency_range` | 대역 경계를 Hz 또는 kHz가 섞인 짧은 화면 문자열로 바꾼다. |
+| 2097 | `ToneMatchApp._format_frequency_range.<local>.compact` | 한 주파수 값을 읽기 쉬운 Hz/kHz 숫자로 축약한다. |
+| 2107 | `ToneMatchApp._reference_band_level` | 프로필 밴드의 버전 호환 레벨 키를 유한 실수로 읽는다. |
+| 2113 | `ToneMatchApp._populate_reference_rows` | 기준 프로필 또는 최신 비교를 Reference·Current·Δ 여섯 행으로 표시한다. |
+| 2149 | `ToneMatchApp._refresh_reference_profile` | 현재 분석 결과의 기준 파일·밴드·상태를 비교 탭에 반영한다. |
+| 2181 | `ToneMatchApp._apply_spectrum_frame` | 최신 스펙트럼 프레임의 수치와 두 캔버스를 Tk 메인 스레드에서 갱신한다. |
+| 2210 | `ToneMatchApp._clear_spectrum_frame_queue` | 새 세션 전에 남아 있는 이전 스펙트럼 화면 프레임을 버린다. |
+| 2218 | `ToneMatchApp._offer_latest_spectrum` | 최신 프레임과 같은 입력 시점의 숫자 진단을 원자적으로 bounded 큐 하나에 남긴다. |
+| 2235 | `ToneMatchApp._drain_spectrum_frames` | bounded 큐의 최신 측정치만 꺼내 메인 스레드에서 화면에 반영한다. |
+| 2261 | `ToneMatchApp._toggle_spectrum_monitor` | 선택한 장치의 공용 실시간 스펙트럼 또는 레퍼런스 비교를 토글한다. |
+| 2317 | `ToneMatchApp._spectrum_monitor_worker` | 단일 장치의 PCM을 스트리밍 DSP로 처리하고 최신 결과와 상태만 큐에 넣는다. |
+| 2330 | `ToneMatchApp._spectrum_monitor_worker.<local>.handle_block` | 첫 PCM에서 엔진을 만들고 임의 길이 블록을 고정 FFT 구간으로 누적한다. |
+| 2386 | `ToneMatchApp._spectrum_backend_text` | 실제 선택된 DSP와 대체 사유를 개인 경로 없는 짧은 한 줄로 만든다. |
+| 2400 | `ToneMatchApp._spectrum_diagnostics_text` | 마지막 push 시간과 엔진 내부 창·대기 프레임 수를 높이 고정 한 줄로 표시한다. |
+| 2421 | `ToneMatchApp._apply_spectrum_backend` | 현재 활성 세션의 DSP 선택 이벤트만 Tk 스레드에서 화면과 진단에 반영한다. |
+| 2435 | `ToneMatchApp._finish_spectrum_monitor` | 현재 세션의 종료·오류를 반영하고 잠근 컨트롤을 안전하게 복구한다. |
+| 2462 | `ToneMatchApp._update_spectrum_availability` | 다른 작업과 장치 상태를 보고 실시간 스펙트럼 컨트롤을 잠그거나 푼다. |
+| 2510 | `ToneMatchApp._change_language` | 선택값과 결과 수치를 보존한 채 전체 화면을 새 언어와 글꼴로 다시 만든다. |
+| 2561 | `ToneMatchApp._change_device` | 멀티이펙터 선택을 갱신하고 미구현 장치에서는 분석을 비활성화한다. |
+| 2572 | `ToneMatchApp._show_qc_catalog` | 공식 QC 모델 목록 창을 중복 생성하지 않고 열거나 앞으로 가져온다. |
+| 2581 | `ToneMatchApp._start_hardware_probe` | PyTorch·CUDA 확인을 UI 밖의 스레드에서 시작해 창 멈춤을 방지한다. |
+| 2600 | `ToneMatchApp._hardware_probe_worker` | Demucs와 GPU 런타임을 검사하고 메인 UI 큐로 결과를 전달한다. |
+| 2608 | `ToneMatchApp._apply_hardware_status` | 하드웨어 검사 결과를 저장하고 가능한 선택값·진단표·로그를 갱신한다. |
+| 2632 | `ToneMatchApp._change_compute_backend` | 표시된 AI 가속 선택을 안정적인 auto·cuda·cpu 코드로 저장한다. |
+| 2640 | `ToneMatchApp._set_compute_controls_enabled` | 하드웨어 검사·분석 상태에 맞춰 가속 선택과 재검사 버튼을 함께 잠그거나 푼다. |
+| 2655 | `ToneMatchApp._format_bytes` | 바이트 값을 진단표에서 읽기 쉬운 MiB 또는 GiB 문자열로 바꾼다. |
+| 2667 | `ToneMatchApp._populate_diagnostics` | 하드웨어·AI 분리 벤치마크·DSP 특징을 한 진단표에 순서대로 표시한다. |
+| 2674 | `ToneMatchApp._populate_diagnostics.<local>.add` | 번역된 항목명과 문자열 값을 진단표 끝에 추가한다. |
+| 2718 | `ToneMatchApp._change_input_method` | 로컬 파일과 PC 재생음 녹음 모드에 맞춰 관련 컨트롤 상태를 바꾼다. |
+| 2744 | `ToneMatchApp._refresh_capture_devices` | Windows 오디오 장치를 다시 열거하고 기존 선택이 가능하면 유지한다. |
+| 2771 | `ToneMatchApp._capture_device_changed` | 녹음 콤보박스의 표시 라벨을 실제 장치 식별자로 저장한다. |
+| 2777 | `ToneMatchApp._toggle_recording` | 현재 상태에 따라 PC 재생음 녹음을 시작하거나 중지 요청을 보낸다. |
+| 2821 | `ToneMatchApp._recording_worker` | 오디오 녹음을 백그라운드에서 실행하고 UI 큐에 상태를 전달한다. |
+| 2823 | `ToneMatchApp._recording_worker.<local>.progress` | 녹음 경과 시간을 메인 UI가 읽는 이벤트로 바꾼다. |
+| 2833 | `ToneMatchApp._toggle_developer_mode` | 개발자 순서도와 변경 기록 탭을 표시하거나 숨긴다. |
+| 2847 | `ToneMatchApp._draw_debug_diagram` | 실제 실행 순서대로 클릭 가능한 세로 블록과 연결 화살표를 그린다. |
+| 2878 | `ToneMatchApp._select_debug_block` | 선택한 처리 블록의 언어별 설명과 연결된 실제 함수 원문을 표시한다. |
+| 2906 | `ToneMatchApp._append_debug_log` | 시각 포함 이벤트를 화면과 EXE 옆 일별 UTF-8 로그 파일에 함께 남긴다. |
+| 2924 | `ToneMatchApp._set_debug_progress` | 진행률로 활성·완료 블록을 계산하고 순서도와 로그를 갱신한다. |
+| 2934 | `ToneMatchApp._refresh_analysis_progress` | 실제 콜백의 전체 단계 진행률과 독립적인 경과 시간을 표시한다. |
+| 2942 | `ToneMatchApp._tick_analysis_progress` | 분석·악기 제거 콜백을 기다리는 동안에도 각 경과 시간을 계속 갱신한다. |
+| 2953 | `ToneMatchApp._finish_analysis_progress` | 완료·오류·취소 시 마지막 진행률과 소요 시간을 화면에 보존한다. |
+| 2958 | `ToneMatchApp._stem_is_running` | 작업자의 종료 이벤트를 UI가 반영할 때까지 새 작업 시작을 막는다. |
+| 2963 | `ToneMatchApp._set_stem_status` | 언어 전환 뒤에도 다시 만들 수 있도록 악기 제거 상태 키와 값을 보존한다. |
+| 2969 | `ToneMatchApp._localized_stem_names` | 코어가 반환한 안정적인 stem 코드를 현재 언어의 쉼표 목록으로 바꾼다. |
+| 2975 | `ToneMatchApp._render_stem_summary` | 마지막 출력 파일과 제거·유지 항목, 처리 장치를 한영 요약으로 표시한다. |
+| 2995 | `ToneMatchApp._refresh_stem_localization` | 재구성된 탭의 상태·결과·가속 라벨을 현재 언어에 맞춰 복원한다. |
+| 3002 | `ToneMatchApp._refresh_stem_progress` | AI 콜백 진행률과 별개로 악기 제거 작업의 실제 경과 시간을 표시한다. |
+| 3012 | `ToneMatchApp._finish_stem_progress` | 완료·실패·취소 시 마지막 악기 제거 경과 시간을 고정한다. |
+| 3017 | `ToneMatchApp._change_stem_compute_backend` | 악기 제거 전용 가속 선택을 auto·cuda·cpu 코드로 보존한다. |
+| 3023 | `ToneMatchApp._default_stem_destination` | 원본 옆에서 기존 파일과 충돌하지 않는 새 WAV 기본 이름을 찾는다. |
+| 3034 | `ToneMatchApp._set_stem_source` | 유휴 상태에서 입력을 선택하면 이전 결과를 비우고 새 출력 기본값을 채운다. |
+| 3049 | `ToneMatchApp._choose_stem_source` | 악기 제거 전용 로컬 오디오·영상 입력을 파일 선택기로 받는다. |
+| 3056 | `ToneMatchApp._use_analysis_source_for_stem` | 현재 톤 분석 입력이 실제 로컬 파일일 때 악기 제거 입력으로 복사한다. |
+| 3064 | `ToneMatchApp._choose_stem_destination` | 개별 stem이 아닌 최종 혼합 WAV의 새 저장 경로를 선택한다. |
+| 3078 | `ToneMatchApp._parse_stem_removal_inputs` | 악기 제거 입력·출력·시간·선택을 검증하고 코어 호출 인자로 바꾼다. |
+| 3130 | `ToneMatchApp._start_stem_removal` | 검증된 악기 제거 요청을 UI 밖의 작업 스레드에서 시작한다. |
+| 3168 | `ToneMatchApp._cancel_stem_removal` | 현재 AI 조각 경계에서 악기 제거를 멈추도록 취소 신호를 보낸다. |
+| 3176 | `ToneMatchApp._stem_removal_worker` | 코어 분리를 실행하고 Tk에서 처리할 진행·결과 이벤트만 큐에 넣는다. |
+| 3178 | `ToneMatchApp._stem_removal_worker.<local>.progress` | 코어 진행 콜백을 Tk 메인 스레드용 불변 이벤트로 복사한다. |
+| 3192 | `ToneMatchApp._show_stem_result` | 완료된 출력과 처리 요약을 표시하고 모든 공통 컨트롤을 복구한다. |
+| 3209 | `ToneMatchApp._show_stem_error` | 악기 제거 실패·취소를 구분해 표시하고 작업 전 컨트롤 상태로 돌아간다. |
+| 3221 | `ToneMatchApp._update_stem_availability` | 다른 모든 장시간 작업과 악기 제거 컨트롤을 상호 배타적으로 잠근다. |
+| 3241 | `ToneMatchApp._choose_audio` | 파일 선택 창에서 오디오 또는 영상 경로를 받아 입력 상태를 갱신한다. |
+| 3249 | `ToneMatchApp._parse_inputs` | 화면 문자열을 분석 요청으로 바꾸고 파일·시간·장치 조건을 검증한다. |
+| 3271 | `ToneMatchApp._start_analysis` | 검증된 요청을 별도 스레드에서 시작하고 취소·내보내기 상태를 설정한다. |
+| 3331 | `ToneMatchApp._cancel_analysis` | 다운로드 또는 Demucs 내부 처리 구간 경계에서 멈추도록 취소 신호를 보낸다. |
+| 3339 | `ToneMatchApp._analysis_worker` | 전체 기타 분석을 실행하고 결과 또는 오류를 메인 UI 큐에 전달한다. |
+| 3341 | `ToneMatchApp._analysis_worker.<local>.progress` | 엔진 콜백을 Tk 메인 스레드용 진행 이벤트로 변환한다. |
+| 3351 | `ToneMatchApp._drain_events` | 백그라운드 분석·녹음·스펙트럼 제어 이벤트를 Tk 메인 스레드에서 처리한다. |
+| 3432 | `ToneMatchApp._recording_completed` | 완료된 임시 녹음을 현재 분석 파일로 연결하고 버튼 상태를 복구한다. |
+| 3445 | `ToneMatchApp._recording_failed` | 녹음 실패 메시지와 상세 로그를 남기고 UI를 다시 사용할 수 있게 한다. |
+| 3455 | `ToneMatchApp._show_error` | 분석 실패 상태를 복구하고 사용자 메시지와 영구 개발 로그를 남긴다. |
+| 3469 | `ToneMatchApp._show_result` | 추천 체인 세 개, 기타 stem 진단과 상태를 현재 언어 화면에 표시한다. |
+| 3525 | `ToneMatchApp._render_recipe` | 한 추천 체인의 모델·순서·파라미터·이유를 읽기 쉬운 서식으로 그린다. |
+| 3551 | `ToneMatchApp._render_voicing` | 코드·보이싱 타임라인의 근거와 대안 해석 및 연주 후보를 구분해 표시한다. |
+| 3615 | `ToneMatchApp._format_time` | 초 단위 위치를 긴 곡에서도 읽기 쉬운 분:초 문자열로 바꾼다. |
+| 3621 | `ToneMatchApp._update_analysis_availability` | 장치 지원과 분석·녹음·스펙트럼 상태를 보고 공통 컨트롤을 갱신한다. |
+| 3649 | `ToneMatchApp._update_copy_availability` | 현재 탭에 복사할 표시 내용이 있고 작업 중이 아닐 때만 복사 버튼을 켠다. |
+| 3667 | `ToneMatchApp._update_result_header_layout` | 코드 보기에서는 톤 레시피 전용 제목·요약을 접고 내보내기와 악보 높이를 보존한다. |
+| 3685 | `ToneMatchApp._default_export_name` | 입력 파일명을 안전한 기본 내보내기 파일명으로 바꾼다. |
+| 3691 | `ToneMatchApp._export_json` | 현재 전체 분석 데이터와 분리 진단을 UTF-8 JSON으로 저장한다. |
+| 3703 | `ToneMatchApp._export_html` | 현재 결과를 외부 자원이 없는 한·영 HTML 리포트로 저장하고 선택 시 연다. |
+| 3717 | `ToneMatchApp._mark_export` | 내보내기 단계를 순서도에 표시하고 상태와 영구 로그를 갱신한다. |
+| 3726 | `ToneMatchApp._export_chart_pdf` | 유효 코드표 사본을 저장하고 명시적 미리보기 요청만 OS 문서 뷰어로 연다. |
+| 3743 | `ToneMatchApp._run_chart_pdf_export` | PDF 작업자는 Tk에 접근하지 않고 완료·취소·오류만 전달한다. |
+| 3755 | `ToneMatchApp._copy_recipe` | 현재 선택한 결과·진단·개발자 탭의 표시 내용을 클립보드에 복사한다. |
+| 3815 | `ToneMatchApp._export_debug_bundle` | 다른 PC에서 진단·개발을 이어갈 소스, 로그, 이력, 환경 정보를 ZIP으로 묶는다. |
+| 3852 | `ToneMatchApp._on_close` | 모든 작업에 중지 신호를 보내고 임시 녹음을 정리한 뒤 창을 닫는다. |
+| 3871 | `ToneMatchApp._finish_close_after_stem_cleanup` | 악기 제거 작업이 임시 음원을 정리할 때까지 숨은 메인 루프를 유지한다. |
+| 3896 | `_write_self_test_audio` | 패키지 자체 진단에 사용할 재현 가능한 기타 유사 스테레오 WAV를 만든다. |
+| 3926 | `_self_test_native_dsp` | 실제 DLL 또는 명시적 대체 경로에서 합성 PCM 누적·위상·평활화·초기화를 검증한다. |
+| 4021 | `_self_test_voicing` | 동결 EXE의 확장화음·모호성 근거와 단음 거부를 모델 다운로드 없이 확인한다. |
+| 4027 | `_self_test_voicing.<local>.analyze_notes` | 작은 합성 신호를 실제 코드 분석기에 전달한다. |
+| 4048 | `_self_test_harmony_reference` | 동결 앱의 이론 사전이 확장음·음이름·펜타토닉·다이어토닉 자료를 실제 계산하는지 확인한다. |
+| 4066 | `_self_test_chord_chart` | 마디 페이지·변화 보존·미확정·원본 믹스 안전 표시와 확장 운지 모듈을 검사한다. |
+| 4090 | `run_self_test` | 합성 기타로 오프라인 분석·한영 변환·개발자 소스와 런타임을 검사한다. |
+| 4153 | `main` | 자체 진단 인수를 처리하거나 한·영 데스크톱 GUI 이벤트 루프를 시작한다. |
 
 ## `catalog.py`
 
@@ -508,47 +548,48 @@
 
 | 줄 | 함수 | 설명 |
 |---:|---|---|
-| 41 | `clamp` | 실수 값을 지정 범위(기본 0~1) 안으로 제한한다. |
-| 46 | `pct` | 0~1 값을 반올림한 0~100 정수 백분율로 바꾼다. |
-| 51 | `db` | 양의 선형 진폭 비율을 로그 dB 값으로 변환한다. |
-| 85 | `bundled_path` | 소스 실행과 PyInstaller 실행 모두에서 번들 리소스 경로를 찾는다. |
-| 99 | `ffmpeg_path` | 앱과 함께 배포된 FFmpeg 실행 파일 경로를 반환한다. |
-| 104 | `_hidden_process_flags` | Windows에서 FFmpeg 콘솔 창이 잠깐 나타나지 않도록 실행 플래그를 만든다. |
-| 109 | `decode_to_pcm_wav` | 선택 구간 또는 최대 20분 전체를 표준 PCM WAV로 디코딩한다. |
-| 185 | `decode_segment` | 선택 구간 또는 전체 곡을 22.05 kHz 스테레오 배열로 디코딩한다. |
-| 208 | `read_pcm_wav` | 8/16/24/32-bit PCM WAV를 -1~1 범위의 스테레오 float 배열로 읽는다. |
-| 239 | `_frames` | 1차원 신호를 겹치는 고정 길이 프레임의 2차원 뷰로 나눈다. |
-| 249 | `_frame_rms` | 긴 곡에서도 메모리가 급증하지 않도록 프레임 RMS를 묶음 단위로 계산한다. |
-| 259 | `_band_ratio` | 전체 스펙트럼 파워 중 지정 주파수 대역이 차지하는 비율을 구한다. |
-| 267 | `_autocorrelation_metrics` | 온셋 엔벨로프 자기상관으로 반복 강도, 딜레이 후보와 BPM을 추정한다. |
-| 295 | `extract_features` | PCM에서 포화도·밝기·바디·다이내믹·공간 및 오염 특징을 계산한다. |
-| 455 | `_parameter` | 정규화된 파라미터에 보정치를 적용하고 TMP 표시용 백분율로 만든다. |
-| 460 | `_amp_parameters` | 앰프 모델별 실제 컨트롤 이름에 맞춘 게인·EQ 시작값을 만든다. |
-| 539 | `_drive_parameters` | 드라이브·부스트·퍼즈 모델별 컨트롤 시작값을 계산한다. |
-| 574 | `_reverb_parameters` | 리버브 모델 유형에 맞춰 믹스·감쇠·댐핑 등 공간 파라미터를 만든다. |
-| 619 | `_parse_mic_position` | 카탈로그의 위치·거리·축 문자열을 검증해 TMP 표시값과 축 값으로 분리한다. |
-| 637 | `_cabinet_parameters` | 검증한 TMP 캐비닛 마이크 위치·축과 톤 기반 컷 필터 시작값을 만든다. |
-| 651 | `_make_block` | 화면과 내보내기에서 공통으로 쓰는 단일 TMP 블록 사전을 만든다. |
-| 668 | `_recipe_from_template` | 한 톤 템플릿을 순서가 지정된 TMP 블록 레시피로 확장한다. |
-| 783 | `_template_score` | 측정 특징과 템플릿 목표의 가중 제곱 거리를 0~1 유사도로 바꾼다. |
-| 792 | `_adjust_for_mix` | 단독 기타 또는 풀믹스 선택에 따라 오염도와 핵심 특징을 보수적으로 보정한다. |
-| 812 | `_application_steps` | 실제 출력 연결에서 포함되는 앰프·캐비닛 블록과 일치하는 적용 순서를 만든다. |
-| 833 | `_analyze_chords` | 이미 디코딩된 원본만 코드 분석에 쓰고 취소·실패를 명시적으로 전달한다. |
-| 852 | `analyze_file` | 디코딩·기타 분리·DSP 분석·장치 레시피 조립의 전체 순서를 실행한다. |
-| 1009 | `save_json` | 분석 결과를 한글이 보존되는 들여쓰기 JSON 파일로 저장한다. |
-| 1014 | `relocalize_result` | 이미 계산한 수치는 유지하고 레시피·경고·적용 문구만 새 언어로 다시 만든다. |
-| 1063 | `human_feature_rows` | 원시 특징 사전을 GUI와 HTML 표에서 읽기 쉬운 언어별 행으로 변환한다. |
+| 42 | `clamp` | 실수 값을 지정 범위(기본 0~1) 안으로 제한한다. |
+| 47 | `pct` | 0~1 값을 반올림한 0~100 정수 백분율로 바꾼다. |
+| 52 | `db` | 양의 선형 진폭 비율을 로그 dB 값으로 변환한다. |
+| 86 | `bundled_path` | 소스 실행과 PyInstaller 실행 모두에서 번들 리소스 경로를 찾는다. |
+| 100 | `ffmpeg_path` | 앱과 함께 배포된 FFmpeg 실행 파일 경로를 반환한다. |
+| 105 | `_hidden_process_flags` | Windows에서 FFmpeg 콘솔 창이 잠깐 나타나지 않도록 실행 플래그를 만든다. |
+| 110 | `decode_to_pcm_wav` | 선택 구간 또는 최대 20분 전체를 표준 PCM WAV로 디코딩한다. |
+| 186 | `decode_segment` | 선택 구간 또는 전체 곡을 22.05 kHz 스테레오 배열로 디코딩한다. |
+| 209 | `read_pcm_wav` | 8/16/24/32-bit PCM WAV를 -1~1 범위의 스테레오 float 배열로 읽는다. |
+| 240 | `_frames` | 1차원 신호를 겹치는 고정 길이 프레임의 2차원 뷰로 나눈다. |
+| 250 | `_frame_rms` | 긴 곡에서도 메모리가 급증하지 않도록 프레임 RMS를 묶음 단위로 계산한다. |
+| 260 | `_band_ratio` | 전체 스펙트럼 파워 중 지정 주파수 대역이 차지하는 비율을 구한다. |
+| 268 | `_autocorrelation_metrics` | 온셋 엔벨로프 자기상관으로 반복 강도, 딜레이 후보와 BPM을 추정한다. |
+| 296 | `extract_features` | PCM에서 포화도·밝기·바디·다이내믹·공간 및 오염 특징을 계산한다. |
+| 456 | `_parameter` | 정규화된 파라미터에 보정치를 적용하고 TMP 표시용 백분율로 만든다. |
+| 461 | `_amp_parameters` | 앰프 모델별 실제 컨트롤 이름에 맞춘 게인·EQ 시작값을 만든다. |
+| 540 | `_drive_parameters` | 드라이브·부스트·퍼즈 모델별 컨트롤 시작값을 계산한다. |
+| 575 | `_reverb_parameters` | 리버브 모델 유형에 맞춰 믹스·감쇠·댐핑 등 공간 파라미터를 만든다. |
+| 620 | `_parse_mic_position` | 카탈로그의 위치·거리·축 문자열을 검증해 TMP 표시값과 축 값으로 분리한다. |
+| 638 | `_cabinet_parameters` | 검증한 TMP 캐비닛 마이크 위치·축과 톤 기반 컷 필터 시작값을 만든다. |
+| 652 | `_make_block` | 화면과 내보내기에서 공통으로 쓰는 단일 TMP 블록 사전을 만든다. |
+| 669 | `_recipe_from_template` | 한 톤 템플릿을 순서가 지정된 TMP 블록 레시피로 확장한다. |
+| 784 | `_template_score` | 측정 특징과 템플릿 목표의 가중 제곱 거리를 0~1 유사도로 바꾼다. |
+| 793 | `_adjust_for_mix` | 단독 기타 또는 풀믹스 선택에 따라 오염도와 핵심 특징을 보수적으로 보정한다. |
+| 813 | `_application_steps` | 실제 출력 연결에서 포함되는 앰프·캐비닛 블록과 일치하는 적용 순서를 만든다. |
+| 834 | `_analyze_chords` | 이미 디코딩된 원본만 코드 분석에 쓰고 취소·실패를 명시적으로 전달한다. |
+| 854 | `_chords_only` | 기타 분리나 톤 추출 없이 원본 음원의 코드만 분석한다. |
+| 875 | `analyze_file` | 디코딩·기타 분리·DSP 분석·장치 레시피 조립의 전체 순서를 실행한다. |
+| 1046 | `save_json` | 분석 결과를 한글이 보존되는 들여쓰기 JSON 파일로 저장한다. |
+| 1051 | `relocalize_result` | 이미 계산한 수치는 유지하고 레시피·경고·적용 문구만 새 언어로 다시 만든다. |
+| 1111 | `human_feature_rows` | 원시 특징 사전을 GUI와 HTML 표에서 읽기 쉬운 언어별 행으로 변환한다. |
 
 ## `i18n.py`
 
 | 줄 | 함수 | 설명 |
 |---:|---|---|
-| 479 | `tr` | 문자열 키를 선택 언어로 번역하고 선택적인 자리표시자를 채운다. |
-| 490 | `voicing_context_lines` | GUI와 HTML에서 코드의 분석 출처·근거·보조 분석·실패 안내를 일관되게 만든다. |
-| 519 | `choice_label` | 안정적인 선택 코드에 대응하는 현재 언어의 콤보박스 라벨을 만든다. |
-| 524 | `choice_values` | 한 선택 그룹에 속한 모든 현재 언어 라벨을 정의 순서대로 반환한다. |
-| 529 | `choice_code` | 한국어 또는 영어 라벨을 언어 독립적인 선택 코드로 되돌린다. |
-| 543 | `language_code` | 언어 콤보박스 라벨을 ``ko`` 또는 ``en`` 코드로 변환한다. |
+| 484 | `tr` | 문자열 키를 선택 언어로 번역하고 선택적인 자리표시자를 채운다. |
+| 495 | `voicing_context_lines` | GUI와 HTML에서 코드의 분석 출처·근거·보조 분석·실패 안내를 일관되게 만든다. |
+| 524 | `choice_label` | 안정적인 선택 코드에 대응하는 현재 언어의 콤보박스 라벨을 만든다. |
+| 529 | `choice_values` | 한 선택 그룹에 속한 모든 현재 언어 라벨을 정의 순서대로 반환한다. |
+| 534 | `choice_code` | 한국어 또는 영어 라벨을 언어 독립적인 선택 코드로 되돌린다. |
+| 548 | `language_code` | 언어 콤보박스 라벨을 ``ko`` 또는 ``en`` 코드로 변환한다. |
 
 ## `native_dsp.py`
 
@@ -867,18 +908,18 @@
 | 47 | `DeveloperModeTests.test_version_and_latest_changelog_match` | 앱 버전은 두 자리 패치 규칙이며 최신 변경 기록과 같아야 한다. |
 | 53 | `DeveloperModeTests.test_pipeline_order_and_source_links_are_complete` | 블록 번호가 연속이고 각 클릭 대상에서 실제 코드가 추출되는지 검사한다. |
 | 64 | `DeveloperModeTests.test_every_function_has_korean_docstring` | 배포 소스의 모든 함수가 개발자에게 보이는 한글 설명을 갖는지 검사한다. |
-| 129 | `DeveloperModeTests.test_progress_maps_to_sequence_blocks` | 대표 진행률이 입력부터 결과까지 순서대로 해당 블록을 가리키는지 확인한다. |
-| 135 | `DeveloperModeTests.test_windowed_import_repairs_missing_standard_streams` | 콘솔 없는 실행 환경도 출력 가능한 스트림을 만들고 기존 스트림은 유지해야 한다. |
-| 161 | `DeveloperModeTests.test_analysis_progress_accepts_floats_without_regressing` | 실수 진행률은 표시되며 지연·잘못된 콜백에도 뒤로 가거나 범위를 벗어나지 않아야 한다. |
-| 195 | `DeveloperModeTests.test_analysis_timer_refreshes_and_stops_on_error_or_cancellation` | 콜백이 없어도 경과 시간만 갱신하고 오류·취소 이후에는 마지막 값이 유지돼야 한다. |
-| 236 | `DeveloperModeTests.test_analysis_completion_preserves_final_elapsed_time` | 완료 이벤트는 전체 진행률을 100%로 만들고 결과 화면에서도 소요 시간을 보존해야 한다. |
-| 274 | `DeveloperModeTests.test_analysis_progress_footer_stays_visible_when_options_scroll` | 최소 크기의 한·영 화면에서 긴 상태와 진행률이 입력 스크롤 밖에 고정돼야 한다. |
-| 345 | `DeveloperModeTests.test_initial_window_and_minimum_fit_the_usable_work_area` | 작업 표시줄과 제목 표시줄 여유를 뺀 화면보다 초기·최소 창이 커지면 안 된다. |
-| 364 | `DeveloperModeTests.test_small_scaled_layout_does_not_grow_after_result_or_long_status` | 작은 고배율 화면에서도 긴 결과·오류가 입력 영역과 고정 진행 영역을 밀어내지 않아야 한다. |
-| 429 | `DeveloperModeTests.test_input_scroll_clamps_after_content_becomes_shorter` | 입력 카드 내용이 줄면 예전 맨 아래 위치나 빈 스크롤 여백이 남지 않아야 한다. |
-| 458 | `DeveloperModeTests.test_debug_diagram_fits_and_displays_source` | 개발자 탭의 모든 블록이 화면 안에 들어오고 코드 내용이 표시되는지 확인한다. |
-| 477 | `DeveloperModeTests.test_live_spectrum_tab_renders_latest_frame_without_hardware` | 실제 장치 없이 합성 FFT 프레임이 탭 수치와 두 캔버스에 표시돼야 한다. |
-| 507 | `DeveloperModeTests.test_reference_compare_tab_renders_six_bands_without_hardware` | 숨긴 Tk 화면에서 기준 프로필과 합성 라이브 차이 여섯 대역을 표시해야 한다. |
+| 130 | `DeveloperModeTests.test_progress_maps_to_sequence_blocks` | 대표 진행률이 입력부터 결과까지 순서대로 해당 블록을 가리키는지 확인한다. |
+| 136 | `DeveloperModeTests.test_windowed_import_repairs_missing_standard_streams` | 콘솔 없는 실행 환경도 출력 가능한 스트림을 만들고 기존 스트림은 유지해야 한다. |
+| 162 | `DeveloperModeTests.test_analysis_progress_accepts_floats_without_regressing` | 실수 진행률은 표시되며 지연·잘못된 콜백에도 뒤로 가거나 범위를 벗어나지 않아야 한다. |
+| 196 | `DeveloperModeTests.test_analysis_timer_refreshes_and_stops_on_error_or_cancellation` | 콜백이 없어도 경과 시간만 갱신하고 오류·취소 이후에는 마지막 값이 유지돼야 한다. |
+| 237 | `DeveloperModeTests.test_analysis_completion_preserves_final_elapsed_time` | 완료 이벤트는 전체 진행률을 100%로 만들고 결과 화면에서도 소요 시간을 보존해야 한다. |
+| 275 | `DeveloperModeTests.test_analysis_progress_footer_stays_visible_when_options_scroll` | 최소 크기의 한·영 화면에서 긴 상태와 진행률이 입력 스크롤 밖에 고정돼야 한다. |
+| 346 | `DeveloperModeTests.test_initial_window_and_minimum_fit_the_usable_work_area` | 작업 표시줄과 제목 표시줄 여유를 뺀 화면보다 초기·최소 창이 커지면 안 된다. |
+| 365 | `DeveloperModeTests.test_small_scaled_layout_does_not_grow_after_result_or_long_status` | 작은 고배율 화면에서도 긴 결과·오류가 입력 영역과 고정 진행 영역을 밀어내지 않아야 한다. |
+| 430 | `DeveloperModeTests.test_input_scroll_clamps_after_content_becomes_shorter` | 입력 카드 내용이 줄면 예전 맨 아래 위치나 빈 스크롤 여백이 남지 않아야 한다. |
+| 459 | `DeveloperModeTests.test_debug_diagram_fits_and_displays_source` | 개발자 탭의 모든 블록이 화면 안에 들어오고 코드 내용이 표시되는지 확인한다. |
+| 478 | `DeveloperModeTests.test_live_spectrum_tab_renders_latest_frame_without_hardware` | 실제 장치 없이 합성 FFT 프레임이 탭 수치와 두 캔버스에 표시돼야 한다. |
+| 508 | `DeveloperModeTests.test_reference_compare_tab_renders_six_bands_without_hardware` | 숨긴 Tk 화면에서 기준 프로필과 합성 라이브 차이 여섯 대역을 표시해야 한다. |
 
 ## `tests/test_engine.py`
 
@@ -1320,10 +1361,10 @@
 
 | 줄 | 함수 | 설명 |
 |---:|---|---|
-| 62 | `_function_rows` | 한 소스 파일에서 함수 줄 번호·정규 이름·설명을 소스 순으로 모은다. |
-| 67 | `_function_rows.<local>.walk` | 클래스와 중첩 함수의 이름 경로를 유지하며 AST 본문을 순회한다. |
-| 82 | `generate` | 모든 배포 모듈의 함수 설명을 버전이 적힌 단일 문서로 저장한다. |
-| 106 | `main` | 현재 프로젝트 기준 함수 색인을 기본 파일명으로 생성한다. |
+| 63 | `_function_rows` | 한 소스 파일에서 함수 줄 번호·정규 이름·설명을 소스 순으로 모은다. |
+| 68 | `_function_rows.<local>.walk` | 클래스와 중첩 함수의 이름 경로를 유지하며 AST 본문을 순회한다. |
+| 83 | `generate` | 모든 배포 모듈의 함수 설명을 버전이 적힌 단일 문서로 저장한다. |
+| 107 | `main` | 현재 프로젝트 기준 함수 색인을 기본 파일명으로 생성한다. |
 
 ## `tools/write_manifest.py`
 
@@ -1335,4 +1376,4 @@
 
 ---
 
-총 함수 수: **1009**
+총 함수 수: **1030**

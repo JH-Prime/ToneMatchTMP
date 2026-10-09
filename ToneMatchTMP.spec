@@ -1,6 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-"""ToneMatch TMP 0.1.01 Windows x64 onedir 배포 사양이다.
+"""ToneMatch TMP 0.1.02 Windows x64 onedir 배포 사양이다.
 
 PyTorch와 Demucs는 단일 파일 압축 해제 방식보다 onedir에서 첫 실행과 모델
 로딩이 안정적이다. AI 모델 가중치는 포함하지 않고 첫 분리 시 사용자 캐시에
@@ -10,10 +10,12 @@ PyTorch와 Demucs는 단일 파일 압축 해제 방식보다 onedir에서 첫 �
 from PyInstaller.utils.hooks import collect_all, copy_metadata
 
 
-APP_VERSION = "0.1.01"
+APP_VERSION = "0.1.02"
 APP_BASENAME = f"ToneMatchTMP-v{APP_VERSION}"
 
 source_files = [
+    ("quad_cortex.py", "devsource"),
+    ("qc_catalog_ui.py", "devsource"),
     ("app.py", "devsource"),
     ("catalog.py", "devsource"),
     ("debug_info.py", "devsource"),
@@ -99,7 +101,8 @@ a = Analysis(
     ["app.py"],
     pathex=[],
     binaries=[("resources/ffmpeg.exe", "resources"), ("resources/tonematch_dsp.dll", "resources")] + extra_binaries,
-    datas=source_files + notice_files + [("resources/fonts", "resources/fonts")] + extra_datas,
+    datas=source_files + notice_files + [("resources/fonts", "resources/fonts"),
+        ("resources/quad_cortex_catalog.json", "resources")] + extra_datas,
     hiddenimports=sorted(set(hidden_imports)),
     hookspath=[],
     hooksconfig={},

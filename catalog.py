@@ -8,17 +8,45 @@
 from __future__ import annotations
 
 
-APP_VERSION = "0.1.01"
+APP_VERSION = "0.1.02"
 TARGET_FIRMWARE = "1.8.58"
 MODEL_GUIDE_REVISION = "Rev. J (2026-07)"
-BUILD_DATE = "2026-10-06"
+BUILD_DATE = "2026-10-09"
 
 
 # 앱 내부의 변경 기록 화면과 배포 문서가 함께 사용하는 단일 원본이다.
 # 기능 버전 0.1.01 이후 수정 릴리스는 0.1.02부터 올리며 공개 산출물을 덮어쓰지 않는다.
 CHANGELOG: list[dict] = [
     {
-        "version": "0.1.01", "date": BUILD_DATE,
+        "version": "0.1.02", "date": BUILD_DATE,
+        "status": "개발자 프리릴리스", "status_en": "Developer prerelease",
+        "changes": [
+            "Quad Cortex 공식 689개 항목 검색과 CorOS별 네이티브 모델 추천",
+            "플러그인·Capture·미출시 모델 구분, 미검증 노브 수치 생성 금지",
+            "기타 분리와 장비 선택에 의존하지 않는 코드만 분석 모드",
+            "CQT 앞·중간·끝 피크 합의 기반 튜닝 편차 보정",
+            "QC·코드 전용 결과의 JSON 재열기·언어 변경·HTML 호환",
+        ],
+        "changes_en": [
+            "Searchable 689-entry official Quad Cortex inventory and CorOS-filtered native recipes",
+            "Distinct plugins, Captures and unreleased devices; no invented numerical controls",
+            "Chords-only analysis independent of guitar separation and modeler selection",
+            "CQT tuning correction from bounded beginning/middle/end pitch-peak consensus",
+            "QC and chords-only JSON reopening, localization and HTML support",
+        ],
+        "known_issues": [
+            "QC는 6개 휴리스틱 시작점 중 3개 추천이며 전체 모델의 실측 매칭이 아님",
+            "실제 곡 정답률은 미측정; 튜닝 변화·반음 경계·복잡한 화성은 여전히 어려움",
+            "서명·실청·실제 장비 프리셋 전송은 검증하지 않음",
+        ],
+        "known_issues_en": [
+            "QC recommends three of six heuristic starting points, not measured matching of every model",
+            "Real-song accuracy is unmeasured; tuning drift, semitone boundaries and complex harmony remain difficult",
+            "Unsigned build; no listening validation or hardware preset transfer",
+        ],
+    },
+    {
+        "version": "0.1.01", "date": "2026-10-06",
         "status": "개발자 프리릴리스", "status_en": "Developer prerelease",
         "changes": [
             "원본 전체 음원을 CQT로 분석하고 코드 기호·근거·후보만 표시",

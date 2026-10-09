@@ -1,7 +1,7 @@
-"""ToneMatch TMP v0.1.01 데스크톱 애플리케이션.
+"""ToneMatch TMP v0.1.02 데스크톱 애플리케이션.
 
 로컬 오디오·영상 또는 Windows PC 재생음 녹음을 받아 AI로 guitar stem만
-분리하고, Tone Master Pro에 수동 적용할 설명 가능한 톤 체인을 추천한다.
+분리하고, Tone Master Pro 또는 Quad Cortex에 수동 적용할 톤 체인을 추천한다.
 별도 악기 제거 작업에서는 선택한 소리를 제외한 새 혼합 WAV를 저장한다.
 """
 
@@ -271,6 +271,8 @@ class ToneMatchApp:
         self.record_limit_var = tk.StringVar(value="360")
         self.language_var = tk.StringVar(value=LANGUAGE_LABELS[self.language])
         self.device_var = tk.StringVar()
+        self.chords_only_var = tk.BooleanVar(value=False)
+        self.qc_firmware_var = tk.StringVar(value='4.1.1')
         self.pickup_var = tk.StringVar()
         self.mix_var = tk.StringVar()
         self.output_var = tk.StringVar()
@@ -484,7 +486,21 @@ class ToneMatchApp:
         left.columnconfigure(0, weight=1)
         ttk.Label(left, text=tr("ui.source_section", self.language), style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
         self.device_description_var = tk.StringVar(value=device_description(self.device_id, self.language))
-        ttk.Label(left, textvariable=self.device_description_var, style="Muted.TLabel", wraplength=380).grid(row=1, column=0, sticky="w", pady=(2, 4))
+        purpose = ttk.Frame(left, style='Panel.TFrame')
+        purpose.grid(row=1, column=0, sticky='ew', pady=(2, 4))
+        ttk.Label(purpose, textvariable=self.device_description_var, style="Muted.TLabel", wraplength=380).pack(anchor='w')
+        self.chords_only_check = ttk.Checkbutton(purpose, text=tr('analysis.chords', self.language),
+            variable=self.chords_only_var, command=self._update_analysis_availability)
+        self.chords_only_check.pack(anchor='w', pady=4)
+        self.qc_options = ttk.Frame(purpose, style='Panel.TFrame')
+        ttk.Label(self.qc_options, text='Quad Cortex · CorOS').pack(side='left')
+        from quad_cortex import load_catalog
+        versions = sorted({row['added_in'] for row in load_catalog()['devices'] if row['added_in']} | {'4.1.1'},
+                          key=lambda v: tuple(map(int, v.split('.'))))
+        self.qc_firmware_combo = ttk.Combobox(self.qc_options, textvariable=self.qc_firmware_var,
+            values=versions, width=9, state='readonly')
+        self.qc_firmware_combo.pack(side='left', padx=6)
+        ttk.Button(purpose, text=tr('qc.catalog', self.language), command=self._show_qc_catalog).pack(anchor='w', pady=2)
 
         self._field_label(left, tr("ui.input_method", self.language), 2, 0)
         self.input_combo = ttk.Combobox(left, textvariable=self.input_method_var, values=tuple(_input_method_label(code, self.language) for code in INPUT_METHODS), state="readonly")
@@ -2553,6 +2569,15 @@ class ToneMatchApp:
         self._update_analysis_availability()
         self._save_settings()
 
+    def _show_qc_catalog(self):
+        """공식 QC 모델 목록 창을 중복 생성하지 않고 열거나 앞으로 가져온다."""
+        from qc_catalog_ui import CatalogWindow
+        previous = getattr(self, 'qc_catalog_window', None)
+        if previous is not None and previous.winfo_exists():
+            previous.lift()
+        else:
+            self.qc_catalog_window = CatalogWindow(self.root, self.language)
+
     def _start_hardware_probe(self) -> None:
         """PyTorch·CUDA 확인을 UI 밖의 스레드에서 시작해 창 멈춤을 방지한다."""
         if not self._suspend_playback():
@@ -2687,7 +2712,7 @@ class ToneMatchApp:
                 add("diag.peak_gpu_memory", self._format_bytes(separation.get("peak_gpu_memory_bytes")))
         else:
             add("diag.effective_device", tr("value.not_applicable", self.language))
-        for label, value in human_feature_rows(self.result["features"], self.language):
+        for label, value in (human_feature_rows(self.result["features"], self.language) if self.result.get('features') else ()):
             self.diag_tree.insert("", "end", values=(label, value))
 
     def _change_input_method(self, _event: object | None = None) -> None:
@@ -3223,7 +3248,7 @@ class ToneMatchApp:
 
     def _parse_inputs(self) -> tuple[str, float, float]:
         """화면 문자열을 분석 요청으로 바꾸고 파일·시간·장치 조건을 검증한다."""
-        if not is_supported_device(self.device_id):
+        if not self.chords_only_var.get() and not is_supported_device(self.device_id):
             raise AnalysisError(tr("error.unsupported_device", self.language))
         path = self.file_var.get().strip().strip('"')
         if not path or not Path(path).is_file():
@@ -3296,6 +3321,8 @@ class ToneMatchApp:
             "device_id": self.device_id,
             "language": self.language,
             "compute_backend": self.compute_backend_code,
+            "analysis_kind": 'chords' if self.chords_only_var.get() else 'tone',
+            "qc_firmware": self.qc_firmware_var.get(),
         }
         self.worker = threading.Thread(target=self._analysis_worker, args=(request,), daemon=True)
         self.worker.start()
@@ -3459,9 +3486,16 @@ class ToneMatchApp:
         self._set_debug_progress(100, tr("progress.complete", self.language))
         self.progress_var.set(100)
         features = result["features"]
-        top = result["recipes"][0]
-        self.result_title_var.set(f"{top['name']} · {tr('recipe.match', self.language, value=top['match_percent'])}")
-        self.summary_var.set(tr("result.feature_summary", self.language, sat=features["saturation"] * 100, bright=features["brightness"] * 100, body=features["body"] * 100, amb=features["ambience"] * 100, conf=features["analysis_confidence"] * 100))
+        chord_only = result.get('analysis_kind') == 'chords'
+        for index in range(len(self.recipe_texts)):
+            self.notebook.tab(index, state='hidden' if chord_only else 'normal')
+        if chord_only:
+            self.result_title_var.set(tr('analysis.chords', self.language))
+            self.summary_var.set(tr('analysis.chords_notice', self.language))
+        else:
+            top = result["recipes"][0]
+            self.result_title_var.set(f"{top['name']} · {tr('recipe.match', self.language, value=top['match_percent'])}")
+            self.summary_var.set(tr("result.feature_summary", self.language, sat=features["saturation"] * 100, bright=features["brightness"] * 100, body=features["body"] * 100, amb=features["ambience"] * 100, conf=features["analysis_confidence"] * 100))
         for index, recipe in enumerate(result["recipes"]):
             self._render_recipe(self.recipe_texts[index], recipe)
             self.notebook.tab(index, text=f"{tr('ui.recipe_tab', self.language, rank=index + 1)} · {recipe['match_percent']}%")
@@ -3478,8 +3512,8 @@ class ToneMatchApp:
         self._refresh_reference_profile(reset_comparison=reset_notebook)
         if reset_notebook:
             self.workspace_notebook.select(self.analysis_workspace)
-            self.notebook.select(0)
-        self.status_var.set(tr("status.complete", self.language))
+            self.notebook.select(self.voicing_tab if chord_only else 0)
+        self.status_var.set(tr("progress.complete" if chord_only else "status.complete", self.language))
         self.analyze_button.configure(text=tr("ui.analyze_again", self.language))
         self.cancel_button.configure(state="disabled")
         self.language_combo.configure(state="readonly")
@@ -3593,10 +3627,21 @@ class ToneMatchApp:
             or self._spectrum_is_running()
             or self.hardware_probe_active
         )
-        enabled = is_supported_device(self.device_id) and not busy
+        chord_only = self.chords_only_var.get()
+        self.device_description_var.set(tr('analysis.chords_notice', self.language) if chord_only
+                                        else device_description(self.device_id, self.language))
+        enabled = (chord_only or is_supported_device(self.device_id)) and not busy
         self.analyze_button.configure(state="normal" if enabled else "disabled")
         self.language_combo.configure(state="disabled" if busy else "readonly")
         self._set_compute_controls_enabled(not busy)
+        self.chords_only_check.configure(state='disabled' if busy else 'normal')
+        for widget in (self.device_combo, self.pickup_combo, self.mix_combo, self.output_combo, self.compute_combo):
+            widget.configure(state='disabled' if busy or chord_only else 'readonly')
+        if self.device_id == 'quad_cortex' and not chord_only:
+            self.qc_options.pack(anchor='w', pady=3)
+        else:
+            self.qc_options.pack_forget()
+        self.qc_firmware_combo.configure(state='disabled' if busy or chord_only else 'readonly')
         self._update_spectrum_availability()
         self._update_stem_availability()
         self._update_copy_availability()

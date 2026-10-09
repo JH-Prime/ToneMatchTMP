@@ -7,12 +7,13 @@ import wave
 
 import numpy as np
 
-from chord_edits import effective_voicing, set_correction
+from chord_edits import effective_voicing, load_result, set_correction
 from chart_pdf import save_chart_pdf
 from playback import WavPlayer, read_pcm_block
 from separator import SEPARATOR_STEMS
 from song_chords import analyze_song_chords
 from stem_mixer import StemBank, MixState, MixReader
+from quad_cortex import load_catalog, recipes
 
 
 def run_music_self_test():
@@ -26,6 +27,18 @@ def run_music_self_test():
     analysis = analyze_song_chords(np.column_stack((signal, -signal)), rate)
     cqt_ok = ("CQT" in analysis["method"] and analysis["analysis_source"] == "original_mix"
               and any(event["symbol"] == "C" for event in analysis["events"]))
+    detuned = sum(.1 * np.sin(2 * np.pi * 440 * 2 ** ((note - 69 + .30) / 12) * axis)
+                  for note in (48, 52, 55))
+    tuned_analysis = analyze_song_chords(detuned[:, None], rate)
+    detuned_ok = any(event['symbol'] == 'C' for event in tuned_analysis['events'])
+    inventory = load_catalog()['devices']
+    catalog_ok = len(inventory) == 689 and any(row['kind'] == 'announced' for row in inventory)
+    from engine import extract_features, analyze_file, save_json
+    recommendations = recipes(extract_features(np.column_stack((signal, signal)), rate), 'frfr')
+    native_ids = {row['id'] for row in inventory if row['kind'] == 'native'}
+    recipes_ok = len(recommendations) == 3 and all(
+        block['catalog_id'] in native_ids and not block['parameters']
+        for recipe in recommendations for block in recipe['blocks'])
     result = {"language": "ko", "features": {"bpm": 120},
               "source": {"file_name": "합성 진단.wav", "duration_seconds": 3},
               "chord_voicing": analysis}
@@ -38,6 +51,12 @@ def run_music_self_test():
         with wave.open(str(source), "wb") as output:
             output.setparams((2, 2, 44100, 0, "NONE", "not compressed"))
             output.writeframes(np.zeros((132300, 2), dtype="<i2").tobytes())
+        chord_result = analyze_file(source, 0, 0, 'unknown', 'full_mix', 'frfr',
+                                    device_id='line6_helix', analysis_kind='chords')
+        save_json(chord_result, root / 'chords.json')
+        restored = load_result(root / 'chords.json', 'en')
+        reopen_ok = (restored['analysis_kind'] == 'chords' and not restored['recipes']
+                     and not restored['features'] and restored['chord_voicing']['analysis_source'] == 'original_mix')
         bank = StemBank(source)
         player = None
         try:
@@ -68,6 +87,8 @@ def run_music_self_test():
             bank.close()
     portaudio_ok = bool(sounddevice.get_portaudio_version()[0])
     checks = {"cqt": bool(cqt_ok), "manual_edit": bool(edit_ok), "pcm_reader": bool(pcm_ok),
-              "mixer_export": bool(export_ok), "pdf_font": bool(pdf_ok), "portaudio_runtime": portaudio_ok}
+              "mixer_export": bool(export_ok), "pdf_font": bool(pdf_ok), "portaudio_runtime": portaudio_ok,
+              "qc_catalog": bool(catalog_ok), "qc_recipes": bool(recipes_ok),
+              "chords_only_reopen": bool(reopen_ok), "cqt_detuned": bool(detuned_ok)}
     return {"ok": all(checks.values()), **checks, "audible_output_tested": False,
             "real_song_accuracy_measured": False}

@@ -1,6 +1,6 @@
 """멀티이펙터 선택기와 향후 장치 확장을 위한 프로필 카탈로그.
 
-현재 분석 레시피 엔진이 구현된 장치는 Tone Master Pro 하나뿐이다. 사용자가
+현재 분석 레시피 엔진은 Tone Master Pro와 Quad Cortex를 지원한다. 사용자가
 구상 중인 장치명을 나중에 넣기 쉽도록 나머지는 중립적인 슬롯으로 유지한다.
 """
 
@@ -26,11 +26,11 @@ DEVICE_PROFILES: list[dict] = [
         "name": "Neural DSP Quad Cortex",
         "name_ko": "Neural DSP Quad Cortex",
         "name_en": "Neural DSP Quad Cortex",
-        "supported": False,
-        "status_ko": "미구현",
-        "status_en": "Not implemented",
-        "description_ko": "추후 제공받을 공식 매뉴얼·모델 정보를 기준으로 구현할 예정입니다.",
-        "description_en": "Reserved for implementation after official manuals and model data are supplied.",
+        "supported": True,
+        "status_ko": "내장 모델 추천",
+        "status_en": "Native recipes",
+        "description_ko": "공식 장비 목록 기반 내장 모델 추천. 노브 수치는 미검증이며 장비 기본값에서 수동 조정합니다.",
+        "description_en": "Native recipes from the official list. Knob ranges are unverified; start with device defaults and adjust manually.",
     },
     {
         "id": "line6_helix",

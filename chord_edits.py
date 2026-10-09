@@ -119,8 +119,15 @@ def load_result(path, language='ko'):
         _validate_tree(incoming)
         if not isinstance(incoming, dict):
             raise ValueError('Analysis must be an object')
+        kind = incoming.get('analysis_kind', 'tone')
+        if kind not in {'tone', 'chords'}:
+            raise ValueError('Invalid analysis purpose')
+        chord_only = kind == 'chords'
         features = incoming['features']
-        ToneFeatures(**features)
+        if not isinstance(features, dict) or (chord_only and features):
+            raise ValueError('Invalid chord-only features')
+        if not chord_only:
+            ToneFeatures(**features)
         if not all(type(value) in (int, float) for value in features.values()):
             raise ValueError('Invalid analysis features')
         source = incoming['source']
@@ -129,7 +136,10 @@ def load_result(path, language='ko'):
             raise ValueError('Invalid analysis range')
         recipes = incoming['recipes']
         templates = {item['id'] for item in TEMPLATES}
-        if not isinstance(recipes, list) or not 1 <= len(recipes) <= 3:
+        if incoming.get('device_id') == 'quad_cortex':
+            from quad_cortex import STARTING_POINTS
+            templates = {f'qc_{index}' for index in range(len(STARTING_POINTS))}
+        if not isinstance(recipes, list) or (len(recipes) != 0 if chord_only else not 1 <= len(recipes) <= 3):
             raise ValueError('Invalid recipes')
         for recipe in recipes:
             if recipe['template_id'] not in templates or not 0 <= float(recipe['match_percent']) <= 100:
@@ -137,6 +147,7 @@ def load_result(path, language='ko'):
         analysis = incoming.get('chord_voicing', {})
         result = {key: incoming[key] for key in ('features', 'input_profile', 'recipes', 'chord_voicing',
                   'chord_corrections', 'chord_chart_settings', 'device_id', 'app_version') if key in incoming}
+        result['analysis_kind'] = kind
         result['source'] = {'file_name': Path(str(source.get('file_name', 'analysis'))).name,
                             'start_seconds': start, 'end_seconds': start + duration, 'duration_seconds': duration}
         separation = incoming.get('source_separation', {'used': analysis.get('analysis_source') == 'guitar_stem'})

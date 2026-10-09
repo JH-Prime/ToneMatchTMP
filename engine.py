@@ -30,6 +30,7 @@ from separator import (
     separation_info_dict,
 )
 from song_chords import analyze_song_chords, ChordAnalysisCancelled
+import quad_cortex
 
 
 SAMPLE_RATE = 22_050
@@ -830,12 +831,13 @@ def _application_steps(output_mode: str, language: str) -> list[str]:
     ]
 
 
-def _analyze_chords(samples, sample_rate, start_seconds, language, progress=None, cancel_requested=None):
+def _analyze_chords(samples, sample_rate, start_seconds, language, progress=None, cancel_requested=None,
+                    progress_start=82, progress_span=3):
     """이미 디코딩된 원본만 코드 분석에 쓰고 취소·실패를 명시적으로 전달한다."""
     try:
         result = analyze_song_chords(
             samples, sample_rate, cancel_requested=cancel_requested,
-            progress=(lambda fraction: progress(82 + 3 * fraction, tr("progress.voicing", language))) if progress else None,
+            progress=(lambda fraction: progress(progress_start + progress_span * fraction, tr("progress.voicing", language))) if progress else None,
         )
     except ChordAnalysisCancelled as exc:
         raise AnalysisError(tr("error.cancelled", language)) from exc
@@ -846,6 +848,27 @@ def _analyze_chords(samples, sample_rate, start_seconds, language, progress=None
                   "limitations": []}
     result["analysis_source"] = "original_mix"
     result["source_start_seconds"] = float(start_seconds)
+    return result
+
+
+def _chords_only(source, start, end, language, progress, cancel_requested):
+    """기타 분리나 톤 추출 없이 원본 음원의 코드만 분석한다."""
+    if cancel_requested and cancel_requested():
+        raise AnalysisError(tr('error.cancelled', language))
+    samples, rate, duration = decode_segment(source, start, end, progress, language)
+    chords = _analyze_chords(samples, rate, start, language, progress, cancel_requested, 20, 75)
+    result = {
+        'schema': 'tonematch-tmp-recipe/v1', 'app_version': APP_VERSION,
+        'analysis_kind': 'chords', 'device_id': 'none', 'features': {}, 'raw_features': {},
+        'recipes': [], 'source_separation': {'used': False, 'mode': 'not_requested'},
+        'source': {'file_name': Path(source).name, 'start_seconds': float(start),
+                   'end_seconds': float(start) + duration, 'duration_seconds': duration,
+                   'chord_analysis_audio': 'original_mix'},
+        'chord_voicing': chords,
+    }
+    result = relocalize_result(result, language)
+    if progress:
+        progress(100, tr('progress.complete', language))
     return result
 
 
@@ -862,10 +885,21 @@ def analyze_file(
     language: str = "ko",
     cancel_requested: Callable[[], bool] | None = None,
     compute_backend: str = "auto",
+    analysis_kind: str = "tone",
+    qc_firmware: str = quad_cortex.TARGET_COROS,
 ) -> dict:
     """디코딩·기타 분리·DSP 분석·장치 레시피 조립의 전체 순서를 실행한다."""
+    if analysis_kind not in {'tone', 'chords'}:
+        raise ValueError('Unsupported analysis purpose')
+    if (not math.isfinite(start_seconds) or not math.isfinite(end_seconds)
+            or start_seconds < 0 or end_seconds < 0 or (end_seconds != 0 and end_seconds <= start_seconds)):
+        raise ValueError('Analysis range must be finite, nonnegative and ordered')
+    if analysis_kind == 'chords':
+        return _chords_only(source, start_seconds, end_seconds, language, progress, cancel_requested)
     if not is_supported_device(device_id):
         raise AnalysisError(tr("error.unsupported_device", language))
+    if device_id == 'quad_cortex':
+        quad_cortex.validate_firmware(qc_firmware)
     pickup_code = choice_code("pickup", pickup)
     mix_code = choice_code("mix", mix_mode)
     output_code = choice_code("output", output_mode)
@@ -947,7 +981,9 @@ def analyze_file(
         _recipe_from_template(template, features, pickup_code, output_code, score, language)
         for template, score in ranked[:3]
     ]
-    warnings: list[str] = [
+    if device_id == 'quad_cortex':
+        recipes = quad_cortex.recipes(features, output_code, language, qc_firmware)
+    warnings: list[str] = [tr('warning.qc', language)] if device_id == 'quad_cortex' else [
         tr("warning.inference", language),
         tr("warning.manual_apply", language),
     ]
@@ -967,12 +1003,13 @@ def analyze_file(
     result = {
         "schema": "tonematch-tmp-recipe/v1",
         "app_version": APP_VERSION,
+        "analysis_kind": analysis_kind,
         "language": language,
         "device_id": device_id,
         "device": device_label(device_id, language),
         "device_name": profile["name"],
-        "target_firmware": TARGET_FIRMWARE,
-        "model_guide": MODEL_GUIDE_REVISION,
+        "target_firmware": qc_firmware if device_id == 'quad_cortex' else TARGET_FIRMWARE,
+        "model_guide": quad_cortex.MODEL_REFERENCE if device_id == 'quad_cortex' else MODEL_GUIDE_REVISION,
         "source": {
             "file_name": Path(source).name,
             "reference_url": reference_url.strip(),
@@ -999,7 +1036,7 @@ def analyze_file(
         "chord_voicing": voicing_analysis,
         "recipes": recipes,
         "warnings": warnings,
-        "application_steps": _application_steps(output_code, language),
+        "application_steps": quad_cortex.instructions(language) if device_id == 'quad_cortex' else _application_steps(output_code, language),
     }
     if progress:
         progress(100, tr("progress.complete", language))
@@ -1014,11 +1051,21 @@ def save_json(result: dict, path: str | Path) -> None:
 def relocalize_result(result: dict, language: str) -> dict:
     """이미 계산한 수치는 유지하고 레시피·경고·적용 문구만 새 언어로 다시 만든다."""
     updated = dict(result)
+    updated['analysis_kind'] = result.get('analysis_kind', 'tone')
+    if updated['analysis_kind'] == 'chords':
+        updated.update(language=language, device_id='none', device=tr('analysis.chords', language),
+                       device_name=tr('analysis.chords', language), target_firmware='—', model_guide='CQT',
+                       features={}, recipes=[], application_steps=[],
+                       input_profile={'pickup_label': '—', 'output_mode_label': '—'},
+                       warnings=[tr('analysis.chords_notice', language)])
+        return updated
     features = ToneFeatures(**result["features"])
     profile = result["input_profile"]
+    is_qc = result.get('device_id') == 'quad_cortex'
     templates_by_id = {template["id"]: template for template in TEMPLATES}
-    localized_recipes: list[dict] = []
-    for previous in result["recipes"]:
+    localized_recipes: list[dict] = quad_cortex.recipes(features, profile['output_mode'], language,
+        result.get('target_firmware', quad_cortex.TARGET_COROS)) if is_qc else []
+    for previous in ([] if is_qc else result["recipes"]):
         template = templates_by_id[previous["template_id"]]
         localized = _recipe_from_template(
             template,
@@ -1030,7 +1077,7 @@ def relocalize_result(result: dict, language: str) -> dict:
         )
         localized["match_percent"] = previous["match_percent"]
         localized_recipes.append(localized)
-    warnings = [tr("warning.inference", language), tr("warning.manual_apply", language)]
+    warnings = [tr('warning.qc', language)] if is_qc else [tr("warning.inference", language), tr("warning.manual_apply", language)]
     if result.get("source_separation", {}).get("used"):
         warnings.append(tr("warning.separation_experimental", language))
         if float(result["source_separation"].get("guitar_rms_dbfs", 0.0)) < -50.0:
@@ -1047,6 +1094,7 @@ def relocalize_result(result: dict, language: str) -> dict:
     compute_code = profile.get("compute_backend", "auto")
     updated["language"] = language
     updated["device"] = device_label(result.get("device_id", "tone_master_pro"), language)
+    updated['device_name'] = device_by_id(result.get('device_id', 'tone_master_pro'))['name']
     updated["recipes"] = localized_recipes
     updated["warnings"] = warnings
     updated["input_profile"] = {
@@ -1056,7 +1104,7 @@ def relocalize_result(result: dict, language: str) -> dict:
         "output_mode_label": choice_label("output", output_code, language),
         "compute_backend_label": choice_label("compute", compute_code, language),
     }
-    updated["application_steps"] = _application_steps(output_code, language)
+    updated["application_steps"] = quad_cortex.instructions(language) if is_qc else _application_steps(output_code, language)
     return updated
 
 
