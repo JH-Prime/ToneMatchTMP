@@ -1,4 +1,4 @@
-"""사용자가 제공한 로컬 곡으로 v0.1.02 코드 전용 경로를 무음 검증한다.
+"""사용자가 제공한 로컬 곡으로 CQT/FFT 코드 전용 경로를 무음 검증한다.
 
 공개 출력에는 파일명·경로·오디오·코드 시퀀스를 넣지 않는다. 정답률 평가가 아니다.
 """
@@ -25,7 +25,7 @@ def digest(path):
         return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
-def verify(source):
+def verify(source, method='cqt'):
     """전체 곡·발췌·실제 취소와 저장 호환성을 검사한다."""
     before = digest(source)
     checks = []
@@ -34,12 +34,13 @@ def verify(source):
         began = time.perf_counter()
         with patch('engine.separate_guitar_wav', side_effect=AssertionError('AI is not needed')):
             result = analyze_file(source, start, end, 'unknown', 'full_mix', 'frfr',
-                                  analysis_kind='chords', device_id='line6_helix',
+                                  analysis_kind='chords', device_id='line6_helix', chord_method=method,
                                   progress=lambda value, _: updates.append(value))
         elapsed = time.perf_counter() - began
         assert result['recipes'] == [] and result['features'] == {}
         assert updates == sorted(updates) and updates[-1] == 100
         assert result['chord_voicing']['analysis_source'] == 'original_mix'
+        assert result['chord_voicing']['method_id'] == method
         assert all(not event['candidate_shapes'] for event in result['chord_voicing']['events'])
         # 임시 결과는 이 컴퓨터에만 두고 파일명도 저장 전에 익명화한다.
         result['source']['file_name'] = 'Private authorized sample'
@@ -49,6 +50,7 @@ def verify(source):
             save_json(edited, root / 'result.json')
             restored = load_result(root / 'result.json', 'en')
             assert restored['analysis_kind'] == 'chords'
+            assert restored['chord_voicing']['method_id'] == method
             save_html(restored, root / 'result.html')
             pdf = save_chart_pdf(restored, root / 'chart.pdf')
             assert pdf['chart_pages'] > 0
@@ -65,13 +67,13 @@ def verify(source):
         cancelled = cancelled or value >= 21
     try:
         analyze_file(source, 0, 0, 'unknown', 'full_mix', 'frfr', analysis_kind='chords',
-                     progress=progress, cancel_requested=lambda: cancelled)
+                     chord_method=method, progress=progress, cancel_requested=lambda: cancelled)
     except AnalysisError:
         assert cancelled
     else:
         raise AssertionError('Expected cancellation')
     assert digest(source) == before
-    return dict(ok=True, app_version=APP_VERSION, checks=checks, source_unchanged=True,
+    return dict(ok=True, app_version=APP_VERSION, method=method, checks=checks, source_unchanged=True,
                 cancelled_as_requested=True, temporary_exports_cleaned=True,
                 real_song_accuracy_measured=False, audible_output_tested=False)
 
@@ -80,10 +82,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('source', type=Path)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--method', choices=('cqt', 'fft'), default='cqt')
     arguments = parser.parse_args()
     if arguments.output.exists():
         parser.error('Output already exists; choose a new receipt')
-    receipt = verify(arguments.source.resolve(strict=True))
+    receipt = verify(arguments.source.resolve(strict=True), arguments.method)
     with arguments.output.open('x', encoding='utf-8') as stream:
         json.dump(receipt, stream, ensure_ascii=False, indent=2)
     print(json.dumps(receipt, ensure_ascii=False))

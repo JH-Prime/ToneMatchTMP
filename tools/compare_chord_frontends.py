@@ -10,7 +10,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from song_chords import analyze_song_chords
-from voicing import CHORD_INTERVALS, analyze_voicings, voicing_analysis_dict
+from voicing import CHORD_INTERVALS
 
 
 def synthesize(notes, harmonic=False):
@@ -28,7 +28,7 @@ def synthesize(notes, harmonic=False):
 def benchmark(output):
     """동일 사례의 가장 긴 구간과 후보를 평가하고 실패 사례도 결과에 남긴다."""
     result = {"scope": "synthetic_regression_not_real_song_accuracy", "case_count": 0, "frontends": {}}
-    methods = {"fft": lambda audio: voicing_analysis_dict(analyze_voicings(audio, 22050)),
+    methods = {"fft": lambda audio: analyze_song_chords(audio, 22050, method='fft'),
                "cqt": lambda audio: analyze_song_chords(audio, 22050)}
     for name in methods:
         result["frontends"][name] = {"top_one": 0, "candidate_included": 0, "seconds": 0, "failures": []}

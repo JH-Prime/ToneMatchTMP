@@ -27,6 +27,11 @@ def run_music_self_test():
     analysis = analyze_song_chords(np.column_stack((signal, -signal)), rate)
     cqt_ok = ("CQT" in analysis["method"] and analysis["analysis_source"] == "original_mix"
               and any(event["symbol"] == "C" for event in analysis["events"]))
+    fft_analysis = analyze_song_chords(np.column_stack((signal, -signal)), rate, method='fft')
+    fft_ok = (fft_analysis['method_id'] == 'fft' and any(event['symbol'] == 'C' for event in fft_analysis['events'])
+              and all(not event['candidate_shapes'] for event in fft_analysis['events']))
+    fft_edited = set_correction({'chord_voicing': fft_analysis}, 0, 'Dm9')
+    fft_ok = fft_ok and effective_voicing(fft_edited)['events'][0]['symbol'] == 'Dm9'
     detuned = sum(.1 * np.sin(2 * np.pi * 440 * 2 ** ((note - 69 + .30) / 12) * axis)
                   for note in (48, 52, 55))
     tuned_analysis = analyze_song_chords(detuned[:, None], rate)
@@ -57,6 +62,11 @@ def run_music_self_test():
         restored = load_result(root / 'chords.json', 'en')
         reopen_ok = (restored['analysis_kind'] == 'chords' and not restored['recipes']
                      and not restored['features'] and restored['chord_voicing']['analysis_source'] == 'original_mix')
+        method_ok = restored['chord_voicing']['method_id'] == 'cqt'
+        chord_result['chord_voicing'] = fft_analysis
+        save_json(chord_result, root / 'fft.json')
+        fft_restored = load_result(root / 'fft.json', 'en')
+        method_ok = method_ok and fft_restored['chord_voicing']['method_id'] == 'fft' and fft_restored['model_guide'] == 'FFT'
         bank = StemBank(source)
         player = None
         try:
@@ -89,6 +99,7 @@ def run_music_self_test():
     checks = {"cqt": bool(cqt_ok), "manual_edit": bool(edit_ok), "pcm_reader": bool(pcm_ok),
               "mixer_export": bool(export_ok), "pdf_font": bool(pdf_ok), "portaudio_runtime": portaudio_ok,
               "qc_catalog": bool(catalog_ok), "qc_recipes": bool(recipes_ok),
-              "chords_only_reopen": bool(reopen_ok), "cqt_detuned": bool(detuned_ok)}
+              "chords_only_reopen": bool(reopen_ok), "cqt_detuned": bool(detuned_ok),
+              "fft": bool(fft_ok), "method_reopen": bool(method_ok)}
     return {"ok": all(checks.values()), **checks, "audible_output_tested": False,
             "real_song_accuracy_measured": False}

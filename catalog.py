@@ -8,17 +8,35 @@
 from __future__ import annotations
 
 
-APP_VERSION = "0.1.02"
+APP_VERSION = "0.1.03"
 TARGET_FIRMWARE = "1.8.58"
 MODEL_GUIDE_REVISION = "Rev. J (2026-07)"
-BUILD_DATE = "2026-10-09"
+BUILD_DATE = "2026-10-10"
 
 
 # 앱 내부의 변경 기록 화면과 배포 문서가 함께 사용하는 단일 원본이다.
 # 기능 버전 0.1.01 이후 수정 릴리스는 0.1.02부터 올리며 공개 산출물을 덮어쓰지 않는다.
 CHANGELOG: list[dict] = [
     {
-        "version": "0.1.02", "date": BUILD_DATE,
+        "version": "0.1.03", "date": BUILD_DATE,
+        "status": "개발자 프리릴리스", "status_en": "Developer prerelease",
+        "changes": [
+            "톤+코드 / 코드만 분석 선택을 넓은 버튼으로 정리하고 장비 목록 창 진입점 제거",
+            "원본 전체 음원의 CQT / 기존 FFT 분석 방식 선택 및 저장 결과 방식 보존",
+            "재생·마디 반복·악보 따라가기의 어두운 스타일과 작은 창 배치 수정",
+            "코드 UI의 한글 맑은 고딕·영문 Arial Narrow 적용 및 PDF 방식 표시",
+        ],
+        "changes_en": [
+            "Clear purpose choices and removal of user-facing equipment inventory entrypoint",
+            "Original-mixture CQT or legacy FFT selection with saved method identity",
+            "Dark playback/loop/follow styling and compact chart layout",
+            "Malgun Gothic / Arial Narrow chord UI fonts and PDF method labels",
+        ],
+        "known_issues": ["실제 곡 정답률 개선은 미측정; 근거·후보와 수동 수정으로 확인 필요", "미서명 CPU 개발자 빌드; 실청·실제 인쇄·새 PC 검증 미실시"],
+        "known_issues_en": ["Real-song accuracy improvement is unmeasured; review evidence/candidates and correct manually", "Unsigned CPU developer build; listening, physical printing and clean-machine checks not performed"],
+    },
+    {
+        "version": "0.1.02", "date": "2026-10-09",
         "status": "개발자 프리릴리스", "status_en": "Developer prerelease",
         "changes": [
             "Quad Cortex 공식 689개 항목 검색과 CorOS별 네이티브 모델 추천",

@@ -600,6 +600,7 @@ def analyze_voicings(
     sample_rate: int,
     tuning_reference_hz: float = 440.0,
     max_events: int = 4096,
+    *, progress=None, cancel_requested=None, include_shapes: bool = True,
 ) -> VoicingAnalysis:
     """guitar stem 전체에서 시간대별 코드와 보이싱 프로필을 결정론적으로 추정한다."""
     if samples.ndim != 2 or samples.shape[1] < 1 or sample_rate < 8_000:
@@ -628,16 +629,22 @@ def analyze_voicings(
     windows: list[dict] = []
     active_frame_count = 0
     polyphonic_frame_count = 0
-    for start in starts:
+    for index, start in enumerate(starts):
+        if cancel_requested and cancel_requested():
+            raise InterruptedError('Chord analysis cancelled')
         chroma, salience, fundamentals, rms = _window_pitch_profile(channels[start : start + window_frames], sample_rate, float(tuning_reference_hz))
         active_frame_count += int(rms >= 1e-5)
         polyphonic_frame_count += int(rms >= 1e-5 and np.count_nonzero(chroma >= max(float(np.max(chroma)) * 0.12, 1e-12)) >= 2)
         classified = _classify_window(chroma, salience, fundamentals, rms)
         classified["_start_seconds"] = start / sample_rate
         windows.append(classified)
+        if progress:
+            progress((index + 1) / (len(starts) + 1))
+    if cancel_requested and cancel_requested():
+        raise InterruptedError('Chord analysis cancelled')
     raw_candidate_frame_count = sum(item["chord_type"] != "unknown" for item in windows)
     windows = _smooth_labels(windows)
-    events = _merge_events(windows, hop_seconds, window_seconds, duration)
+    events = _merge_events(windows, hop_seconds, window_seconds, duration, include_shapes=include_shapes)
     event_count_before_limit = len(events)
     events = _limit_timeline_events(events, max_events)
     tonal_coverage = float(np.mean([item["chord_type"] != "unknown" for item in windows])) if windows else 0.0
@@ -678,6 +685,10 @@ def analyze_voicings(
         "identical_pitch_class_sets_can_have_multiple_valid_chord_names",
         "full_extension_templates_require_each_listed_pitch_class",
     )
+    if cancel_requested and cancel_requested():
+        raise InterruptedError('Chord analysis cancelled')
+    if progress:
+        progress(1.0)
     return VoicingAnalysis(
         schema="tonematch-voicing/v1",
         method="NumPy phase-safe independent-pitch chroma + coverage-weighted extended chord templates with explicit alternatives",

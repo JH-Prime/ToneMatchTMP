@@ -29,7 +29,7 @@ from separator import (
     separate_guitar_wav,
     separation_info_dict,
 )
-from song_chords import analyze_song_chords, ChordAnalysisCancelled
+from song_chords import analyze_song_chords, ChordAnalysisCancelled, chord_method_id
 import quad_cortex
 
 
@@ -832,17 +832,18 @@ def _application_steps(output_mode: str, language: str) -> list[str]:
 
 
 def _analyze_chords(samples, sample_rate, start_seconds, language, progress=None, cancel_requested=None,
-                    progress_start=82, progress_span=3):
+                    progress_start=82, progress_span=3, chord_method='cqt'):
     """이미 디코딩된 원본만 코드 분석에 쓰고 취소·실패를 명시적으로 전달한다."""
     try:
         result = analyze_song_chords(
-            samples, sample_rate, cancel_requested=cancel_requested,
-            progress=(lambda fraction: progress(progress_start + progress_span * fraction, tr("progress.voicing", language))) if progress else None,
+            samples, sample_rate, method=chord_method, cancel_requested=cancel_requested,
+            progress=(lambda fraction: progress(progress_start + progress_span * fraction,
+                      tr("progress.chord_method", language, method=chord_method.upper()))) if progress else None,
         )
     except ChordAnalysisCancelled as exc:
         raise AnalysisError(tr("error.cancelled", language)) from exc
     except ValueError:
-        result = {"schema": "tonematch-voicing/v1", "method": "CQT",
+        result = {"schema": "tonematch-voicing/v1", "method": chord_method.upper(), "method_id": chord_method,
                   "event_count": 0, "events": [], "tonal_coverage": 0,
                   "diagnostics": {"status": "unavailable", "reason": "invalid_chord_input"},
                   "limitations": []}
@@ -851,12 +852,12 @@ def _analyze_chords(samples, sample_rate, start_seconds, language, progress=None
     return result
 
 
-def _chords_only(source, start, end, language, progress, cancel_requested):
+def _chords_only(source, start, end, language, progress, cancel_requested, chord_method):
     """기타 분리나 톤 추출 없이 원본 음원의 코드만 분석한다."""
     if cancel_requested and cancel_requested():
         raise AnalysisError(tr('error.cancelled', language))
     samples, rate, duration = decode_segment(source, start, end, progress, language)
-    chords = _analyze_chords(samples, rate, start, language, progress, cancel_requested, 20, 75)
+    chords = _analyze_chords(samples, rate, start, language, progress, cancel_requested, 20, 75, chord_method)
     result = {
         'schema': 'tonematch-tmp-recipe/v1', 'app_version': APP_VERSION,
         'analysis_kind': 'chords', 'device_id': 'none', 'features': {}, 'raw_features': {},
@@ -887,15 +888,18 @@ def analyze_file(
     compute_backend: str = "auto",
     analysis_kind: str = "tone",
     qc_firmware: str = quad_cortex.TARGET_COROS,
+    chord_method: str = 'cqt',
 ) -> dict:
     """디코딩·기타 분리·DSP 분석·장치 레시피 조립의 전체 순서를 실행한다."""
     if analysis_kind not in {'tone', 'chords'}:
         raise ValueError('Unsupported analysis purpose')
+    if chord_method not in ('cqt', 'fft'):
+        raise ValueError('Unsupported chord analysis method')
     if (not math.isfinite(start_seconds) or not math.isfinite(end_seconds)
             or start_seconds < 0 or end_seconds < 0 or (end_seconds != 0 and end_seconds <= start_seconds)):
         raise ValueError('Analysis range must be finite, nonnegative and ordered')
     if analysis_kind == 'chords':
-        return _chords_only(source, start_seconds, end_seconds, language, progress, cancel_requested)
+        return _chords_only(source, start_seconds, end_seconds, language, progress, cancel_requested, chord_method)
     if not is_supported_device(device_id):
         raise AnalysisError(tr("error.unsupported_device", language))
     if device_id == 'quad_cortex':
@@ -962,9 +966,10 @@ def analyze_file(
     reference_spectrum = build_reference_profile(samples, sample_rate)
     if progress:
         progress(80, tr("progress.features_done", language))
-        progress(82, tr("progress.voicing", language))
+        progress(82, tr("progress.chord_method", language, method=chord_method.upper()))
     voicing_analysis = _analyze_chords(
         chord_samples, chord_rate, start_seconds, language, progress, cancel_requested,
+        chord_method=chord_method,
     )
     del chord_samples
     if progress:
@@ -1054,10 +1059,12 @@ def relocalize_result(result: dict, language: str) -> dict:
     updated['analysis_kind'] = result.get('analysis_kind', 'tone')
     if updated['analysis_kind'] == 'chords':
         updated.update(language=language, device_id='none', device=tr('analysis.chords', language),
-                       device_name=tr('analysis.chords', language), target_firmware='—', model_guide='CQT',
+                       device_name=tr('analysis.chords', language), target_firmware='—',
+                       model_guide=chord_method_id(result.get('chord_voicing', {})).upper(),
                        features={}, recipes=[], application_steps=[],
                        input_profile={'pickup_label': '—', 'output_mode_label': '—'},
-                       warnings=[tr('analysis.chords_notice', language)])
+                       warnings=[tr('analysis.chords_notice', language,
+                                    method=chord_method_id(result.get('chord_voicing', {})).upper())])
         return updated
     features = ToneFeatures(**result["features"])
     profile = result["input_profile"]

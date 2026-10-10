@@ -14,6 +14,7 @@ from chord_chart import build_chord_chart, initial_chart_settings
 from chord_edits import effective_voicing
 from stem_removal import _commit_new_output
 from voicing import pitch_class_names
+from song_chords import chord_method_id
 
 
 FONT = "ToneMatchNanum"
@@ -166,6 +167,8 @@ def save_chart_pdf(result, destination, *, cancel_requested=None):
     if chart["bar_count"] > 10000:
         raise ValueError("Too many PDF bars")
     language = result.get("language", "ko")
+    method = chord_method_id(analysis)
+    method_label = method.upper() if method != 'legacy' else ('방식 미기록' if language == 'ko' else 'Method not recorded')
     title = "코드 진행" if language == "ko" else "Chord progression"
     source_name = Path(str(result.get("source", {}).get("file_name", "Audio")).replace("\\", "/")).name[:120]
     descriptor, temporary_name = tempfile.mkstemp(prefix=".chart-", suffix=".partial.pdf", dir=target.parent)
@@ -178,7 +181,7 @@ def save_chart_pdf(result, destination, *, cancel_requested=None):
         canvas.setAuthor("ToneMatch TMP")
         for page in chart["pages"]:
             check()
-            subtitle = (f'{source_name} | {chart["bpm"]:g} BPM | {chart["beats_per_bar"]}/4 | '
+            subtitle = (f'{method_label} | {source_name} | {chart["bpm"]:g} BPM | {chart["beats_per_bar"]}/4 | '
                         f'{page["first_bar_number"]}-{page["last_bar_number"]} | '
                         f'{page["page_index"] + 1}/{chart["page_count"]}')
             y = _draw_chart_page(canvas, chart, page, title, subtitle, language)

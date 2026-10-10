@@ -272,6 +272,7 @@ class ToneMatchApp:
         self.language_var = tk.StringVar(value=LANGUAGE_LABELS[self.language])
         self.device_var = tk.StringVar()
         self.chords_only_var = tk.BooleanVar(value=False)
+        self.chord_method_var = tk.StringVar(value='CQT')
         self.qc_firmware_var = tk.StringVar(value='4.1.1')
         self.pickup_var = tk.StringVar()
         self.mix_var = tk.StringVar()
@@ -364,11 +365,17 @@ class ToneMatchApp:
         style.map("Developer.TCheckbutton", background=[("active", COLORS["bg"])], foreground=[("selected", COLORS["accent"]), ("active", COLORS["text"])])
         style.configure("Alt.TCheckbutton", background=COLORS["panel_alt"], foreground=COLORS["text"], font=(font, 9), padding=4)
         style.map("Alt.TCheckbutton", background=[("active", COLORS["panel_alt"])], foreground=[("selected", COLORS["accent"]), ("active", COLORS["text"]), ("disabled", "#64727c")])
+        style.configure("Purpose.TRadiobutton", background=COLORS["panel"], foreground=COLORS["text"],
+                        font=(font, 10, "bold"), padding=(8, 8))
+        style.map("Purpose.TRadiobutton", background=[("active", COLORS["panel_alt"])],
+                  foreground=[("disabled", "#64727c"), ("selected", COLORS["accent"])])
+        style.configure("Alt.TLabel", background=COLORS["panel_alt"], foreground=COLORS["muted"], font=(font, 9))
         style.configure("Treeview", background=COLORS["panel_alt"], foreground=COLORS["text"], fieldbackground=COLORS["panel_alt"], borderwidth=0, rowheight=28, font=(font, 9))
         style.configure("Treeview.Heading", background="#101820", foreground=COLORS["muted"], relief="flat", font=(font, 9, "bold"))
         self.root.option_add("*TCombobox*Listbox.background", "#0d151c")
         self.root.option_add("*TCombobox*Listbox.foreground", COLORS["text"])
         self.root.option_add("*TCombobox*Listbox.selectBackground", COLORS["border"])
+        self.root.option_add("*TCombobox*Listbox.font", (font, 9))
 
     @staticmethod
     def _panel(parent: tk.Misc, **grid_options: object) -> ttk.Frame:
@@ -414,6 +421,30 @@ class ToneMatchApp:
         self.result_title_label.configure(wraplength=width)
         self.result_summary_label.configure(wraplength=width)
 
+    def _resize_header(self, event: tk.Event) -> None:
+        """작은 창에서는 장식 제목을 접고 언어·장비 선택을 같은 행으로 배치한다."""
+        compact = event.width < 1100 or event.height < 700
+        if compact == self.header_compact:
+            return
+        self.header_compact = compact
+        self.header_tools.columnconfigure(3, weight=1 if compact else 0)
+        if compact:
+            self.brand.grid_remove()
+            self.header_tools.grid_configure(column=0, columnspan=2, sticky='ew')
+            self.device_label.grid_configure(row=0, column=2, padx=(12, 6), pady=0)
+            self.device_combo.configure(width=26)
+            self.device_combo.grid_configure(row=0, column=3, sticky='ew', pady=0)
+            self.developer_check.grid_configure(row=1, column=3)
+        else:
+            self.brand.grid()
+            self.header_tools.grid_configure(column=1, columnspan=1, sticky='e')
+            self.device_label.grid_configure(row=1, column=0, padx=(0, 6), pady=(6, 0))
+            self.device_combo.configure(width=39)
+            self.device_combo.grid_configure(row=1, column=1, sticky='e', pady=(6, 0))
+            self.developer_check.grid_configure(row=2, column=1)
+        ttk.Style(self.root).configure('Results.TNotebook.Tab',
+            padding=(5, 4) if compact else (13, 8), font=(self.ui_font, 8 if compact else 9, 'bold'))
+
     def _enable_left_mousewheel(self, _event: object | None = None) -> None:
         """포인터가 입력 카드 위에 있을 때 휠을 해당 세로 스크롤에 연결한다."""
         self.root.bind_all("<MouseWheel>", self._scroll_left_panel)
@@ -450,23 +481,29 @@ class ToneMatchApp:
         header.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 13))
         header.columnconfigure(0, weight=1)
         brand = ttk.Frame(header)
+        self.brand = brand
         brand.grid(row=0, column=0, sticky="w")
         ttk.Label(brand, text=tr("app.unofficial", self.language), style="Accent.TLabel").pack(anchor="w")
         ttk.Label(brand, text=APP_NAME, style="Title.TLabel").pack(anchor="w")
         ttk.Label(brand, text=tr("app.subtitle", self.language), foreground=COLORS["muted"]).pack(anchor="w", pady=(1, 0))
 
         tools = ttk.Frame(header)
+        self.header_tools = tools
+        self.header_compact = None
         tools.grid(row=0, column=1, sticky="e")
         ttk.Label(tools, text=tr("ui.language", self.language), foreground=COLORS["muted"]).grid(row=0, column=0, sticky="e", padx=(0, 6))
         self.language_combo = ttk.Combobox(tools, textvariable=self.language_var, values=tuple(LANGUAGE_LABELS.values()), width=12, state="readonly")
         self.language_combo.grid(row=0, column=1, sticky="e")
         self.language_combo.bind("<<ComboboxSelected>>", self._change_language)
-        ttk.Label(tools, text=tr("ui.device", self.language), foreground=COLORS["muted"]).grid(row=1, column=0, sticky="e", padx=(0, 6), pady=(6, 0))
+        self.device_label = ttk.Label(tools, text=tr("ui.device", self.language), foreground=COLORS["muted"])
+        self.device_label.grid(row=1, column=0, sticky="e", padx=(0, 6), pady=(6, 0))
         device_values = tuple(device_label(item["id"], self.language) for item in DEVICE_PROFILES)
         self.device_combo = ttk.Combobox(tools, textvariable=self.device_var, values=device_values, width=39, state="readonly")
         self.device_combo.grid(row=1, column=1, sticky="e", pady=(6, 0))
         self.device_combo.bind("<<ComboboxSelected>>", self._change_device)
-        ttk.Checkbutton(tools, text=tr("ui.developer", self.language), variable=self.developer_var, command=self._toggle_developer_mode, style="Developer.TCheckbutton").grid(row=2, column=1, sticky="e", pady=(5, 0))
+        self.developer_check = ttk.Checkbutton(tools, text=tr("ui.developer", self.language), variable=self.developer_var, command=self._toggle_developer_mode, style="Developer.TCheckbutton")
+        self.developer_check.grid(row=2, column=1, sticky="e", pady=(5, 0))
+        shell.bind('<Configure>', self._resize_header)
 
         left_shell = ttk.Frame(shell, style="Panel.TFrame")
         left_shell.grid(row=1, column=0, sticky="nsew", padx=(0, 13))
@@ -488,19 +525,34 @@ class ToneMatchApp:
         self.device_description_var = tk.StringVar(value=device_description(self.device_id, self.language))
         purpose = ttk.Frame(left, style='Panel.TFrame')
         purpose.grid(row=1, column=0, sticky='ew', pady=(2, 4))
-        ttk.Label(purpose, textvariable=self.device_description_var, style="Muted.TLabel", wraplength=380).pack(anchor='w')
-        self.chords_only_check = ttk.Checkbutton(purpose, text=tr('analysis.chords', self.language),
-            variable=self.chords_only_var, command=self._update_analysis_availability)
-        self.chords_only_check.pack(anchor='w', pady=4)
+        modes = ttk.Frame(purpose, style='Panel.TFrame')
+        modes.pack(fill='x', pady=(4, 6))
+        modes.columnconfigure((0, 1), weight=1, uniform='purpose')
+        self.purpose_buttons = []
+        for column, (value, key) in enumerate(((False, 'analysis.tone'), (True, 'analysis.chords'))):
+            button = ttk.Radiobutton(modes, text=tr(key, self.language), value=value,
+                variable=self.chords_only_var, command=self._update_analysis_availability,
+                style='Purpose.TRadiobutton', takefocus=True)
+            button.grid(row=0, column=column, sticky='ew')
+            self.purpose_buttons.append(button)
+        method_row = ttk.Frame(purpose, style='Panel.TFrame')
+        method_row.pack(fill='x', pady=(0, 6))
+        ttk.Label(method_row, text=tr('analysis.method', self.language), style='Panel.TLabel').pack(side='left')
+        self.chord_method_combo = ttk.Combobox(method_row, textvariable=self.chord_method_var,
+            values=('CQT', 'FFT'), state='readonly', width=7, font=(self.ui_font, 10))
+        self.chord_method_combo.pack(side='right')
+        self.chord_method_combo.bind('<<ComboboxSelected>>', lambda _: self._update_analysis_availability())
+        ttk.Label(purpose, text=tr('analysis.method_hint', self.language), style='Muted.TLabel',
+                  wraplength=340).pack(anchor='w', pady=(0, 5))
+        ttk.Label(purpose, textvariable=self.device_description_var, style="Muted.TLabel", wraplength=340).pack(anchor='w')
         self.qc_options = ttk.Frame(purpose, style='Panel.TFrame')
-        ttk.Label(self.qc_options, text='Quad Cortex · CorOS').pack(side='left')
+        ttk.Label(self.qc_options, text='Quad Cortex · CorOS', style='Panel.TLabel').pack(side='left')
         from quad_cortex import load_catalog
         versions = sorted({row['added_in'] for row in load_catalog()['devices'] if row['added_in']} | {'4.1.1'},
                           key=lambda v: tuple(map(int, v.split('.'))))
         self.qc_firmware_combo = ttk.Combobox(self.qc_options, textvariable=self.qc_firmware_var,
             values=versions, width=9, state='readonly')
         self.qc_firmware_combo.pack(side='left', padx=6)
-        ttk.Button(purpose, text=tr('qc.catalog', self.language), command=self._show_qc_catalog).pack(anchor='w', pady=2)
 
         self._field_label(left, tr("ui.input_method", self.language), 2, 0)
         self.input_combo = ttk.Combobox(left, textvariable=self.input_method_var, values=tuple(_input_method_label(code, self.language) for code in INPUT_METHODS), state="readonly")
@@ -620,7 +672,7 @@ class ToneMatchApp:
         self.result_summary_label.grid(row=1, column=0, sticky="ew", pady=(0, 9))
         self.analysis_workspace.bind("<Configure>", self._resize_result_labels)
 
-        self.notebook = ttk.Notebook(self.analysis_workspace)
+        self.notebook = ttk.Notebook(self.analysis_workspace, style='Results.TNotebook')
         self.notebook.grid(row=2, column=0, sticky="nsew")
         self.notebook.bind("<<NotebookTabChanged>>", self._update_copy_availability)
         for rank in range(1, 4):
@@ -2569,15 +2621,6 @@ class ToneMatchApp:
         self._update_analysis_availability()
         self._save_settings()
 
-    def _show_qc_catalog(self):
-        """공식 QC 모델 목록 창을 중복 생성하지 않고 열거나 앞으로 가져온다."""
-        from qc_catalog_ui import CatalogWindow
-        previous = getattr(self, 'qc_catalog_window', None)
-        if previous is not None and previous.winfo_exists():
-            previous.lift()
-        else:
-            self.qc_catalog_window = CatalogWindow(self.root, self.language)
-
     def _start_hardware_probe(self) -> None:
         """PyTorch·CUDA 확인을 UI 밖의 스레드에서 시작해 창 멈춤을 방지한다."""
         if not self._suspend_playback():
@@ -3323,6 +3366,7 @@ class ToneMatchApp:
             "compute_backend": self.compute_backend_code,
             "analysis_kind": 'chords' if self.chords_only_var.get() else 'tone',
             "qc_firmware": self.qc_firmware_var.get(),
+            "chord_method": self.chord_method_var.get().lower(),
         }
         self.worker = threading.Thread(target=self._analysis_worker, args=(request,), daemon=True)
         self.worker.start()
@@ -3491,7 +3535,7 @@ class ToneMatchApp:
             self.notebook.tab(index, state='hidden' if chord_only else 'normal')
         if chord_only:
             self.result_title_var.set(tr('analysis.chords', self.language))
-            self.summary_var.set(tr('analysis.chords_notice', self.language))
+            self.summary_var.set(tr('analysis.chords_notice', self.language, method=result.get('model_guide', '—')))
         else:
             top = result["recipes"][0]
             self.result_title_var.set(f"{top['name']} · {tr('recipe.match', self.language, value=top['match_percent'])}")
@@ -3628,13 +3672,15 @@ class ToneMatchApp:
             or self.hardware_probe_active
         )
         chord_only = self.chords_only_var.get()
-        self.device_description_var.set(tr('analysis.chords_notice', self.language) if chord_only
+        self.device_description_var.set(tr('analysis.chords_notice', self.language, method=self.chord_method_var.get()) if chord_only
                                         else device_description(self.device_id, self.language))
         enabled = (chord_only or is_supported_device(self.device_id)) and not busy
         self.analyze_button.configure(state="normal" if enabled else "disabled")
         self.language_combo.configure(state="disabled" if busy else "readonly")
         self._set_compute_controls_enabled(not busy)
-        self.chords_only_check.configure(state='disabled' if busy else 'normal')
+        for button in self.purpose_buttons:
+            button.configure(state='disabled' if busy else 'normal')
+        self.chord_method_combo.configure(state='disabled' if busy else 'readonly')
         for widget in (self.device_combo, self.pickup_combo, self.mix_combo, self.output_combo, self.compute_combo):
             widget.configure(state='disabled' if busy or chord_only else 'readonly')
         if self.device_id == 'quad_cortex' and not chord_only:

@@ -6,7 +6,23 @@ from typing import Callable
 
 import numpy as np
 
-from voicing import CHORD_INTERVALS, _classify_window, _merge_events, _smooth_labels
+from voicing import (CHORD_INTERVALS, _classify_window, _merge_events, _smooth_labels,
+                     analyze_voicings, voicing_analysis_dict)
+
+
+def chord_method_id(analysis):
+    """명시적 방식은 검증하고 이전 결과는 실제 기록된 근거에서만 추론한다."""
+    if 'method_id' in analysis:
+        value = analysis['method_id']
+        if value not in ('cqt', 'fft'):
+            raise ValueError('Unsupported chord analysis method')
+        return value
+    method = str(analysis.get('method', ''))
+    if method.startswith('CQT'):
+        return 'cqt'
+    if method.startswith(('FFT', 'NumPy phase-safe independent-pitch chroma')):
+        return 'fft'
+    return 'legacy'
 
 
 class ChordAnalysisCancelled(Exception):
@@ -87,17 +103,37 @@ def _pitch_profile(magnitude):
 
 def analyze_song_chords(
     samples: np.ndarray, sample_rate: int, *,
+    method: str = 'cqt',
     progress: Callable[[float], None] | None = None,
     cancel_requested: Callable[[], bool] | None = None,
 ) -> dict:
     """최대 20분 원본 PCM을 겹치는 구간으로 처리하고 근거·대안을 남긴다."""
     _check_cancelled(cancel_requested)
+    if method not in ('cqt', 'fft'):
+        raise ValueError('Unsupported chord analysis method')
     if (not isinstance(samples, np.ndarray) or samples.ndim != 2
             or samples.shape[1] not in (1, 2) or not isinstance(sample_rate, int)
             or isinstance(sample_rate, bool) or not 8000 <= sample_rate <= 192000):
         raise ValueError("Expected mono/stereo PCM and an 8–192 kHz sample rate")
     if len(samples) > sample_rate * 1200 or not len(samples) or not np.all(np.isfinite(samples)):
         raise ValueError("Expected nonempty finite PCM, at most 20 minutes")
+    if method == 'fft':
+        try:
+            result = voicing_analysis_dict(analyze_voicings(samples, sample_rate, include_shapes=False,
+                progress=progress, cancel_requested=cancel_requested))
+        except InterruptedError as exc:
+            raise ChordAnalysisCancelled() from exc
+        _check_cancelled(cancel_requested)
+        result.update(method_id='fft', analysis_source='original_mix', method='FFT · ' + result['method'])
+        # 기존 불변 FFT 객체의 tuple을 새 곡 분석/수정 계약의 이벤트 목록으로 정규화한다.
+        result['events'] = list(result['events'])
+        result['limitations'] = ['identical_pitch_sets_can_have_multiple_names',
+                                'missing_notes_melody_percussion_and_overtones_can_confuse_templates',
+                                'evidence_score_is_not_calibrated_accuracy']
+        for row in result['events']:
+            row['register'] = row['spacing'] = 'unknown'
+            row['evidence']['pitch_method'] = 'FFT'
+        return result
     duration = len(samples) / sample_rate
     window_seconds, hop_seconds = 1.2, 0.6
     window_frames, hop_frames = round(window_seconds * sample_rate), round(hop_seconds * sample_rate)
@@ -162,6 +198,7 @@ def analyze_song_chords(
         rows.append(row)
     return {
         "schema": "tonematch-voicing/v1", "method": "CQT (36 bins/octave) + harmonic weighting + chroma + temporal templates",
+        "method_id": "cqt",
         "analysis_source": "original_mix", "window_seconds": window_seconds,
         "hop_seconds": hop_seconds, "event_count": len(rows), "events": rows,
         "tonal_coverage": round(reliable / len(windows), 4),

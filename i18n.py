@@ -9,9 +9,13 @@ LANGUAGE_LABELS = {"ko": "한국어", "en": "English"}
 
 
 TEXT: dict[str, dict[str, str]] = {
+    "analysis.method": {"ko": "코드 분석 방식", "en": "Chord analysis method"},
+    "analysis.method_used": {"ko": "분석 방식: {method}", "en": "Analysis method: {method}"},
+    "analysis.method_hint": {"ko": "CQT: 로그 음높이 · FFT: 기존 방식. 곡에 따라 결과가 다를 수 있습니다.", "en": "CQT: logarithmic pitches · FFT: legacy method. Results depend on the recording."},
+    "progress.chord_method": {"ko": "전체 음원 {method}·크로마·코드 흐름 분석 중…", "en": "Analyzing full-recording {method}, chroma and chord sequence…"},
     "analysis.chords": {"ko": "코드만 분석", "en": "Chords only"},
     "analysis.tone": {"ko": "톤 + 코드 분석", "en": "Tone + chords"},
-    "analysis.chords_notice": {"ko": "원본 전체 음원 CQT 추정입니다. 기타 분리·톤 추천은 실행하지 않았으며 코드의 정답을 보장하지 않습니다.", "en": "Original-mixture CQT estimate. Guitar separation and tone matching were not requested. Chord correctness is not guaranteed."},
+    "analysis.chords_notice": {"ko": "원본 전체 음원의 {method} 코드 추정입니다. 기타 분리·톤 추천 없이 분석하며 코드의 정답을 보장하지 않습니다.", "en": "Original-mixture {method} chord estimate without guitar separation or tone matching. Chord correctness is not guaranteed."},
     "qc.catalog": {"ko": "Quad Cortex 장비 목록", "en": "Quad Cortex catalog"},
     "warning.qc": {"ko": "Quad Cortex 내장 모델의 휴리스틱 추천입니다. 원 장비 식별이나 정확도 확률이 아니며 장비 기본값부터 수동 적용하세요. Neural DSP와 무관한 비공식 도구입니다.", "en": "Heuristic Quad Cortex native-device suggestions, not equipment identification or accuracy probabilities. Apply manually from device defaults. Unofficial and unaffiliated with Neural DSP."},
     "pdf.save": {"ko": "16마디 코드표 PDF 저장…", "en": "Save 16-bar chart PDF…"},
@@ -498,6 +502,10 @@ def voicing_context_lines(analysis: dict, language: str = "ko") -> list[str]:
     if source not in {"guitar_stem", "provided_audio", "original_mix"}:
         source = "provided_audio"
     lines = [tr(f"ui.voicing_source_{source}", language)]
+    from song_chords import chord_method_id
+    method = chord_method_id(analysis)
+    label = method.upper() if method != 'legacy' else ('이전 결과 · 방식 미기록' if language == 'ko' else 'Legacy result · method not recorded')
+    lines.append(tr('analysis.method_used', language, method=label))
     diagnostics = analysis.get("diagnostics", {})
     fallback = analysis.get("fallback", {})
     if fallback.get("selected"):

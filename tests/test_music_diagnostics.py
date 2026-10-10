@@ -9,6 +9,6 @@ class MusicDiagnosticsTests(unittest.TestCase):
         result = run_music_self_test()
         self.assertTrue(result["ok"], result)
         for name in ("cqt", "manual_edit", "pcm_reader", "mixer_export", "pdf_font", "portaudio_runtime",
-                     "qc_catalog", "qc_recipes", "chords_only_reopen", "cqt_detuned"):
+                     "qc_catalog", "qc_recipes", "chords_only_reopen", "cqt_detuned", "fft", "method_reopen"):
             self.assertTrue(result[name], name)
         self.assertFalse(result["audible_output_tested"])

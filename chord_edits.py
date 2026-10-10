@@ -145,6 +145,10 @@ def load_result(path, language='ko'):
             if recipe['template_id'] not in templates or not 0 <= float(recipe['match_percent']) <= 100:
                 raise ValueError('Invalid recipe template or score')
         analysis = incoming.get('chord_voicing', {})
+        from song_chords import chord_method_id
+        if not isinstance(analysis, dict):
+            raise ValueError('Invalid chord analysis')
+        chord_method_id(analysis)
         result = {key: incoming[key] for key in ('features', 'input_profile', 'recipes', 'chord_voicing',
                   'chord_corrections', 'chord_chart_settings', 'device_id', 'app_version') if key in incoming}
         result['analysis_kind'] = kind

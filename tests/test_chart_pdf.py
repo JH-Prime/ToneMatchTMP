@@ -28,6 +28,18 @@ def pdf_result(language="ko", dense=False):
 
 
 class ChartPdfTests(unittest.TestCase):
+    def test_method_identity_is_visible_on_every_page(self):
+        from chart_pdf import save_chart_pdf
+        with tempfile.TemporaryDirectory() as folder:
+            for method in ('cqt', 'fft'):
+                result = pdf_result('en')
+                result['chord_voicing']['method_id'] = method
+                result['source']['file_name'] = 'Very long name ' * 30 + '.wav'
+                path = Path(folder) / (method + '.pdf')
+                save_chart_pdf(result, path)
+                for page in PdfReader(path).pages:
+                    self.assertIn(method.upper(), page.extract_text())
+
     def test_a4_pages_manual_edits_korean_evidence_and_no_fingering(self):
         from chart_pdf import save_chart_pdf
         with tempfile.TemporaryDirectory() as folder:

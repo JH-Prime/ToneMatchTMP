@@ -14,28 +14,37 @@ class PlaybackControls(ttk.Frame):
         super().__init__(parent, style='Alt.TFrame', padding=(4, 2))
         self.session, self.language = session, language
         self.can_play, self.follow, self.selected_bar = can_play, follow, selected_bar
-        self.columnconfigure(4, weight=1)
+        self.columnconfigure(2, weight=1)
+        ui_font = 'Arial Narrow' if language == 'en' else 'Malgun Gothic'
         self.play_button = ttk.Button(self, command=self.toggle, width=6, style='Chart.TButton')
         self.play_button.grid(row=0, column=0)
         ttk.Button(self, text=tr('play.stop', language), command=self.stop, width=5,
                    style='Chart.TButton').grid(row=0, column=1)
         self.loop_var = tk.BooleanVar(self, value=bool(session.loop))
-        ttk.Checkbutton(self, text=tr('play.loop', language), variable=self.loop_var,
-                        command=self.change_loop).grid(row=0, column=2, padx=3)
+        options = ttk.Frame(self, style='Alt.TFrame')
+        options.grid(row=0, column=2, sticky='w', padx=(6, 0))
+        ttk.Checkbutton(options, text=tr('play.loop', language), variable=self.loop_var,
+                        command=self.change_loop, style='Alt.TCheckbutton').pack(side='left', padx=(0, 6))
         self.follow_var = tk.BooleanVar(self, value=True)
-        ttk.Checkbutton(self, text=tr('play.follow', language), variable=self.follow_var).grid(row=0, column=3)
+        ttk.Checkbutton(options, text=tr('play.follow', language), variable=self.follow_var,
+                        style='Alt.TCheckbutton').pack(side='left')
+        seek_row = ttk.Frame(self, style='Alt.TFrame')
+        seek_row.grid(row=1, column=0, columnspan=3, sticky='ew')
+        seek_row.columnconfigure(0, weight=1)
         self.time_var = tk.StringVar(self)
-        ttk.Label(self, textvariable=self.time_var, width=13, anchor='e', font=('Consolas', 8)).grid(row=0, column=4, sticky='e')
+        ttk.Label(seek_row, textvariable=self.time_var, width=15, anchor='e', style='Alt.TLabel',
+                  font=(ui_font, 9)).grid(row=0, column=1, sticky='e')
         self.position_var = tk.DoubleVar(self)
-        self.scale = ttk.Scale(self, from_=0, to=1, variable=self.position_var)
-        self.scale.grid(row=1, column=0, columnspan=5, sticky='ew')
+        self.scale = ttk.Scale(seek_row, from_=0, to=1, variable=self.position_var)
+        self.scale.grid(row=0, column=0, sticky='ew')
         self.scale.bind('<ButtonPress-1>', self._begin_drag)
         self.scale.bind('<ButtonRelease-1>', self._end_drag)
         self.scale.bind('<KeyRelease>', self._end_drag)
         self.dragging = False
         self.status_var = tk.StringVar(self)
-        self.status = ttk.Label(self, textvariable=self.status_var, font=('Segoe UI', 8), width=1, takefocus=True)
-        self.status.grid(row=1, column=0, columnspan=5, sticky='ew')
+        self.status = ttk.Label(seek_row, textvariable=self.status_var, style='Alt.TLabel',
+                                font=(ui_font, 9), width=1, takefocus=True)
+        self.status.grid(row=0, column=0, sticky='ew')
         self.status.bind('<Double-Button-1>', self.show_status)
         self.status.bind('<Return>', self.show_status)
         self.refresh()
