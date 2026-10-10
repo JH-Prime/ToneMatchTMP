@@ -1,0 +1,19 @@
+# v0.1.03 active work
+
+Updated: 2026-10-10 14:50:55 KST (Asia/Seoul)
+Status: Approved, plan written before implementation. Parent-only.
+Interaction constraint: User stopped Computer Use and explicitly says no screen manipulation. Use shell-only/hidden checks. Do not activate, close, resize or launch visible windows. A synthetic fixture may remain open; leave it untouched. Native maximize/restore was interrupted, not verified visually.
+Plan: plan/20261009-212335--work-plan--v0-1-03-chord-ui-methods--v01.md
+Approval: User “넵” after UI/inventory/CQT-FFT/font/verification/release understanding report.
+Baseline: clean main ac1f8f3; v0.1.02 tag and assets immutable.
+Accepted facts: three bare TCheckbutton controls have light #dcdad5 background; English mode inherits Malgun Gothic instead of Arial Narrow. Existing explicit style probe fixes both. Both fonts installed; Korean alias resolves as 맑은 고딕.
+Scope: see plan; internal tone catalogs retained, browsing entrypoint removed. Original full mixture used for both CQT and legacy FFT; no fingering. Video auto-generated Korean transcript inspected (not full video viewing).
+Active phase: final build, then read-only review and release. Below earlier implementation notes are historical.
+Next: Build with the full suite, frozen self-test, update QA, package_v103.py finalize/verify, then non-force commit/push/tag and publish_v103.py.
+Current: Both real-media methods full/excerpt, immediate edits/JSON/HTML/PDF pass with source unchanged. Synthetic 246/246 per method is not real accuracy. Fixed FFT event tuple-to-list integration. Full 386-test run passed (252.019s) before compact-header correction found in actual 960x600 Tk 2.0 visual QA. Latest UI 5/5 (24.479s) and developer 16/16 (32.332s) pass; final build reruns all tests. Native ordinary KO/EN and compact KO controls and rendered PDF first pages inspected. Hidden Tk roots ignore WM resize; callback restoration checked. Test window no longer open. Version/docs/QA prepared but no archive or release yet.
+UI first RED: 3 tests, 17 subcase failures and 1 missing-control error; exact light backgrounds and hardcoded Segoe UI status reproduced. Implemented padded purpose radios, method selector UI, no inventory button/entrypoint, explicit dark playback styles and language fonts. Selector backend still pending. No release/version claim yet.
+Score: provisional 46/100, not accuracy.
+Build update: final 387 tests passed in 223.881s with warnings as errors; compileall and C++ parity passed. Product commit 41caed5. EXE 0.1.03 built; frozen self-test all music flags and ABI 2/float32 parity passed. Same 17 packaging warnings as v0.1.02. Session 94438 is completing manifest/checksums. QA status passed for source/build; external fresh-archive gate still required before publication. No UI manipulation after user prohibition.
+Three UI regressions GREEN (15.271s). Backend regressions then RED on absent method support; added original-mixture FFT choice, per-window progress/cancel, no-shapes output, method metadata and request/localization/reopen/context integration. Legacy defaults remain unchanged. Method tests running next.
+Latest: backend 5/5, PDF 4/4, music self-test pass. Full 383-test run found three compact high-DPI chart-height failures from the extra transport row; two-row repair passed chart 8/8 and playback 5/5. Added actual worker request and C→C/E→silence→Am regression. Version source is 0.1.03, but no new QA/doc/build/commit/release yet. Runtime restart lost GUI test handle; rerun it.
+New theory references: AudioLabs FMP inspected; Jaenung blocked by robot-check; Cuonet empty; Wikidocs reviewed only as user reference, primary FMP grounds technical conclusion. No new FFT library justified. Current scoring is weighted coverage/complexity, not raw cosine; no accuracy improvement claimed. Update research documentation.

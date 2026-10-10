@@ -1,4 +1,22 @@
-# ToneMatch TMP v0.1.02 — 개발 인수인계 / Developer Handoff
+# ToneMatch TMP v0.1.03 — 개발 인수인계 / Developer Handoff
+
+## Current v0.1.03 / 현행 — 2026-10-10 KST
+
+Current evidence: QA_REPORT_v0.1.03.json and newest BUILD_HISTORY entry; sections below are historical.
+engine.analyze_file(chord_method='cqt'|'fft') validates before decode. Both use original PCM;
+legacy voicing defaults remain unchanged. song_chords normalizes FFT event tuples to mutable lists
+at the integration boundary so immediate manual correction/PDF works, not only JSON reopen.
+Method metadata is validated and preserved; missing legacy identity stays neutral, never fabricated CQT.
+Dark purpose/transport styles and ko/en fonts are tested with real Tk at multiple scales.
+Catalog browsing entrypoint is removed, internal device data/recipes remain. No new FFT library or ABI.
+Video auto-generated captions informed moving-bass/section-gap regressions, not an accuracy claim.
+Use tools/verify_qc_chords.py --method cqt|fft for authorized local samples; public receipts contain
+aggregate metrics only. Coverage is not accuracy. Never package private audio or model weights.
+Frozen music_workflow now requires fft and method_reopen as well as previous checks.
+Next patch after publication: 0.1.04. Rollback uses untouched v0.1.02 assets.
+
+현재 계약은 이 절입니다. CQT/FFT 선택·코드 즉시 수정·내보내기·화면을 함께 검증하고,
+분류 점수나 검출 비율을 정답률로 표현하지 마세요. 새 FFT/C++ 재작성은 이번 범위가 아닙니다.
 
 ## Current v0.1.02 / 현행 — 2026-10-09 KST
 

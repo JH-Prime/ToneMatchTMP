@@ -8,6 +8,7 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 | 버전 | 상태 | 범위 |
 |---|---|---|
+| `0.1.03` | 소스·실행 파일 검증 완료, 독립 ZIP 검증 후 게시 | 코드 UI·폰트·장비 목록 진입점 정리, 원본 CQT/FFT 선택과 저장 방식 보존 |
 | `0.1.02` | 검증 완료·개발자 프리릴리스 게시 | Quad Cortex 목록·내장 추천, AI 독립 코드 모드, CQT 튜닝 보정 |
 | `0.1.01` | 개발자 프리릴리스 검증 중 | 전체 음원 CQT 코드, 재생 연동·직접 수정, 6-stem 믹서·WAV, 16마디 PDF |
 | `0.0.13` | 서명되지 않은 CPU 포터블 개발자 프리릴리스 | 16마디 코드표, 수동 격자 보정, 이론 기타 운지 확대, 긴 타임라인 보존 |
@@ -23,6 +24,26 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 | `0.0.03` | 포터블 개발 프리뷰 빌드 완료 | 포터블 개발 ZIP, 한·영 handoff, 로그·빌드 이력, NumPy 코드/보이싱 분석(실험) |
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
+
+## v0.1.03 — 2026-10-10 KST
+
+Scope: padded purpose choices, original-mixture CQT/legacy FFT selector, dark playback loop/follow,
+compact chart toolbar, language fonts, removed inventory entrypoint, method identity in JSON/HTML/PDF.
+The old FFT function keeps its defaults; new song-analysis boundary disables shapes and normalizes
+event tuples to lists. Real-source validation caught and repaired immediate FFT manual-edit failure.
+C++ ABI 2 and separation weights are unchanged; no KissFFT/FFTW dependency was introduced.
+
+Final source suite: 387 tests passed with warnings as errors in 223.881s.
+Focused evidence: UI 5 tests, method 5, chart layout 8, playback 5 and PDF 4 passed.
+Two frontends each matched 246 controlled synthetic labels; this is not real-song accuracy.
+Room335 full/excerpt coverage: CQT 0.1188/0.2323, FFT 0.3587/0.4242. Original preserved;
+progress, cancellation and immediate edit/reopen/HTML/PDF succeeded. No private audio is packaged.
+Native Korean/English synthetic UI and Poppler first-page PDF renders inspected without audio output.
+Frozen executable music workflow and C++ ABI 2/float32 parity passed, including both frontends,
+immediate edits and method-preserving reopening. PyInstaller has the same 17 warnings as v0.1.02;
+there are no new warning categories. Fresh archive verification remains an external publication gate,
+recorded in ToneMatchTMP-v0.1.03-ARCHIVE-VERIFICATION.json to avoid circular ZIP hash claims.
+Keep v0.1.02 assets for rollback; never replace a published tag or archive. Next patch is 0.1.04.
 
 ## v0.1.02 publication record — 2026-10-09 KST
 

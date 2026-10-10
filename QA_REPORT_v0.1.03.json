@@ -1,0 +1,38 @@
+{
+  "schema": "tonematch-qa/v1",
+  "app_version": "0.1.03",
+  "build_date": "2026-10-10",
+  "tested_at": "2026-10-10",
+  "status": "passed",
+  "scope": "Dark usable chord-purpose/transport UI, CQT versus legacy FFT choice on original mixture, method-preserving edits and exports.",
+  "checks": {
+    "ui_regressions": {"ok": true, "tests": 5, "seconds": 24.479, "languages": ["ko", "en"], "tk_scalings": [1.33, 1.67, 2.0, 2.67], "resize_callback_restoration": true},
+    "compact_layout_repair": {"ok": true, "chart_tests": 8, "playback_tests": 5, "minimum_window": [960, 600], "high_dpi_scaling": 2.0},
+    "method_regressions": {"ok": true, "tests": 5, "seconds": 5.359, "immediate_fft_edit_regression": true, "original_pcm": true, "cancel_progress": true},
+    "pdf_regressions": {"ok": true, "tests": 4, "seconds": 0.471, "method_identity_every_page": true},
+    "pdf_visual": {"ok": true, "scope": "Poppler-rendered first pages, Korean CQT and English dense FFT; no clipping or overlap"},
+    "native_ui_visual": {"ok": true, "scope": "Real synthetic silent 1200x800 Tk window with Korean-to-English rebuild, and repaired 960x600 Tk 2.0 compact header/controls"},
+    "developer_regressions": {"ok": true, "tests": 16, "seconds": 32.332},
+    "actual_chords": {"ok": true, "source_unchanged": true, "progress_and_cancel": true, "immediate_edit_json_html_pdf": true,
+      "cqt_full_coverage": 0.1188, "cqt_excerpt_coverage": 0.2323, "fft_full_coverage": 0.3587, "fft_excerpt_coverage": 0.4242,
+      "full_duration_seconds": 252.60988662131518, "coverage_is_accuracy": false},
+    "synthetic_frontend_comparison": {"ok": true, "cases": 246, "fft_matches": 246, "cqt_matches": 246,
+      "performance_note": "Concurrent validation, not a controlled speed benchmark"},
+    "reference_review": {"video_auto_generated_transcript_reviewed": true, "full_video_watched": false,
+      "jaenung_body_read": false, "jaenung_limit": "Robot check; no bypass", "primary_basis": "AudioLabs FMP and local implementation/regressions"},
+    "final_suite": {"status": "passed", "tests": 387, "seconds": 223.881, "warnings_as_errors": true},
+    "packaging_warnings": {"count": 17, "new_vs_v102": 0, "scope": "Normalized PyInstaller warnings and torch deprecations; frozen runtime checks are required separately"},
+    "frozen_self_test": {"status": "passed", "ok": true, "music_workflow": true, "cqt": true, "fft": true,
+      "manual_edit": true, "method_reopen": true, "pcm_reader": true, "mixer_export": true, "pdf_font": true,
+      "portaudio_runtime": true, "cpp_abi": 2, "cpp_parity": true, "float32_parity": true},
+    "fresh_archive_verification": {"status": "external_release_gate", "required_before_publication": true,
+      "report_asset": "ToneMatchTMP-v0.1.03-ARCHIVE-VERIFICATION.json"}
+  },
+  "limitations": {
+    "real_song_accuracy_measured": false, "separation_quality_improvement_measured": false,
+    "audible_output_tested": false, "physical_printing_tested": false,
+    "clean_machine_tested": false, "cuda_tested": false, "code_signed": false,
+    "new_cpp_chord_engine": false, "new_fft_dependency": false,
+    "native_maximize_restore_visual_tested": false
+  }
+}

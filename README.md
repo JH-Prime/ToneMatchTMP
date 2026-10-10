@@ -1,9 +1,22 @@
-# ToneMatch TMP 0.1.02
+# ToneMatch TMP 0.1.03
 
 An unofficial Windows tool for authorized local audio/video and Windows capture:
 whole-mixture chord charts plus three starting-point Fender Tone Master Pro or Quad Cortex recipes.
-Build reference: 2026-10-09 KST. Unsigned CPU developer prerelease.
-See [한국어 사용 안내](README_KO.md), [QA](QA_REPORT_v0.1.02.json) and [build history](BUILD_HISTORY.md).
+Build reference: 2026-10-10 KST. Unsigned CPU developer prerelease.
+See [한국어 사용 안내](README_KO.md), [QA](QA_REPORT_v0.1.03.json) and [build history](BUILD_HISTORY.md).
+
+## Added in 0.1.03
+
+- Clear, padded **Tone + chords / Chords only** choices and an actual **CQT / FFT** selector.
+  Both consume the original mixture. CQT remains the default; legacy FFT retains its fixed 440 Hz,
+  pitch-range weighting and harmonic suppression. No automatic guitar fingering is shown.
+- Removed the user-facing equipment inventory entrypoint; internal recipe data remains.
+- Dark playback/loop/follow controls, compact small-window layout and language-specific fonts.
+  GUI requests Malgun Gothic for Korean and Arial Narrow for English; PDFs keep licensed Nanum Gothic.
+- Method identity survives JSON/localization/HTML/PDF. FFT results support immediate manual edits.
+- No measured real-song accuracy gain is claimed. Compare the evidence and alternatives yourself.
+
+Keep the preserved v0.1.02 folder for rollback. Old release assets and source audio are unchanged.
 
 ## Added in 0.1.02
 
@@ -11,9 +24,8 @@ See [한국어 사용 안내](README_KO.md), [QA](QA_REPORT_v0.1.02.json) and [b
 - Choose Quad Cortex and your CorOS version for three of six curated native starting points.
   Start at device defaults: numerical QC knob ranges are unverified, not copied from TMP.
   Older firmware may use the previous names shown in the catalog.
-- Search the offline [official device list](https://neuraldsp.com/device-list) snapshot (2026-10-07):
-  318 native, 164 factory Captures, 150 plugin and 57 announced entries. The 689-entry
-  inventory is not 689 individually measured recipes; licensed and unreleased entries are excluded.
+- Internal recommendations use the [official device list](https://neuraldsp.com/device-list) snapshot
+  (2026-10-07). The inventory browsing entrypoint was removed in 0.1.03; licensed and unreleased entries are excluded.
 - CQT estimates a global tuning offset from at most 12 seconds of pitch-peak evidence,
   falling back to zero when peaks disagree. Twelve detuned synthetic C/Am/Dsus4 cases pass.
   Room 335 detection coverage is unchanged: 11.88% full-song, 23.23% excerpt, **not accuracy**.
@@ -42,12 +54,12 @@ Ambiguous names (e.g. C6/Am7), melody, percussion, harmonics and omitted notes r
 ## Start
 
 Extract the **entire** developer ZIP to a new directory, verify SHA-256, then run
-`ToneMatchTMP-v0.1.02.exe`. Do not move only the EXE.
+`ToneMatchTMP-v0.1.03.exe`. Do not move only the EXE.
 Choose authorized local media or PC capture, then a range of 3 seconds to 20 minutes;
 end `0` means through the end subject to that cap.
 Full-mix tone analysis isolates guitar; already-guitar audio can skip isolation.
 Chord input is always the selected original source. A separation failure can still stop the
-overall tone workflow; there is no independent chord-only analysis button yet.
+overall tone workflow; choose **Chords only** to run without guitar separation.
 
 First AI separation needs internet access and storage for the Demucs `htdemucs_6s` model.
 Weights are not bundled. Complete per-user caches are reused. The portable runtime is CPU-only.
