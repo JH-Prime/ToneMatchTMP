@@ -19,14 +19,14 @@ class PurposeUITests(unittest.TestCase):
             app._show_result(original)
             self.assertTrue(all(app.notebook.tab(i, 'state') == 'normal' for i in range(3)))
 
-    def test_chord_purpose_ignores_modeler_and_disables_tone_controls(self):
+    def test_chord_purpose_allows_modeler_selection_but_disables_tone_controls(self):
         with tempfile.TemporaryDirectory() as folder, hidden_chart_application(Path(folder)) as (_, app):
             app.device_id = 'line6_helix'
             app.chords_only_var.set(True)
             app._update_analysis_availability()
             self.assertEqual(str(app.analyze_button['state']), 'normal')
             self.assertEqual(str(app.mix_combo['state']), 'disabled')
-            self.assertEqual(str(app.device_combo['state']), 'disabled')
+            self.assertEqual(str(app.device_combo['state']), 'readonly')
             self.assertIn('CQT', app.device_description_var.get())
 
     def test_catalog_search_preserves_licensing_and_pending_status(self):

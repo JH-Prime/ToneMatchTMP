@@ -2614,7 +2614,7 @@ class ToneMatchApp:
         """멀티이펙터 선택을 갱신하고 미구현 장치에서는 분석을 비활성화한다."""
         self.device_id = device_id_from_label(self.device_var.get())
         self.device_description_var.set(device_description(self.device_id, self.language))
-        if not is_supported_device(self.device_id):
+        if not self.chords_only_var.get() and not is_supported_device(self.device_id):
             self.status_var.set(tr("status.unsupported_device", self.language))
         else:
             self.status_var.set(tr("status.ready", self.language) if self.file_var.get() else tr("status.choose_file", self.language))
@@ -3417,8 +3417,12 @@ class ToneMatchApp:
                         self.status_var.set(event[2])
                     self._set_debug_progress(self.analysis_progress_percent, event[2])
                 elif event[0] == "done":
+                    # The terminal event ends the job even if its thread is still
+                    # returning. Retire it before availability checks run.
+                    self.worker = None
                     self._show_result(event[1])
                 elif event[0] == "error":
+                    self.worker = None
                     self._show_error(event[1], event[2])
                 elif event[0] == "record_progress":
                     self.status_var.set(event[3])
@@ -3681,7 +3685,10 @@ class ToneMatchApp:
         for button in self.purpose_buttons:
             button.configure(state='disabled' if busy else 'normal')
         self.chord_method_combo.configure(state='disabled' if busy else 'readonly')
-        for widget in (self.device_combo, self.pickup_combo, self.mix_combo, self.output_combo, self.compute_combo):
+        # Device selection is also useful for the next tone analysis. Chord-only
+        # analysis remains device-independent; only tone-specific inputs lock.
+        self.device_combo.configure(state='disabled' if busy else 'readonly')
+        for widget in (self.pickup_combo, self.mix_combo, self.output_combo, self.compute_combo):
             widget.configure(state='disabled' if busy or chord_only else 'readonly')
         if self.device_id == 'quad_cortex' and not chord_only:
             self.qc_options.pack(anchor='w', pady=3)
