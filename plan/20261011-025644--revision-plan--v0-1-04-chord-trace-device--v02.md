@@ -3,15 +3,15 @@
 Plan Type: revision-plan
 Workstream: CQT timing, harmonic context, and bounded chord-path optimization
 Version: 02
-Status: Source and frozen executable verified; fresh ZIP verification/publication in progress
+Status: Complete — source, frozen executable, independent archive and public release verified
 Created: 2026-10-11 02:56:44 KST (Asia/Seoul)
-Last Updated: 2026-10-11 23:07:15 KST (Asia/Seoul)
+Last Updated: 2026-10-11 23:13:15 KST (Asia/Seoul)
 Supersedes: plan/20261011-023540--work-plan--v0-1-04-chord-trace--v01.md
-Current Completion State: 11 trace tests pass on onset-bounded 50 ms observations; scalar scoring and path equivalence pass. Eight headless lifecycle tests pass after the approved selector fix.
+Current Completion State: 318 headless tests, frozen workflow and independent ZIP verification pass; v0.1.04 is published with matching public asset digests. The 92 GUI-containing tests remain explicitly deferred under the no-screen constraint.
 Completed So Far: Confirmed existing CQT tuning, candidate evidence gates, fixed overlapping windows, and dynamic-programming trace.
-Remaining Work: Regression baseline, bounded implementation increments, comparison metrics, full verification, review, version and release preparation.
+Remaining Work: None within the approved no-screen delivery scope. Native click/visual checks and real-song annotated accuracy remain disclosed validation limitations.
 Current Blockers: No algorithm implementation blocker. Real-song ground-truth annotations are unavailable; that limits accuracy claims.
-Next Step: Create and independently verify the immutable v0.1.04 ZIP, then publish only after digest/source gates pass.
+Next Step: User may test the new portable build; handle any follow-up defect as v0.1.05 without replacing existing assets.
 
 ## Approval, objective, and scope
 
@@ -81,19 +81,20 @@ Remaining scientific uncertainty is expected. Dense mixes, overtones, reverb, in
 
 ## Scoreboard
 
-Current Score: 48/100
+Current Score: 50/100
 Score Source: provisional
-Last Updated: 2026-10-11 23:07:15 KST (Asia/Seoul)
-Rationale: Headless regressions, private-file integration, independent review and packaged executable self-tests pass. Fresh ZIP and public asset verification remain outstanding.
+Last Updated: 2026-10-11 23:13:15 KST (Asia/Seoul)
+Rationale: Approved fixes and bounded tracing improvements are implemented, verified, and publicly released. This is a capped provisional workflow score, not user satisfaction or musical accuracy.
 What Improved: CQT timing regressions, exact decoder/scoring equivalence, and device lifecycle recovery are covered.
-What Remains Unsatisfactory: Native pointer/visual verification is intentionally deferred; real-song accuracy is not labeled, and the ZIP is not yet verified/published.
-Next Score Action: Finish immutable archive validation and public digest readback.
+What Remains Unsatisfactory: Native pointer/visual verification is intentionally deferred and real-song accuracy lacks independent annotations.
+Next Score Action: Collect the user's actual build feedback without initiating screen interaction or widening scope.
 
 Score History:
 - 2026-10-11 02:35:40 KST (Asia/Seoul): 28/100 provisional. Approved scope recorded; no claim of implementation or measured improvement.
 
 ## Progress log
 
+- 2026-10-11 23:13:15 KST: v0.1.04 published at 23:13:04 KST from 96bae548efd22cc56818e418a3698a04de021264. Fresh ZIP verified 5,458 files/96 source inputs and no-GUI frozen tests. Public ZIP, checksum and verification assets match local digests. Old v0.1.03 SHA-256 remains unchanged. No release blockers; native visual/real-song annotation limitations retained. Score 50/100 provisional.
 - 2026-10-11 23:07:15 KST: Continued from durable build output. v0.1.04 frozen self-test passed all music workflow and C++ ABI 2 checks. Headless suite passed 318 cases in 56.648s with warnings as errors; 92 GUI cases deferred and guarded. Both private-file frontends passed edit/reopen/export/cancel checks. Independent review reported no actionable findings and 23 focused tests passed. QA status covers source and frozen gates; archive/publication remain external gates. Score 48/100 provisional, not musical accuracy.
 - 2026-10-11 08:28:10 KST: Eight lifecycle test methods exercised real completion/error/availability handlers without Tk windows. RED reproduced eight failing subcases; GREEN passed all eight methods in 0.023 seconds. Terminal events retire analysis state before refreshing controls; idle chord mode permits modeler selection but leaves tone-only settings disabled. Other active operations still lock controls; result refresh does not retire a live task. Updated the deferred native UI expectation. Independent read-only algorithm review is running under the runtime's proactive delegation instruction; no delegated writes or screen use.
 - 2026-10-11 02:50:52 KST: User highlighted tempo-relative timing. Added 180 BPM quarter-note changes and 60 ms clean-boundary targets within the approved timing scope. Plain 50 ms hops reproduced mixed-boundary false extensions; an independent short STFT now locates changes only, while CQT remains the pitch source and evidence windows shift inside detected harmonic regions. A low-note beating regression required enough STFT frequency resolution; all nine audio trace tests now pass. No generic 50 ms accuracy guarantee is claimed. Previous 307 headless tests passed before this additional boundary work; 87 GUI-containing cases were deliberately excluded. Re-run the headless suite on the final source.
@@ -128,3 +129,6 @@ The publication gate now includes this lifecycle fix and its tests; do not relea
 
 Score History continuation:
 - 2026-10-11 02:56:44 KST (Asia/Seoul): 42/100 provisional. Focused timing/fast-tempo/scalar-equivalence improvements are demonstrated; a reproduced selector lifecycle bug and release verification remain. This is not an accuracy score.
+- 2026-10-11 08:28:10 KST (Asia/Seoul): 45/100 provisional. Selector regression now red/green verified; broader delivery work remained.
+- 2026-10-11 23:07:15 KST (Asia/Seoul): 48/100 provisional. Source/frozen tests and independent review passed; archive/publication pending.
+- 2026-10-11 23:13:15 KST (Asia/Seoul): 50/100 provisional. Approved no-screen delivery completed and published; user has not supplied an explicit score.

@@ -8,7 +8,7 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 | 버전 | 상태 | 범위 |
 |---|---|---|
-| `0.1.04` | 소스·실행 파일 검증 완료, 독립 ZIP 검증 후 게시 | 분석 종료 장비 잠금 복구, 코드 모드 장비 선택, 50ms CQT 관측·경계·시간 가중 경로 |
+| `0.1.04` | 독립 ZIP 검증 완료·개발자 프리릴리스 게시 | 분석 종료 장비 잠금 복구, 코드 모드 장비 선택, 50ms CQT 관측·경계·시간 가중 경로 |
 | `0.1.03` | 소스·실행 파일 검증 완료, 독립 ZIP 검증 후 게시 | 코드 UI·폰트·장비 목록 진입점 정리, 원본 CQT/FFT 선택과 저장 방식 보존 |
 | `0.1.02` | 검증 완료·개발자 프리릴리스 게시 | Quad Cortex 목록·내장 추천, AI 독립 코드 모드, CQT 튜닝 보정 |
 | `0.1.01` | 개발자 프리릴리스 검증 중 | 전체 음원 CQT 코드, 재생 연동·직접 수정, 6-stem 믹서·WAV, 16마디 PDF |
@@ -25,6 +25,19 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 | `0.0.03` | 포터블 개발 프리뷰 빌드 완료 | 포터블 개발 ZIP, 한·영 handoff, 로그·빌드 이력, NumPy 코드/보이싱 분석(실험) |
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
+
+## v0.1.04 publication record — 2026-10-11 KST
+
+Published at 23:13:04 KST. Release: https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.04
+Immutable tag commit: `96bae548efd22cc56818e418a3698a04de021264`.
+Archive: `ToneMatchTMP-v0.1.04-Windows-x64-Portable-Dev.zip`, 349,538,383 bytes.
+SHA-256: `49AD63DB4480DEDE045CBB57FD6B5CA961B18B3D77BB65454892CB3C7D12D9C4`.
+Fresh extraction verified 5,458 manifest files and 96 source inputs, frozen workflow and native parity,
+font/licenses, private-path/media/model-weight exclusion, and cold CQT execution without development JIT caches.
+Three public assets (ZIP, checksums, archive verification JSON) match the local sizes and SHA-256 digests.
+No native click/visual, audible output, new-PC, GPU or physical-printing validation is claimed.
+The earlier v0.1.03 ZIP remains unchanged and unpublished; its UI repairs are included in v0.1.04.
+This post-publication record does not modify the immutable ZIP or tag. Further fixes use v0.1.05.
 
 ## v0.1.04 — 2026-10-11 KST
 
