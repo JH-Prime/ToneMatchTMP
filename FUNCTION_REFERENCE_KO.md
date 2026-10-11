@@ -48,7 +48,9 @@
 | 38 | `_estimate_tuning` | 앞·중간·끝 최대 12초의 일관된 피크만 튜닝 근거로 사용한다. |
 | 80 | `_cqt_magnitudes` | 위상이 반대인 채널도 소실시키지 않는 실제 상수 Q 스펙트럼을 만든다. |
 | 94 | `_pitch_profile` | 국소 잡음 바닥을 낮추되 작은 구성음을 평균 문턱으로 삭제하지 않는다. |
-| 104 | `analyze_song_chords` | 최대 20분 원본 PCM을 겹치는 구간으로 처리하고 근거·대안을 남긴다. |
+| 104 | `_harmonic_change_times` | Locate spectral changes, independently of their eventual chord names. A short STFT supplies timing only; CQT still supplies all chord pitches. Compare normalized spectra so a level change alone is not a new harmony. |
+| 133 | `_bounded_evidence` | Shift a window inside its harmonic region instead of mixing two chords. |
+| 142 | `analyze_song_chords` | 최대 20분 원본 PCM을 겹치는 구간으로 처리하고 근거·대안을 남긴다. |
 
 ## `playback.py`
 
@@ -487,34 +489,34 @@
 | 3383 | `ToneMatchApp._analysis_worker` | 전체 기타 분석을 실행하고 결과 또는 오류를 메인 UI 큐에 전달한다. |
 | 3385 | `ToneMatchApp._analysis_worker.<local>.progress` | 엔진 콜백을 Tk 메인 스레드용 진행 이벤트로 변환한다. |
 | 3395 | `ToneMatchApp._drain_events` | 백그라운드 분석·녹음·스펙트럼 제어 이벤트를 Tk 메인 스레드에서 처리한다. |
-| 3476 | `ToneMatchApp._recording_completed` | 완료된 임시 녹음을 현재 분석 파일로 연결하고 버튼 상태를 복구한다. |
-| 3489 | `ToneMatchApp._recording_failed` | 녹음 실패 메시지와 상세 로그를 남기고 UI를 다시 사용할 수 있게 한다. |
-| 3499 | `ToneMatchApp._show_error` | 분석 실패 상태를 복구하고 사용자 메시지와 영구 개발 로그를 남긴다. |
-| 3513 | `ToneMatchApp._show_result` | 추천 체인 세 개, 기타 stem 진단과 상태를 현재 언어 화면에 표시한다. |
-| 3569 | `ToneMatchApp._render_recipe` | 한 추천 체인의 모델·순서·파라미터·이유를 읽기 쉬운 서식으로 그린다. |
-| 3595 | `ToneMatchApp._render_voicing` | 코드·보이싱 타임라인의 근거와 대안 해석 및 연주 후보를 구분해 표시한다. |
-| 3659 | `ToneMatchApp._format_time` | 초 단위 위치를 긴 곡에서도 읽기 쉬운 분:초 문자열로 바꾼다. |
-| 3665 | `ToneMatchApp._update_analysis_availability` | 장치 지원과 분석·녹음·스펙트럼 상태를 보고 공통 컨트롤을 갱신한다. |
-| 3695 | `ToneMatchApp._update_copy_availability` | 현재 탭에 복사할 표시 내용이 있고 작업 중이 아닐 때만 복사 버튼을 켠다. |
-| 3713 | `ToneMatchApp._update_result_header_layout` | 코드 보기에서는 톤 레시피 전용 제목·요약을 접고 내보내기와 악보 높이를 보존한다. |
-| 3731 | `ToneMatchApp._default_export_name` | 입력 파일명을 안전한 기본 내보내기 파일명으로 바꾼다. |
-| 3737 | `ToneMatchApp._export_json` | 현재 전체 분석 데이터와 분리 진단을 UTF-8 JSON으로 저장한다. |
-| 3749 | `ToneMatchApp._export_html` | 현재 결과를 외부 자원이 없는 한·영 HTML 리포트로 저장하고 선택 시 연다. |
-| 3763 | `ToneMatchApp._mark_export` | 내보내기 단계를 순서도에 표시하고 상태와 영구 로그를 갱신한다. |
-| 3772 | `ToneMatchApp._export_chart_pdf` | 유효 코드표 사본을 저장하고 명시적 미리보기 요청만 OS 문서 뷰어로 연다. |
-| 3789 | `ToneMatchApp._run_chart_pdf_export` | PDF 작업자는 Tk에 접근하지 않고 완료·취소·오류만 전달한다. |
-| 3801 | `ToneMatchApp._copy_recipe` | 현재 선택한 결과·진단·개발자 탭의 표시 내용을 클립보드에 복사한다. |
-| 3861 | `ToneMatchApp._export_debug_bundle` | 다른 PC에서 진단·개발을 이어갈 소스, 로그, 이력, 환경 정보를 ZIP으로 묶는다. |
-| 3898 | `ToneMatchApp._on_close` | 모든 작업에 중지 신호를 보내고 임시 녹음을 정리한 뒤 창을 닫는다. |
-| 3917 | `ToneMatchApp._finish_close_after_stem_cleanup` | 악기 제거 작업이 임시 음원을 정리할 때까지 숨은 메인 루프를 유지한다. |
-| 3942 | `_write_self_test_audio` | 패키지 자체 진단에 사용할 재현 가능한 기타 유사 스테레오 WAV를 만든다. |
-| 3972 | `_self_test_native_dsp` | 실제 DLL 또는 명시적 대체 경로에서 합성 PCM 누적·위상·평활화·초기화를 검증한다. |
-| 4067 | `_self_test_voicing` | 동결 EXE의 확장화음·모호성 근거와 단음 거부를 모델 다운로드 없이 확인한다. |
-| 4073 | `_self_test_voicing.<local>.analyze_notes` | 작은 합성 신호를 실제 코드 분석기에 전달한다. |
-| 4094 | `_self_test_harmony_reference` | 동결 앱의 이론 사전이 확장음·음이름·펜타토닉·다이어토닉 자료를 실제 계산하는지 확인한다. |
-| 4112 | `_self_test_chord_chart` | 마디 페이지·변화 보존·미확정·원본 믹스 안전 표시와 확장 운지 모듈을 검사한다. |
-| 4136 | `run_self_test` | 합성 기타로 오프라인 분석·한영 변환·개발자 소스와 런타임을 검사한다. |
-| 4199 | `main` | 자체 진단 인수를 처리하거나 한·영 데스크톱 GUI 이벤트 루프를 시작한다. |
+| 3480 | `ToneMatchApp._recording_completed` | 완료된 임시 녹음을 현재 분석 파일로 연결하고 버튼 상태를 복구한다. |
+| 3493 | `ToneMatchApp._recording_failed` | 녹음 실패 메시지와 상세 로그를 남기고 UI를 다시 사용할 수 있게 한다. |
+| 3503 | `ToneMatchApp._show_error` | 분석 실패 상태를 복구하고 사용자 메시지와 영구 개발 로그를 남긴다. |
+| 3517 | `ToneMatchApp._show_result` | 추천 체인 세 개, 기타 stem 진단과 상태를 현재 언어 화면에 표시한다. |
+| 3573 | `ToneMatchApp._render_recipe` | 한 추천 체인의 모델·순서·파라미터·이유를 읽기 쉬운 서식으로 그린다. |
+| 3599 | `ToneMatchApp._render_voicing` | 코드·보이싱 타임라인의 근거와 대안 해석 및 연주 후보를 구분해 표시한다. |
+| 3663 | `ToneMatchApp._format_time` | 초 단위 위치를 긴 곡에서도 읽기 쉬운 분:초 문자열로 바꾼다. |
+| 3669 | `ToneMatchApp._update_analysis_availability` | 장치 지원과 분석·녹음·스펙트럼 상태를 보고 공통 컨트롤을 갱신한다. |
+| 3702 | `ToneMatchApp._update_copy_availability` | 현재 탭에 복사할 표시 내용이 있고 작업 중이 아닐 때만 복사 버튼을 켠다. |
+| 3720 | `ToneMatchApp._update_result_header_layout` | 코드 보기에서는 톤 레시피 전용 제목·요약을 접고 내보내기와 악보 높이를 보존한다. |
+| 3738 | `ToneMatchApp._default_export_name` | 입력 파일명을 안전한 기본 내보내기 파일명으로 바꾼다. |
+| 3744 | `ToneMatchApp._export_json` | 현재 전체 분석 데이터와 분리 진단을 UTF-8 JSON으로 저장한다. |
+| 3756 | `ToneMatchApp._export_html` | 현재 결과를 외부 자원이 없는 한·영 HTML 리포트로 저장하고 선택 시 연다. |
+| 3770 | `ToneMatchApp._mark_export` | 내보내기 단계를 순서도에 표시하고 상태와 영구 로그를 갱신한다. |
+| 3779 | `ToneMatchApp._export_chart_pdf` | 유효 코드표 사본을 저장하고 명시적 미리보기 요청만 OS 문서 뷰어로 연다. |
+| 3796 | `ToneMatchApp._run_chart_pdf_export` | PDF 작업자는 Tk에 접근하지 않고 완료·취소·오류만 전달한다. |
+| 3808 | `ToneMatchApp._copy_recipe` | 현재 선택한 결과·진단·개발자 탭의 표시 내용을 클립보드에 복사한다. |
+| 3868 | `ToneMatchApp._export_debug_bundle` | 다른 PC에서 진단·개발을 이어갈 소스, 로그, 이력, 환경 정보를 ZIP으로 묶는다. |
+| 3905 | `ToneMatchApp._on_close` | 모든 작업에 중지 신호를 보내고 임시 녹음을 정리한 뒤 창을 닫는다. |
+| 3924 | `ToneMatchApp._finish_close_after_stem_cleanup` | 악기 제거 작업이 임시 음원을 정리할 때까지 숨은 메인 루프를 유지한다. |
+| 3949 | `_write_self_test_audio` | 패키지 자체 진단에 사용할 재현 가능한 기타 유사 스테레오 WAV를 만든다. |
+| 3979 | `_self_test_native_dsp` | 실제 DLL 또는 명시적 대체 경로에서 합성 PCM 누적·위상·평활화·초기화를 검증한다. |
+| 4074 | `_self_test_voicing` | 동결 EXE의 확장화음·모호성 근거와 단음 거부를 모델 다운로드 없이 확인한다. |
+| 4080 | `_self_test_voicing.<local>.analyze_notes` | 작은 합성 신호를 실제 코드 분석기에 전달한다. |
+| 4101 | `_self_test_harmony_reference` | 동결 앱의 이론 사전이 확장음·음이름·펜타토닉·다이어토닉 자료를 실제 계산하는지 확인한다. |
+| 4119 | `_self_test_chord_chart` | 마디 페이지·변화 보존·미확정·원본 믹스 안전 표시와 확장 운지 모듈을 검사한다. |
+| 4143 | `run_self_test` | 합성 기타로 오프라인 분석·한영 변환·개발자 소스와 런타임을 검사한다. |
+| 4206 | `main` | 자체 진단 인수를 처리하거나 한·영 데스크톱 GUI 이벤트 루프를 시작한다. |
 
 ## `catalog.py`
 
@@ -759,20 +761,22 @@
 | 188 | `_independent_pitch_peaks` | 국소 잡음보다 뚜렷한 기본음만 남기고 낮은 음의 정수배 배음 중복을 억제한다. |
 | 240 | `_window_pitch_profile` | 채널 위상을 섞지 않는 스펙트럼에서 독립 기본음 chroma와 실제 RMS를 계산한다. |
 | 260 | `_score_chord` | 구성음 보상과 비구성음 벌점을 조합해 한 코드 템플릿 점수를 만든다. |
-| 278 | `_infer_bass_pc` | 충분히 강한 가장 낮은 기타 음을 찾아 베이스 pitch class로 사용한다. |
-| 287 | `_voicing_profile` | 활성 음들의 pitch class, 평균 음역과 음 간격 폭을 보수적으로 분류한다. |
-| 308 | `_barre_shape` | 검출값과 별개로 연주해 볼 수 있는 E형 또는 A형 바레 후보를 만든다. |
-| 338 | `candidate_guitar_shapes` | 코드 이름을 실제로 시험할 수 있는 최대 두 개의 일반 운지 후보로 바꾼다. |
-| 356 | `_classify_window` | 한 분석창을 코드, 베이스/역위, 음역, 간격과 신뢰도로 분류한다. |
-| 425 | `_unknown_window` | 원래 시간 좌표만 보존하고 근거가 불충분한 창의 모든 코드 주장을 지운다. |
-| 433 | `_smooth_labels` | 각 창의 직접 근거와 인접 창의 반복 근거가 있는 후보만 시간 경로에 사용한다. |
-| 489 | `_merge_events` | 연속해서 같은 코드로 분류된 시간창을 하나의 타임라인 이벤트로 합친다. |
-| 563 | `_limit_timeline_events` | 표시 상한을 넘는 약한 후보는 미확정으로 합치되 전체 시간대와 무음 간격을 보존한다. |
-| 568 | `_limit_timeline_events.<local>.retained_timeline` | 선택하지 않은 후보와 기존 미확정 구간을 연속 미확정 구간으로 모은다. |
-| 598 | `analyze_voicings` | guitar stem 전체에서 시간대별 코드와 보이싱 프로필을 결정론적으로 추정한다. |
-| 705 | `voicing_analysis_dict` | 불변 보이싱 분석 객체와 이벤트를 JSON 직렬화 가능한 사전으로 바꾼다. |
-| 710 | `pitch_class_names` | pitch class 정수 모음을 사람이 읽는 음이름 문자열로 바꾼다. |
-| 715 | `without_bass_note` | 끝에 붙은 역위 베이스 음이름만 제거하고 6/9 같은 코드 유형 표기는 보존한다. |
+| 279 | `_template_groups` | Same-sized templates share array operations, not new scoring rules. |
+| 291 | `_template_scores` | Vectorized equivalent of _score_chord, including tone and power gates. |
+| 307 | `_infer_bass_pc` | 충분히 강한 가장 낮은 기타 음을 찾아 베이스 pitch class로 사용한다. |
+| 316 | `_voicing_profile` | 활성 음들의 pitch class, 평균 음역과 음 간격 폭을 보수적으로 분류한다. |
+| 337 | `_barre_shape` | 검출값과 별개로 연주해 볼 수 있는 E형 또는 A형 바레 후보를 만든다. |
+| 367 | `candidate_guitar_shapes` | 코드 이름을 실제로 시험할 수 있는 최대 두 개의 일반 운지 후보로 바꾼다. |
+| 385 | `_classify_window` | 한 분석창을 코드, 베이스/역위, 음역, 간격과 신뢰도로 분류한다. |
+| 454 | `_unknown_window` | 원래 시간 좌표만 보존하고 근거가 불충분한 창의 모든 코드 주장을 지운다. |
+| 462 | `_smooth_labels` | 각 창의 직접 근거와 인접 창의 반복 근거가 있는 후보만 시간 경로에 사용한다. |
+| 535 | `_merge_events` | 연속해서 같은 코드로 분류된 시간창을 하나의 타임라인 이벤트로 합친다. |
+| 610 | `_limit_timeline_events` | 표시 상한을 넘는 약한 후보는 미확정으로 합치되 전체 시간대와 무음 간격을 보존한다. |
+| 615 | `_limit_timeline_events.<local>.retained_timeline` | 선택하지 않은 후보와 기존 미확정 구간을 연속 미확정 구간으로 모은다. |
+| 645 | `analyze_voicings` | guitar stem 전체에서 시간대별 코드와 보이싱 프로필을 결정론적으로 추정한다. |
+| 752 | `voicing_analysis_dict` | 불변 보이싱 분석 객체와 이벤트를 JSON 직렬화 가능한 사전으로 바꾼다. |
+| 757 | `pitch_class_names` | pitch class 정수 모음을 사람이 읽는 음이름 문자열로 바꾼다. |
+| 762 | `without_bass_note` | 끝에 붙은 역위 베이스 음이름만 제거하고 6/9 같은 코드 유형 표기는 보존한다. |
 
 ## `harmony_reference.py`
 
@@ -1378,4 +1382,4 @@
 
 ---
 
-총 함수 수: **1032**
+총 함수 수: **1036**

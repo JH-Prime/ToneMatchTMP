@@ -1,0 +1,32 @@
+{
+  "schema": "tonematch-qa/v1",
+  "app_version": "0.1.04",
+  "build_date": "2026-10-11",
+  "tested_at": "2026-10-11",
+  "status": "passed",
+  "scope": "Modeler lifecycle recovery, idle chord-mode device choice, finer CQT tracing and exact path/template optimization.",
+  "checks": {
+    "device_lifecycle": {"ok": true, "tests": 8, "red_before_fix": true, "success_error_cancel": true, "other_busy_locks_preserved": true, "result_refresh_not_completion": true},
+    "headless_suite": {"ok": true, "tests": 318, "seconds": 56.648, "warnings_as_errors": true, "tk_creation_guard": true, "deferred_gui_tests": 92, "receipt": "v104-headless-tests.json"},
+    "trace_regressions": {"ok": true, "tests": 11, "fast_tempo_bpm": 180, "song_endpoints": true, "detuned_and_low_register": true},
+    "synthetic_comparison": {"ok": true, "cases": 11, "baseline_ref": "1edefc6", "baseline_duration_weighted_symbol_agreement": 0.9065558961, "current_duration_weighted_symbol_agreement": 0.9935761047, "tempo_180_boundary_error_seconds_max": 0.0407, "scope": "Development regression signals, not independent real-song accuracy", "receipt": "v104-chord-trace-comparison.json"},
+    "exact_optimizations": {"ok": true, "randomized_path_cases": 100, "scalar_score_profiles": 558, "classifier_profiles": 96, "new_cpp_abi": false, "overall_speedup_claimed": false},
+    "actual_chords": {"ok": true, "methods": ["cqt", "fft"], "source_unchanged": true, "progress_cancel": true, "immediate_edit_reopen_html_pdf": true, "duration_seconds": 252.6098866213, "cqt_full_coverage": 0.4951, "cqt_excerpt_coverage": 0.51, "fft_full_coverage": 0.3587, "fft_excerpt_coverage": 0.4242, "coverage_is_accuracy": false},
+    "independent_review": {"ok": true, "actionable_findings": 0, "focused_tests_repeated": 23, "scope": "Trace endpoints, duration/scoring/path equivalence, device lifecycle; no native UI"},
+    "frozen_self_test": {"status": "passed", "ok": true, "music_workflow": true, "cqt": true, "fft": true, "manual_edit": true, "method_reopen": true, "mixer_export": true, "pdf_font": true, "cpp_abi": 2, "cpp_parity": true, "float32_parity": true},
+    "packaging_warnings": {"count": 17, "scope": "PyInstaller optional imports, third-party hooks and torch deprecations; frozen runtime passes"},
+    "fresh_archive_verification": {"status": "external_release_gate", "required_before_publication": true, "report_asset": "ToneMatchTMP-v0.1.04-ARCHIVE-VERIFICATION.json"},
+    "publication": {"status": "external_release_gate", "requires_verified_archive_and_remote_asset_digests": true}
+  },
+  "limitations": {
+    "real_song_accuracy_measured": false,
+    "observation_hop_is_error_guarantee": false,
+    "native_click_and_visual_tested": false,
+    "audible_output_tested": false,
+    "physical_printing_tested": false,
+    "clean_machine_tested": false,
+    "cuda_tested": false,
+    "code_signed": false,
+    "new_fft_dependency": false
+  }
+}

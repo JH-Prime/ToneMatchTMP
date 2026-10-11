@@ -1,6 +1,25 @@
-# ToneMatch TMP v0.1.03 — 개발 인수인계 / Developer Handoff
+# ToneMatch TMP v0.1.04 — 개발 인수인계 / Developer Handoff
 
-## Current v0.1.03 / 현행 — 2026-10-10 KST
+## Current v0.1.04 / 현행 — 2026-10-11 KST
+
+Use QA_REPORT_v0.1.04.json and the newest BUILD_HISTORY entry; older sections are historical.
+CQT uses 0.6-second evidence, 0.05-second observation hops and bounded 120-observation batches.
+Phase-safe normalized STFT novelty supplies boundaries only, never replaces CQT pitch evidence.
+Keep endpoint observations, duration-weighted emissions, slash-symbol merging and exact tie behavior.
+Vectorized templates match the scalar reference; no dependency or C++ ABI change was needed.
+Device job retirement belongs in terminal queue handling, not _show_result, which also refreshes saved results.
+Idle chords-only permits the modeler selector; tone controls remain inapplicable and active operations lock selection.
+tools/verify_headless.py is the no-screen gate: Tk construction is forbidden; 92 native UI cases are deferred.
+Use tools/verify_chord_trace.py for annotated synthetic metrics, not real-song accuracy claims.
+Use tools/verify_qc_chords.py for private local samples; never upload media, filenames or private paths.
+Keep the immutable v0.1.03 archive; it was verified locally but not published by this work.
+No database/settings migration is introduced. Rollback uses an untouched older portable folder and saved results.
+The v0.1.04 package/publication gates remain separate from source verification; consult current QA status.
+
+코드 전용 분석은 장비와 독립적입니다. 실제 곡 검출 비율과 정답률을 구별하고,
+화면 조작 없는 검증을 실제 클릭·배치 검증으로 표현하지 마세요.
+
+## Historical v0.1.03 / 이전 — 2026-10-10 KST
 
 Current evidence: QA_REPORT_v0.1.03.json and newest BUILD_HISTORY entry; sections below are historical.
 engine.analyze_file(chord_method='cqt'|'fft') validates before decode. Both use original PCM;

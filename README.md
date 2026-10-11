@@ -1,9 +1,23 @@
-# ToneMatch TMP 0.1.03
+# ToneMatch TMP 0.1.04
 
 An unofficial Windows tool for authorized local audio/video and Windows capture:
 whole-mixture chord charts plus three starting-point Fender Tone Master Pro or Quad Cortex recipes.
-Build reference: 2026-10-10 KST. Unsigned CPU developer prerelease.
-See [한국어 사용 안내](README_KO.md), [QA](QA_REPORT_v0.1.03.json) and [build history](BUILD_HISTORY.md).
+Build reference: 2026-10-11 KST. Unsigned CPU developer prerelease.
+See [한국어 사용 안내](README_KO.md), [QA](QA_REPORT_v0.1.04.json) and [build history](BUILD_HISTORY.md).
+
+## Added in 0.1.04
+
+- Modeler selection recovers after analysis success, failure or cancellation, including the
+  terminal-event/thread-return race. Idle **Chords only** also permits choosing the next tone device.
+  Chord extraction remains device-independent; ongoing tasks still lock controls.
+- CQT observes every 50 ms, with spectral-change timing used to bound pitch evidence windows.
+  Short opening/closing chords and duration-weighted candidate paths are preserved.
+  This does not upsample audio or guarantee 50 ms transcription accuracy.
+- Eleven annotated synthetic sequences improved duration-weighted symbol agreement from
+  90.66% to 99.36%. These development signals are not a real-song accuracy benchmark.
+  Finer observations add work; exact path/scoring optimizations mitigate that cost, not an overall speed guarantee.
+- No-screen regression checks are separate from native clicking/layout verification, which is deferred.
+  CQT and FFT remain selectable; existing saved corrections are not automatically reanalyzed.
 
 ## Added in 0.1.03
 

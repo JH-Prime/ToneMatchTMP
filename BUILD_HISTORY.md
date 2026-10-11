@@ -8,6 +8,7 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 | 버전 | 상태 | 범위 |
 |---|---|---|
+| `0.1.04` | 소스·실행 파일 검증 완료, 독립 ZIP 검증 후 게시 | 분석 종료 장비 잠금 복구, 코드 모드 장비 선택, 50ms CQT 관측·경계·시간 가중 경로 |
 | `0.1.03` | 소스·실행 파일 검증 완료, 독립 ZIP 검증 후 게시 | 코드 UI·폰트·장비 목록 진입점 정리, 원본 CQT/FFT 선택과 저장 방식 보존 |
 | `0.1.02` | 검증 완료·개발자 프리릴리스 게시 | Quad Cortex 목록·내장 추천, AI 독립 코드 모드, CQT 튜닝 보정 |
 | `0.1.01` | 개발자 프리릴리스 검증 중 | 전체 음원 CQT 코드, 재생 연동·직접 수정, 6-stem 믹서·WAV, 16마디 PDF |
@@ -24,6 +25,32 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 | `0.0.03` | 포터블 개발 프리뷰 빌드 완료 | 포터블 개발 ZIP, 한·영 handoff, 로그·빌드 이력, NumPy 코드/보이싱 분석(실험) |
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
+
+## v0.1.04 — 2026-10-11 KST
+
+Source scope: explicit analysis terminal-event retirement fixes the modeler selector race;
+idle chords-only mode now allows choosing hardware without changing chord extraction.
+CQT observations use 50 ms hops and 0.6-second evidence bounded by normalized STFT changes.
+Short opening/closing chords survive; duration weights prevent extra observations from inflating
+evidence, while exact path/template optimizations preserve the selected objective. C++ ABI 2 unchanged.
+
+Eight headless device lifecycle methods reproduced the old failures and passed after the fix.
+Eleven annotated synthetic sequences: duration-weighted strict symbol agreement 0.906556 → 0.993576.
+180 BPM cases preserved quarter-note changes, with boundary errors 4–40.7 ms (0.012–0.1221 beats).
+These are development regression signals, not independent real-song accuracy validation.
+Isolated 6000-by-24 path comparison preserved labels; timings are machine/load dependent.
+Finer observations cost more total work than the old coarse grid; do not claim universal speedup.
+
+Room335 CQT full/excerpt coverage 0.4951/0.5100; FFT 0.3587/0.4242. Coverage is not accuracy.
+Both preserve the original source and support progress, cancellation, immediate edits, reopen and HTML/PDF.
+The 252.61-second CQT full-file check took 18.272 seconds in this development run.
+No screen interaction, sound output or uploads of private audio. Native UI cases are deferred.
+Final test counts and frozen/archive status are recorded in QA_REPORT_v0.1.04.json.
+Final headless suite: 318 tests passed with warnings as errors in 56.648s; 92 GUI cases deferred.
+Independent read-only review found no actionable defects; 23 focused tests passed again.
+Packaged executable self-test passed CQT/FFT, immediate correction/reopen, mixer/PDF and C++ ABI 2 parity.
+PyInstaller emitted 17 optional-import/hook/deprecation warnings; no warning-free build is claimed.
+Do not replace v0.1.03 or earlier archives. New ZIP hash verification must be external to that ZIP.
 
 ## v0.1.03 — 2026-10-10 KST
 

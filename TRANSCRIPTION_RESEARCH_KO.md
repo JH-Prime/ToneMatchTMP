@@ -1,4 +1,26 @@
-# 채보 정확도 개선 조사 · v0.1.03
+# 채보 정확도 개선 조사 · v0.1.04
+
+## 2026-10-11 시간 해상도·문맥·장비 선택 회귀
+
+사용자 참고 [음악이론 토론](https://www.reddit.com/r/musictheory/comments/1blksoj/how_is_a_musician_able_to_identify_the_chords_of/)은
+베이스·지속 화음·경과음·문맥을 구별하라는 청음 관점이며 CQT 오차 공식이나 성능 보장은 아닙니다.
+[AudioLabs의 HMM 설명](https://www.audiolabs-erlangen.de/resources/MIR/FMP/C5/C5S3_ChordRec_HMM.html)은
+시간 연속성의 장점과 실제 변화를 과하게 평활화할 위험을 함께 보여줍니다. 기존 경로 추적에
+실제 관측 지속 시간을 반영했으며 고정 조성으로 코드를 강제하거나 없는 구성음을 생성하지 않습니다.
+
+180 BPM에서 170–230ms는 약 0.51–0.69박입니다. 오디오 샘플레이트와 코드 관측 간격은 다릅니다.
+[librosa CQT](https://librosa.org/doc/0.11.0/generated/librosa.cqt.html)의 hop_length는 변환 열 사이의
+오디오 샘플 수이며 저음 필터의 시간·주파수 해상도 한계를 없애지 않습니다. 가짜 업샘플링 없이
+50ms 관측과 약 23.2ms CQT 프레임(22050Hz, hop 512)을 사용합니다. 별도 STFT는 경계 탐지에만
+사용하고 CQT 증거 창을 같은 화성 구간 안으로 제한합니다. 저음 비팅이 거짓 경계가 되는 회귀도 검사합니다.
+
+11개 개발용 정답 주석 합성 신호의 시간 가중 엄격 코드명 일치율은 90.66%에서 99.36%로 개선됐습니다.
+180 BPM 시험 경계 오차는 4–40.7ms였으나 모든 음악의 50ms 이내 정확도를 보장하지 않습니다.
+소음·리버브·타악·생략음·동일 구성음의 다른 코드명은 여전히 어렵고, Room335에는 독립 정답표가 없습니다.
+빠른 관측 때문에 계산량이 늘며 경로·템플릿 최적화만을 전체 앱 속도 향상으로 표현하지 않습니다.
+
+재현: tools/verify_chord_trace.py (합성 비교), tools/verify_headless.py (Tk 생성 금지),
+tools/verify_qc_chords.py (로컬 원본 보존·진행률·취소·수정·저장 검사). 검출 비율은 정답률이 아닙니다.
 
 ## 2026-10-10 FFT/CQT 선택과 사용자 참고 자료 검토
 

@@ -8,17 +8,35 @@
 from __future__ import annotations
 
 
-APP_VERSION = "0.1.03"
+APP_VERSION = "0.1.04"
 TARGET_FIRMWARE = "1.8.58"
 MODEL_GUIDE_REVISION = "Rev. J (2026-07)"
-BUILD_DATE = "2026-10-10"
+BUILD_DATE = "2026-10-11"
 
 
 # 앱 내부의 변경 기록 화면과 배포 문서가 함께 사용하는 단일 원본이다.
 # 기능 버전 0.1.01 이후 수정 릴리스는 0.1.02부터 올리며 공개 산출물을 덮어쓰지 않는다.
 CHANGELOG: list[dict] = [
     {
-        "version": "0.1.03", "date": BUILD_DATE,
+        "version": "0.1.04", "date": BUILD_DATE,
+        "status": "개발자 프리릴리스", "status_en": "Developer prerelease",
+        "changes": [
+            "분석 완료·실패·취소 후 멀티이펙터 선택 잠금 복구",
+            "코드만 분석 대기 상태에서도 다음 톤 분석에 사용할 장비 선택 허용",
+            "CQT 50ms 관측 간격과 화성 변화 경계 기반 증거 구간으로 빠른 코드 추적 보완",
+            "곡 시작·끝의 짧은 코드 보존, 시간 가중 경로 추적과 템플릿 계산 최적화",
+        ],
+        "changes_en": [
+            "Release modeler selection after analysis success, failure or cancellation",
+            "Allow idle chords-only device selection for the next tone analysis",
+            "50 ms CQT observations with change-bounded evidence for faster chord transitions",
+            "Preserve short opening/closing chords; duration-aware paths and exact scoring optimization",
+        ],
+        "known_issues": ["50ms는 관측 간격이며 실제 채보 오차 보장이 아님; 실제 곡 정답률 미측정", "화면 조작 없이 검증하여 이번 패치의 실제 클릭·시각 검사는 보류"],
+        "known_issues_en": ["50 ms is the observation interval, not a guaranteed timing error; real-song accuracy unmeasured", "Native click/visual checks deferred for this no-screen verification run"],
+    },
+    {
+        "version": "0.1.03", "date": "2026-10-10",
         "status": "개발자 프리릴리스", "status_en": "Developer prerelease",
         "changes": [
             "톤+코드 / 코드만 분석 선택을 넓은 버튼으로 정리하고 장비 목록 창 진입점 제거",
