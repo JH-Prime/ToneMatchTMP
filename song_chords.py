@@ -101,6 +101,44 @@ def _pitch_profile(magnitude):
     return magnitude * weight
 
 
+def _harmonic_change_times(audio, sample_rate):
+    """Locate spectral changes, independently of their eventual chord names.
+
+    A short STFT supplies timing only; CQT still supplies all chord pitches.
+    Compare normalized spectra so a level change alone is not a new harmony.
+    """
+    import librosa
+    from scipy.signal import find_peaks
+    # Resolve adjacent low notes well enough that beating is not an onset.
+    size = 2 ** math.ceil(math.log2(sample_rate * .12))
+    if len(audio) < size:
+        return np.empty(0)
+    hop = max(64, round(sample_rate * .01))
+    spectrum = librosa.stft(np.ascontiguousarray(audio.T, dtype=np.float32),
+                           n_fft=size, hop_length=hop)
+    magnitude = np.sqrt(np.mean(np.abs(spectrum) ** 2, axis=0))
+    frequencies = np.fft.rfftfreq(size, 1 / sample_rate)
+    magnitude = magnitude[(frequencies >= 50) & (frequencies <= 4000)]
+    norm = np.linalg.norm(magnitude, axis=0)
+    normalized = magnitude / np.maximum(norm, 1e-12)
+    novelty = np.zeros(len(norm))
+    novelty[2:-2] = np.clip(1 - np.sum(normalized[:, :-4] * normalized[:, 4:], axis=0), 0, 1)
+    novelty[np.maximum(np.roll(norm, 2), np.roll(norm, -2)) < 1e-4] = 0
+    peaks, _ = find_peaks(novelty, height=.12, prominence=.08,
+                          distance=max(1, round(.12 * sample_rate / hop)))
+    times = peaks * hop / sample_rate
+    return times[(times > 0) & (times < len(audio) / sample_rate)]
+
+
+def _bounded_evidence(center, width, changes, duration):
+    """Shift a window inside its harmonic region instead of mixing two chords."""
+    index = int(np.searchsorted(changes, center, side='right'))
+    left = float(changes[index - 1]) if index else 0.0
+    right = float(changes[index]) if index < len(changes) else duration
+    start = max(left, min(center - width / 2, right - width))
+    return start, min(right, start + width)
+
+
 def analyze_song_chords(
     samples: np.ndarray, sample_rate: int, *,
     method: str = 'cqt',
@@ -135,36 +173,43 @@ def analyze_song_chords(
             row['evidence']['pitch_method'] = 'FFT'
         return result
     duration = len(samples) / sample_rate
-    window_seconds, hop_seconds = 1.2, 0.6
+    window_seconds, hop_seconds = 0.6, 0.05
     window_frames, hop_frames = round(window_seconds * sample_rate), round(hop_seconds * sample_rate)
-    starts = list(range(0, max(1, len(samples) - window_frames + 1), hop_frames))
-    final_start = max(0, len(samples) - window_frames)
-    if starts[-1] != final_start:
-        starts.append(final_start)
+    # Place observations at the endpoints too: a short opening/final chord
+    # must not disappear behind half an evidence window.
+    centers = list(range(0, len(samples), hop_frames)) + [len(samples)]
+    starts = [center - window_frames // 2 for center in centers]
     midi = np.arange(24, 108 if sample_rate >= 11025 else 96)
     windows = []
     active = 0
     input_rms = math.sqrt(float(np.einsum("ij,ij->", samples, samples, dtype=np.float64)) / samples.size)
     tuning_cents, tuning_status = _estimate_tuning(samples, sample_rate, cancel_requested)
-    for offset in range(0, len(starts), 10):
+    # Keep roughly six seconds of observations per transform despite finer hops.
+    batch_size = 120
+    for offset in range(0, len(starts), batch_size):
         _check_cancelled(cancel_requested)
-        batch = starts[offset:offset + 10]
+        batch = starts[offset:offset + batch_size]
         # 곡 전체 CQT를 보관하지 않고 저음 필터용 앞뒤 여백만 공유한다.
         left = max(0, batch[0] - sample_rate) // 512 * 512
         right = min(len(samples), batch[-1] + window_frames + sample_rate)
         audio = samples[left:right]
         magnitude = None
+        changes = np.empty(0)
         if np.max(np.abs(audio)) >= 1e-5:
             magnitude = _pitch_profile(_cqt_magnitudes(audio, sample_rate, midi, tuning_cents))
+            changes = _harmonic_change_times(audio, sample_rate)
         for start in batch:
             _check_cancelled(cancel_requested)
-            clip = samples[start:min(len(samples), start + window_frames)]
+            region_start, region_end = _bounded_evidence(
+                (start - left) / sample_rate + window_seconds / 2,
+                window_seconds, changes, len(audio) / sample_rate)
+            clip = audio[round(region_start * sample_rate):round(region_end * sample_rate)]
             rms = math.sqrt(float(np.einsum("ij,ij->", clip, clip, dtype=np.float64)) / clip.size)
             active += int(rms >= 1e-5)
             salience = np.zeros(len(midi))
             if magnitude is not None:
-                first = max(0, int((start - left) / 512))
-                last = min(magnitude.shape[1], int((start - left + len(clip)) / 512) + 1)
+                first = max(0, math.ceil(region_start * sample_rate / 512))
+                last = min(magnitude.shape[1], max(first + 1, math.ceil(region_end * sample_rate / 512)))
                 profile = np.median(magnitude[:, first:last], axis=1)
                 # 각 반음의 중심과 ±1/3반음만 결합하며 옥타브 가중치를 두지 않는다.
                 padded = np.pad(profile, (1, 1))
@@ -181,6 +226,10 @@ def analyze_song_chords(
                 chroma[:] = 0
             item = _classify_window(chroma, salience, salience, rms, midi=midi)
             item["_start_seconds"] = start / sample_rate
+            index = len(windows)
+            previous_gap = (start - starts[index - 1]) / sample_rate if index else 0.0
+            next_gap = (starts[index + 1] - start) / sample_rate if index + 1 < len(starts) else 0.0
+            item["_evidence_seconds"] = (previous_gap + next_gap) * 0.5
             windows.append(item)
         if progress:
             progress(min(1.0, (offset + len(batch)) / len(starts)))
@@ -214,7 +263,11 @@ def analyze_song_chords(
             "tuning_cents": tuning_cents, "tuning_status": tuning_status,
             "tuning_policy": "bounded_12s_pitch_peak_consensus_55pct_with_zero_fallback",
             "channel_policy": "channel_magnitude_rms_no_phase_cancellation",
-            "temporal_policy": "locally_supported_candidates_with_transition_cost",
+            "temporal_policy": "duration_weighted_locally_supported_candidates_with_transition_cost",
+            "observation_window_seconds": window_seconds, "observation_hop_seconds": hop_seconds,
+            "cqt_batch_observations": batch_size,
+            "boundary_policy": "normalized_stft_changes_bound_cqt_evidence_no_audio_upsampling",
+            "cqt_frame_hop_seconds": 512 / sample_rate,
         },
         "limitations": ["identical_pitch_sets_can_have_multiple_names",
                         "missing_notes_melody_percussion_and_overtones_can_confuse_templates",

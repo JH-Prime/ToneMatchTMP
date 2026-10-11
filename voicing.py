@@ -275,6 +275,35 @@ def _score_chord(chroma: np.ndarray, root: int, chord_type: str) -> float:
     return coverage - 0.35 * outside - 0.045 * max(0, len(intervals) - 2)
 
 
+@lru_cache(maxsize=1)
+def _template_groups():
+    """Same-sized templates share array operations, not new scoring rules."""
+    groups = []
+    for size in sorted({len(notes) for notes in CHORD_INTERVALS.values()}):
+        labels = [(root, kind) for root in range(12) for kind, notes in CHORD_INTERVALS.items()
+                  if len(notes) == size]
+        included = [[(root + interval) % 12 for interval in CHORD_INTERVALS[kind]] for root, kind in labels]
+        outside = [[pc for pc in range(12) if pc not in notes] for notes in included]
+        groups.append((labels, np.array(included), np.array(outside), size))
+    return groups
+
+
+def _template_scores(chroma):
+    """Vectorized equivalent of _score_chord, including tone and power gates."""
+    threshold = max(float(np.max(chroma)) * .12, 1e-12)
+    result = []
+    for labels, included, outside, size in _template_groups():
+        energies = chroma[included]
+        outside_energy = np.sum(chroma[outside], axis=1)
+        scores = np.sum(energies, axis=1) - .35 * outside_energy - .045 * max(0, size - 2)
+        valid = np.all(energies >= threshold, axis=1)
+        if size == 2:  # The vocabulary's two-note template is power5 only.
+            valid &= outside_energy <= .18
+        scores[~valid] = -1.0
+        result.extend((float(score), root, kind) for score, (root, kind) in zip(scores, labels))
+    return result
+
+
 def _infer_bass_pc(midi: np.ndarray, fundamentals: np.ndarray) -> int | None:
     """충분히 강한 가장 낮은 기타 음을 찾아 베이스 pitch class로 사용한다."""
     if not fundamentals.size or float(np.max(fundamentals)) <= 0:
@@ -362,8 +391,8 @@ def _classify_window(chroma: np.ndarray, salience: np.ndarray, fundamentals: np.
         return _unknown_window({})
     bass_pc = _infer_bass_pc(midi, fundamentals)
     candidates = sorted(
-        ((_score_chord(chroma, root, chord_type) + (0.018 if root == bass_pc else 0.0), root, chord_type)
-         for root in range(12) for chord_type in CHORD_INTERVALS),
+        ((score + (0.018 if root == bass_pc else 0.0), root, chord_type)
+         for score, root, chord_type in _template_scores(chroma)),
         reverse=True,
     )
     best_score, root, chord_type = candidates[0]
@@ -453,17 +482,34 @@ def _smooth_labels(windows: list[dict]) -> list[dict]:
     previous_indexes: list[list[int]] = []
     for index, options in enumerate(candidates):
         current_costs, current_previous = [], []
+        # Finer overlapping observations must not count as extra independent
+        # evidence. Legacy FFT windows keep the original 0.6-second weight.
+        evidence_weight = windows[index].get("_evidence_seconds", 0.6) / 0.6
+        if index:
+            previous_costs = costs[-1]
+            best_any = max(range(len(previous_costs)), key=previous_costs.__getitem__)
+            best_same = {}
+            for previous_index, before in enumerate(candidates[index - 1]):
+                label = (before["root_pc"], before["chord_type"])
+                if label not in best_same or previous_costs[previous_index] > previous_costs[best_same[label]]:
+                    best_same[label] = previous_index
         for option in options:
-            emission = float(option.get("_score", 0.0))
+            emission = float(option.get("_score", 0.0)) * evidence_weight
             if index == 0:
                 current_costs.append(emission)
                 current_previous.append(-1)
                 continue
             label = (option["root_pc"], option["chord_type"])
-            transitions = [value - (0.045 if label != (before["root_pc"], before["chord_type"]) else 0.0)
-                           for value, before in zip(costs[-1], candidates[index - 1])]
-            best_previous = int(np.argmax(transitions))
-            current_costs.append(transitions[best_previous] + emission)
+            # Every label change has the same cost: one overall maximum and
+            # one same-label maximum are sufficient, without a K-by-K scan.
+            best_previous = best_any
+            best_value = previous_costs[best_any] - 0.045
+            same_index = best_same.get(label)
+            if same_index is not None:
+                same_value = previous_costs[same_index]
+                if same_value > best_value or (same_value == best_value and same_index < best_previous):
+                    best_previous, best_value = same_index, same_value
+            current_costs.append(best_value + emission)
             current_previous.append(best_previous)
         costs.append(current_costs)
         previous_indexes.append(current_previous)
@@ -475,7 +521,7 @@ def _smooth_labels(windows: list[dict]) -> list[dict]:
         selected.append(result)
         chosen = previous_indexes[index][chosen]
     selected.reverse()
-    # 하나의 1.2초 창에서만 나타나는 라벨은 순간적인 멜로디/배음 조합일 수 있다.
+    # 하나의 창에서만 나타나는 라벨은 순간적인 멜로디/배음 조합일 수 있다.
     # 인접 창의 같은 코드 증거를 요구하되, 분석창 하나뿐인 짧은 입력은 예외다.
     if len(selected) > 1:
         labels = [(item["root_pc"], item["chord_type"]) for item in selected]
@@ -495,10 +541,11 @@ def _merge_events(windows: list[dict], hop_seconds: float, window_seconds: float
     start_index = 0
     for index in range(1, len(windows) + 1):
         previous = windows[index - 1]
-        # 같은 코드라도 실제 베이스가 바뀌면 역위 구간을 합쳐 지우지 않는다.
+        # 기호에 반영되는 실제 역위는 보존한다. 비화성 베이스로 판정 불가인
+        # 순간까지 별도 동일 코드 이벤트로 쪼개지는 것은 피한다.
         boundary = index == len(windows) or (
-            windows[index]["root_pc"], windows[index]["chord_type"], windows[index].get("bass_pc")
-        ) != (previous["root_pc"], previous["chord_type"], previous.get("bass_pc"))
+            windows[index]["root_pc"], windows[index]["chord_type"], windows[index]["symbol"]
+        ) != (previous["root_pc"], previous["chord_type"], previous["symbol"])
         if not boundary:
             continue
         groups.append(windows[start_index:index])
