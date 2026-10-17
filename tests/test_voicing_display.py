@@ -259,7 +259,9 @@ class VoicingDisplayTests(unittest.TestCase):
         self.assertIn("다른 해석 · Am7/C, Am7/E\n", widget.text("detail"))
         event["chord_type"] = "unknown"
         unknown = _render({"events": [event]})
-        self.assertNotIn("Am7", unknown.text())
+        self.assertIn("다른 해석 · Am7/C, Am7/E\n", unknown.text('detail'))
+        self.assertNotIn("Am7", unknown.text('event'))
+        self.assertIn(tr('ui.voicing_unknown', 'ko'), unknown.text('warning'))
         self.assertNotIn("81/100", unknown.text())
         self.assertNotIn("TEST_SHAPE_ONLY", unknown.text())
 

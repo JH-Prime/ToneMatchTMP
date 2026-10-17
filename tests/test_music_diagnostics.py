@@ -7,6 +7,7 @@ class MusicDiagnosticsTests(unittest.TestCase):
     def test_real_cqt_corrections_pcm_mixer_pdf_and_portaudio_runtime(self):
         from music_diagnostics import run_music_self_test
         result = run_music_self_test()
+        self.assertTrue(result['uncertainty_reopen_exports'])
         self.assertTrue(result["ok"], result)
         for name in ("cqt", "manual_edit", "pcm_reader", "mixer_export", "pdf_font", "portaudio_runtime",
                      "qc_catalog", "qc_recipes", "chords_only_reopen", "cqt_detuned", "fft", "method_reopen"):

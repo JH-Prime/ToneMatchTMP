@@ -13,6 +13,35 @@ import math
 MAX_BARS = 10_000
 MAX_SEGMENTS = 100_000
 _EPSILON = 1e-9
+_UNCERTAINTY_DESCRIPTIONS = {
+    'low_signal': ('음량이 매우 낮아 코드를 판정하기 어렵습니다.',
+                   'The signal is too quiet to identify a chord.'),
+    'insufficient_tonal_evidence': ('코드를 판정할 음정 근거가 부족합니다.',
+                                    'There is insufficient tonal evidence to identify a chord.'),
+    'weak_match': ('코드 후보의 근거가 충분하지 않거나 서로 비슷합니다.',
+                   'Chord candidates have weak or competing evidence.'),
+    'temporal_instability': ('앞뒤 관측에서 같은 코드의 근거가 충분히 유지되지 않았습니다.',
+                             'The chord was not sufficiently supported by adjacent observations.'),
+    'unobserved_gap': ('분석된 코드 관측이 없는 구간입니다.',
+                       'No chord observation is available for this interval.'),
+    'output_limit': ('출력 한도로 코드 정보가 축약된 구간입니다.',
+                     'Chord detail was omitted because of the output limit.'),
+}
+UNCERTAINTY_REASONS = frozenset(_UNCERTAINTY_DESCRIPTIONS)
+
+
+def uncertainty_description(event: dict, language: str = 'ko') -> str:
+    """자동 미확정 구간의 이유만 설명하며 수동 수정과 확정 코드에는 붙이지 않는다."""
+    unknown = event.get('chord_type') == 'unknown' or event.get('symbol', event.get('label')) == '?'
+    if event.get('manual_edit') or not unknown:
+        return ''
+    evidence = event.get('evidence') or {}
+    reason = evidence.get('uncertainty_reason') if isinstance(evidence, dict) else None
+    descriptions = _UNCERTAINTY_DESCRIPTIONS.get(reason) if isinstance(reason, str) else None
+    if descriptions is None:
+        descriptions = ('코드를 확정할 근거가 부족합니다.',
+                        'There is not enough evidence to identify a chord.')
+    return descriptions[1 if language == 'en' else 0]
 
 
 def _finite_number(value: object, name: str) -> float:
@@ -103,6 +132,8 @@ def _normalise_events(voicing: dict) -> list[dict]:
             "confidence": deepcopy(event.get("confidence")),
             "root_pc": event.get("root_pc"),
             "manual_edit": bool(event.get('manual_edit')),
+            "evidence": deepcopy(event.get('evidence') or {}),
+            "alternatives": deepcopy(event.get('alternatives') or []),
         })
     return sorted(events, key=lambda item: (item["start_seconds"], item["end_seconds"], item["event_index"]))
 
@@ -113,6 +144,7 @@ def _unknown_gap(start: float, end: float, source_kind: str) -> dict:
         "start_seconds": start, "end_seconds": end, "label": "?",
         "chord_type": "unknown", "event_index": None, "source_kind": source_kind,
         "candidate_shapes": [], "unknown": True, "confidence": None, "root_pc": None,
+        "evidence": {"uncertainty_reason": "unobserved_gap"}, "alternatives": [],
     }
 
 

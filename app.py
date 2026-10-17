@@ -45,7 +45,7 @@ _ensure_standard_streams()
 import numpy as np
 
 from catalog import APP_VERSION, BUILD_DATE, CHANGELOG, MODEL_GUIDE_REVISION, TARGET_FIRMWARE
-from chord_chart import build_chord_chart, initial_chart_settings
+from chord_chart import build_chord_chart, initial_chart_settings, uncertainty_description
 from chord_edits import effective_voicing, set_correction, load_result
 from chord_edit_ui import ChordEditor
 from debug_info import (
@@ -3612,7 +3612,8 @@ class ToneMatchApp:
         events = analysis.get("events", [])
         reliable = [event for event in events if event.get("chord_type", "unknown") != "unknown"]
         if not reliable:
-            widget.insert("end", tr("ui.voicing_empty", self.language) + "\n", "warning")
+            notice = "ui.voicing_candidates_available" if any(event.get("alternatives") for event in events) else "ui.voicing_empty"
+            widget.insert("end", tr(notice, self.language) + "\n", "warning")
         offset = float(analysis.get("source_start_seconds", 0.0))
         for event_index, event in enumerate(events):
             if hasattr(widget, "mark_set"):
@@ -3623,28 +3624,32 @@ class ToneMatchApp:
             if event.get('manual_edit'):
                 widget.insert('end', tr('edit.manual', self.language) + ' · '
                               + tr('edit.original', self.language, symbol=event.get('original_symbol', '?')) + '\n', 'warning')
-            if event.get("chord_type", "unknown") == "unknown":
+            unknown = event.get("chord_type", "unknown") == "unknown"
+            symbol = "?" if unknown else str(event["symbol"])
+            if unknown:
                 widget.insert("end", f"{start}–{end}   {tr('ui.voicing_unknown', self.language)}\n", "warning")
-                continue
-            try:
-                confidence = float(event.get("confidence", 0.0))
-            except (TypeError, ValueError):
-                confidence = math.nan
-            score = f"{max(0, min(100, round(confidence * 100)))}/100" if math.isfinite(confidence) else "—"
-            symbol = str(event["symbol"])
-            widget.insert("end", f"{start}–{end}   {symbol}   {tr('ui.voicing_confidence', self.language)} {score}\n", "event")
+            else:
+                try:
+                    confidence = float(event.get("confidence", 0.0))
+                except (TypeError, ValueError):
+                    confidence = math.nan
+                score = f"{max(0, min(100, round(confidence * 100)))}/100" if math.isfinite(confidence) else "—"
+                widget.insert("end", f"{start}–{end}   {symbol}   {tr('ui.voicing_confidence', self.language)} {score}\n", "event")
+            reason = uncertainty_description(event, self.language)
+            if reason:
+                widget.insert("end", reason + "\n", "warning")
             evidence = event.get("evidence") or {}
-            notes = pitch_class_names(evidence.get("observed_pitch_classes", event.get("pitch_classes", ()))) or "—"
-            notes_label = "ui.voicing_observed_notes" if "observed_pitch_classes" in evidence else "ui.voicing_template_notes"
+            notes = pitch_class_names(evidence.get("observed_pitch_classes", () if unknown else event.get("pitch_classes", ()))) or "—"
+            notes_label = "ui.voicing_observed_notes" if unknown or "observed_pitch_classes" in evidence else "ui.voicing_template_notes"
             widget.insert("end", f"{tr(notes_label, self.language)} · {notes}\n", "detail")
-            if "observed_pitch_classes" in evidence and evidence.get("required_pitch_classes"):
+            if not unknown and "observed_pitch_classes" in evidence and evidence.get("required_pitch_classes"):
                 required = pitch_class_names(evidence["required_pitch_classes"])
                 widget.insert("end", f"{tr('ui.voicing_template_notes', self.language)} · {required}\n", "detail")
             if evidence.get("analyzed_window_count", 0) > 0:
                 support = tr("ui.voicing_window_support", self.language, supported=evidence.get("supported_window_count", 0), total=evidence["analyzed_window_count"])
                 widget.insert("end", support + "\n", "detail")
             alternatives = []
-            for candidate in event.get("alternatives", ()):
+            for candidate in event.get("alternatives", ())[:3]:
                 alternative = str(candidate.get("symbol", ""))
                 if alternative and alternative != symbol and alternative not in alternatives:
                     alternatives.append(alternative)

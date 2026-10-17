@@ -387,8 +387,12 @@ def _classify_window(chroma: np.ndarray, salience: np.ndarray, fundamentals: np.
     """한 분석창을 코드, 베이스/역위, 음역, 간격과 신뢰도로 분류한다."""
     if midi is None:
         midi, _frequencies = _guitar_midi_frequencies()
-    if rms < 1e-5 or float(np.max(chroma)) < 0.10 or int(np.count_nonzero(chroma >= float(np.max(chroma)) * 0.12)) < 2:
-        return _unknown_window({})
+    if rms < 1e-5:
+        return _unknown_window({}, 'low_signal')
+    observed = tuple(int(pc) for pc in np.flatnonzero(chroma >= max(float(np.max(chroma)) * 0.12, 1e-12)))
+    uncertain = {'evidence': {'observed_pitch_classes': observed}}
+    if float(np.max(chroma)) < 0.10 or len(observed) < 2:
+        return _unknown_window(uncertain, 'insufficient_tonal_evidence')
     bass_pc = _infer_bass_pc(midi, fundamentals)
     candidates = sorted(
         ((score + (0.018 if root == bass_pc else 0.0), root, chord_type)
@@ -397,7 +401,7 @@ def _classify_window(chroma: np.ndarray, salience: np.ndarray, fundamentals: np.
     )
     best_score, root, chord_type = candidates[0]
     if best_score < 0:
-        return _unknown_window({})
+        return _unknown_window(uncertain, 'insufficient_tonal_evidence')
     runner_score = max(0.0, candidates[1][0])
     intervals = CHORD_INTERVALS[chord_type]
     coverage = float(np.sum(chroma[[(root + interval) % 12 for interval in intervals]]))
@@ -405,8 +409,22 @@ def _classify_window(chroma: np.ndarray, salience: np.ndarray, fundamentals: np.
     confidence = float(np.clip(0.18 + 1.7 * margin + 0.70 * max(0.0, coverage - 0.38), 0.0, 1.0))
     _pitch_classes, register, spacing = _voicing_profile(midi, salience)
     if confidence < 0.34 or coverage < 0.60:
-        return _unknown_window({})
-    observed = tuple(int(pc) for pc in np.flatnonzero(chroma >= float(np.max(chroma)) * 0.12))
+        # Display-only alternatives still require every template tone locally.
+        # They never enter the accepted-chord or temporal candidate pool.
+        alternatives = []
+        for score, candidate_root, candidate_type in candidates:
+            if score < max(0.0, best_score - .040):
+                break
+            pcs = tuple((candidate_root + note) % 12 for note in CHORD_INTERVALS[candidate_type])
+            if float(np.sum(chroma[list(pcs)])) < .50:
+                continue
+            symbol = NOTE_NAMES[candidate_root] + CHORD_SUFFIX[candidate_type]
+            if bass_pc in pcs and bass_pc != candidate_root:
+                symbol += f'/{NOTE_NAMES[bass_pc]}'
+            alternatives.append({'root_pc': candidate_root, 'chord_type': candidate_type,
+                                 'symbol': symbol, 'score_delta': round(best_score - score, 4)})
+        uncertain['alternatives'] = tuple(alternatives[:3])
+        return _unknown_window(uncertain, 'weak_match')
     evidenced = []
     # 같은 구성음인 C6/Am7, 감7 전위 등은 베이스 선호로 정렬하되 다른 해석을
     # 숨기지 않는다. 모든 후보는 현재 창에 필요한 음들이 직접 존재해야 한다.
@@ -451,12 +469,28 @@ def _classify_window(chroma: np.ndarray, salience: np.ndarray, fundamentals: np.
     return result
 
 
-def _unknown_window(window: dict) -> dict:
-    """원래 시간 좌표만 보존하고 근거가 불충분한 창의 모든 코드 주장을 지운다."""
+def _unknown_window(window: dict, reason: str | None = None) -> dict:
+    """Abstain from a chord claim while retaining bounded local observations."""
+    evidence = dict(window.get('evidence', {}))
+    evidence.pop('required_pitch_classes', None)
+    evidence.pop('explained_energy', None)
+    evidence.pop('template_margin', None)
+    evidence.pop('reanalysis_recovered', None)
+    evidence['uncertainty_reason'] = reason or evidence.get('uncertainty_reason',
+        'temporal_instability' if window.get('chord_type', 'unknown') != 'unknown' else 'insufficient_tonal_evidence')
+    alternatives = list(window.get('alternatives', ()))
+    if window.get('chord_type', 'unknown') != 'unknown':
+        alternatives.insert(0, {key: window[key] for key in ('root_pc', 'chord_type', 'symbol')})
+    unique = {}
+    for item in alternatives:
+        unique.setdefault(item['symbol'], item)
+    alternatives = tuple(unique.values())[:3]
+    evidence['ambiguous'] = bool(alternatives)
     return {"root_pc": None, "chord_type": "unknown", "symbol": "?", "bass_pc": None,
             "inversion": "unknown", "pitch_classes": (), "register": "unknown",
-            "spacing": "unknown", "confidence": 0.0, "alternatives": (), "evidence": {},
-            "_start_seconds": window.get("_start_seconds", 0.0)}
+            "spacing": "unknown", "confidence": 0.0, "alternatives": alternatives, "evidence": evidence,
+            "_start_seconds": window.get("_start_seconds", 0.0),
+            "_evidence_seconds": window.get('_evidence_seconds', .6)}
 
 
 def _smooth_labels(windows: list[dict]) -> list[dict]:
@@ -539,13 +573,17 @@ def _merge_events(windows: list[dict], hop_seconds: float, window_seconds: float
         return []
     groups: list[list[dict]] = []
     start_index = 0
+    def identity(item):
+        label = (item['root_pc'], item['chord_type'], item['symbol'])
+        if item['chord_type'] == 'unknown':
+            return label + (item.get('evidence', {}).get('uncertainty_reason'),
+                            tuple(sorted(row['symbol'] for row in item.get('alternatives', ()))))
+        return label
     for index in range(1, len(windows) + 1):
         previous = windows[index - 1]
         # 기호에 반영되는 실제 역위는 보존한다. 비화성 베이스로 판정 불가인
         # 순간까지 별도 동일 코드 이벤트로 쪼개지는 것은 피한다.
-        boundary = index == len(windows) or (
-            windows[index]["root_pc"], windows[index]["chord_type"], windows[index]["symbol"]
-        ) != (previous["root_pc"], previous["chord_type"], previous["symbol"])
+        boundary = index == len(windows) or identity(windows[index]) != identity(previous)
         if not boundary:
             continue
         groups.append(windows[start_index:index])
@@ -557,7 +595,12 @@ def _merge_events(windows: list[dict], hop_seconds: float, window_seconds: float
         confidence = float(np.mean([item["confidence"] for item in group]))
         evidence = dict(representative.get("evidence", {}))
         alternatives_by_label: dict[tuple, dict] = {}
+        if representative['chord_type'] == 'unknown':
+            alternatives_by_label = {row['symbol']: row for row in representative.get('alternatives', ())}
+            evidence['analyzed_window_count'] = len(group)
         if representative["chord_type"] != "unknown":
+            if any(item.get('evidence', {}).get('reanalysis_recovered') for item in group):
+                evidence['reanalysis_recovered'] = True
             for item in group:
                 for alternative in item.get("alternatives", ()):
                     alternatives_by_label.setdefault((alternative["root_pc"], alternative["chord_type"]), alternative)
@@ -621,7 +664,8 @@ def _limit_timeline_events(events: list[VoicingEvent], max_events: int) -> list[
                 continue
             unknown = replace(event, root_pc=None, chord_type="unknown", symbol="?", bass_pc=None,
                               inversion="unknown", pitch_classes=(), register="unknown", spacing="unknown",
-                              confidence=0.0, candidate_shapes=(), alternatives=(), evidence={})
+                              confidence=0.0, candidate_shapes=(), alternatives=(),
+                              evidence={'uncertainty_reason': 'output_limit'})
             if timeline and timeline[-1].chord_type == "unknown":
                 timeline[-1] = replace(timeline[-1], end_seconds=unknown.end_seconds)
             else:
@@ -632,13 +676,14 @@ def _limit_timeline_events(events: list[VoicingEvent], max_events: int) -> list[
                     key=lambda index: (events[index].end_seconds - events[index].start_seconds) * events[index].confidence,
                     reverse=True)
     kept: set[int] = set()
+    timeline_count = 1
     for index in ranked:
-        candidate_indexes = sorted(kept | {index})
-        # 이벤트 사본을 매번 만들지 않고 선택 구간 사이의 미확정 구간 수만 센다.
-        unknown_runs = int(candidate_indexes[0] > 0) + int(candidate_indexes[-1] < len(events) - 1)
-        unknown_runs += sum(after > before + 1 for before, after in zip(candidate_indexes, candidate_indexes[1:]))
-        if len(candidate_indexes) + unknown_runs <= max_events:
+        # Splitting an omitted run adds only its remaining left/right pieces.
+        # This preserves the greedy budget rule without rescanning kept events.
+        added = int(index > 0 and index - 1 not in kept) + int(index + 1 < len(events) and index + 1 not in kept)
+        if timeline_count + added <= max_events:
             kept.add(index)
+            timeline_count += added
     return retained_timeline(kept)
 
 

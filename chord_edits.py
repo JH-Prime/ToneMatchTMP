@@ -6,13 +6,15 @@ import math
 from pathlib import Path
 import re
 
-from chord_chart import build_chord_chart, initial_chart_settings
+from chord_chart import UNCERTAINTY_REASONS, build_chord_chart, initial_chart_settings
 from catalog import APP_VERSION, TARGET_FIRMWARE, MODEL_GUIDE_REVISION
 from voicing import CHORD_INTERVALS, CHORD_SUFFIX
 
 
 MAX_RESULT_BYTES = 8 * 1024 * 1024
 MAX_EDIT_EVENTS = 10_000
+# 20분 CQT의 50ms 관측 간격과 정수 샘플 반올림 여유를 포함한다.
+MAX_EVIDENCE_WINDOWS = 25_000
 _NOTES = {'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11}
 _SUFFIX_TYPES = {CHORD_SUFFIX[key].replace('♭', 'b').replace('♯', '#'): key for key in CHORD_INTERVALS}
 
@@ -190,12 +192,20 @@ def load_result(path, language='ko'):
             evidence = event.get('evidence') or {}
             if not isinstance(evidence, dict):
                 raise ValueError('Invalid chord evidence')
+            if 'uncertainty_reason' in evidence:
+                reason = evidence['uncertainty_reason']
+                if not isinstance(reason, str) or reason not in UNCERTAINTY_REASONS:
+                    raise ValueError('Invalid chord uncertainty reason')
+            if 'reanalysis_recovered' in evidence:
+                recovered = evidence['reanalysis_recovered']
+                if type(recovered) is not bool or (recovered and (event.get('chord_type') == 'unknown' or event.get('symbol', '?') == '?')):
+                    raise ValueError('Invalid chord reanalysis status')
             for values in (event.get('pitch_classes', []), evidence.get('observed_pitch_classes', []),
                            evidence.get('required_pitch_classes', [])):
                 if not isinstance(values, list) or len(values) > 12 or any(type(pc) is not int or not 0 <= pc < 12 for pc in values):
                     raise ValueError('Invalid evidence notes')
             for key in ('supported_window_count', 'analyzed_window_count'):
-                if key in evidence and (type(evidence[key]) is not int or not 0 <= evidence[key] <= 10000):
+                if key in evidence and (type(evidence[key]) is not int or not 0 <= evidence[key] <= MAX_EVIDENCE_WINDOWS):
                     raise ValueError('Invalid evidence counts')
             alternatives = event.get('alternatives', [])
             if not isinstance(alternatives, list) or len(alternatives) > 3:

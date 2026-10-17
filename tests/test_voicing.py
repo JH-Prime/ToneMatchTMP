@@ -495,7 +495,7 @@ class VoicingAnalysisTests(unittest.TestCase):
                         self.assertIn((event.start_seconds, event.end_seconds, event.symbol), known_bounds)
                     else:
                         self.assertEqual(event.alternatives, ())
-                        self.assertEqual(event.evidence, {})
+                        self.assertEqual(event.evidence, {'uncertainty_reason': 'output_limit'})
                 self.assertTrue(any(event.chord_type == "unknown" and event.start_seconds <= 4.0 <= event.end_seconds for event in limited.events))
 
     def test_candidate_shapes_are_explicitly_not_detected(self) -> None:

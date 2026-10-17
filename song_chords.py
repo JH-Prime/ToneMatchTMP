@@ -6,7 +6,7 @@ from typing import Callable
 
 import numpy as np
 
-from voicing import (CHORD_INTERVALS, _classify_window, _merge_events, _smooth_labels,
+from voicing import (CHORD_INTERVALS, _classify_window, _merge_events, _smooth_labels, _limit_timeline_events,
                      analyze_voicings, voicing_analysis_dict)
 
 
@@ -139,6 +139,62 @@ def _bounded_evidence(center, width, changes, duration):
     return start, min(right, start + width)
 
 
+def _classify_cqt_region(audio, magnitude, midi, sample_rate, region):
+    """Classify one bounded interval using the already-computed CQT matrix."""
+    region_start, region_end = region
+    clip = audio[round(region_start * sample_rate):round(region_end * sample_rate)]
+    rms = math.sqrt(float(np.einsum('ij,ij->', clip, clip, dtype=np.float64)) / clip.size) if clip.size else 0.0
+    salience = np.zeros(len(midi))
+    if magnitude is not None:
+        first = max(0, math.ceil(region_start * sample_rate / 512))
+        last = min(magnitude.shape[1], max(first + 1, math.ceil(region_end * sample_rate / 512)))
+        if first < last:
+            profile = np.median(magnitude[:, first:last], axis=1)
+            padded = np.pad(profile, (1, 1))
+            salience = np.maximum.reduce([padded[0:-2:3], padded[1:-1:3], padded[2::3]])
+            salience = np.maximum(0, salience - float(np.median(salience)))
+    chroma = np.bincount(midi % 12, weights=salience, minlength=12)
+    total = float(np.sum(chroma))
+    if total:
+        chroma /= total
+    flatness = float(np.exp(np.mean(np.log(np.maximum(chroma, 1e-12))))) / max(float(np.mean(chroma)), 1e-12)
+    if flatness > .85:
+        chroma[:] = 0
+    return _classify_window(chroma, salience, salience, rms, midi=midi)
+
+
+def _recover_cqt_window(primary, center, audio, magnitude, midi, changes, sample_rate, cancel_requested=None):
+    """Retry only plausible abstentions, with two agreeing local evidence widths.
+
+    Neither overlapping observations nor alternate windows are independent
+    measurements. Agreement is a conservative gate, not a probability boost.
+    """
+    if primary['chord_type'] != 'unknown' or not primary.get('alternatives') or magnitude is None:
+        return primary, False
+    regions = [_bounded_evidence(center, width, changes, len(audio) / sample_rate) for width in (.3, 1.0)]
+    if regions[0][1] - regions[0][0] >= .8 * (regions[1][1] - regions[1][0]):
+        return primary, False
+    reviews = []
+    for region in regions:
+        _check_cancelled(cancel_requested)
+        reviews.append(_classify_cqt_region(audio, magnitude, midi, sample_rate, region))
+    label = lambda item: (item['root_pc'], item['chord_type'], item['symbol'])
+    if label(reviews[0]) != label(reviews[1]) or reviews[0]['chord_type'] == 'unknown':
+        return primary, True
+    if label(reviews[0]) not in {label(candidate) for candidate in primary['alternatives']}:
+        return primary, True
+    observed = set(primary.get('evidence', {}).get('observed_pitch_classes', ()))
+    for review in reviews:
+        if (review['confidence'] < .5 or review['evidence'].get('explained_energy', 0) < .7
+                or not set(review['evidence'].get('required_pitch_classes', ())) <= observed):
+            return primary, True
+    candidate = {key: value for key, value in reviews[0].items() if key not in ('_candidates', '_temporal_candidates')}
+    candidate['evidence'] = dict(candidate['evidence'], reanalysis_recovered=True)
+    # Only the agreed label may enter temporal decoding; other names remain
+    # display alternatives and cannot be promoted via a different path.
+    return dict(candidate, _candidates=[candidate], _temporal_candidates=[candidate]), True
+
+
 def analyze_song_chords(
     samples: np.ndarray, sample_rate: int, *,
     method: str = 'cqt',
@@ -182,6 +238,7 @@ def analyze_song_chords(
     midi = np.arange(24, 108 if sample_rate >= 11025 else 96)
     windows = []
     active = 0
+    reanalysis_attempts = 0
     input_rms = math.sqrt(float(np.einsum("ij,ij->", samples, samples, dtype=np.float64)) / samples.size)
     tuning_cents, tuning_status = _estimate_tuning(samples, sample_rate, cancel_requested)
     # Keep roughly six seconds of observations per transform despite finer hops.
@@ -200,31 +257,17 @@ def analyze_song_chords(
             changes = _harmonic_change_times(audio, sample_rate)
         for start in batch:
             _check_cancelled(cancel_requested)
+            center = (start - left) / sample_rate + window_seconds / 2
             region_start, region_end = _bounded_evidence(
-                (start - left) / sample_rate + window_seconds / 2,
+                center,
                 window_seconds, changes, len(audio) / sample_rate)
             clip = audio[round(region_start * sample_rate):round(region_end * sample_rate)]
             rms = math.sqrt(float(np.einsum("ij,ij->", clip, clip, dtype=np.float64)) / clip.size)
             active += int(rms >= 1e-5)
-            salience = np.zeros(len(midi))
-            if magnitude is not None:
-                first = max(0, math.ceil(region_start * sample_rate / 512))
-                last = min(magnitude.shape[1], max(first + 1, math.ceil(region_end * sample_rate / 512)))
-                profile = np.median(magnitude[:, first:last], axis=1)
-                # 각 반음의 중심과 ±1/3반음만 결합하며 옥타브 가중치를 두지 않는다.
-                padded = np.pad(profile, (1, 1))
-                salience = np.maximum.reduce([padded[0:-2:3], padded[1:-1:3], padded[2::3]])
-                floor = float(np.median(salience))
-                salience = np.maximum(0, salience - floor)
-            chroma = np.bincount(midi % 12, weights=salience, minlength=12)
-            total = float(np.sum(chroma))
-            if total:
-                chroma /= total
-            # 넓게 분포하는 비주기 잡음을 7음 확장화음으로 억지 분류하지 않는다.
-            flatness = float(np.exp(np.mean(np.log(np.maximum(chroma, 1e-12))))) / max(float(np.mean(chroma)), 1e-12)
-            if flatness > 0.85:
-                chroma[:] = 0
-            item = _classify_window(chroma, salience, salience, rms, midi=midi)
+            item = _classify_cqt_region(audio, magnitude, midi, sample_rate, (region_start, region_end))
+            item, attempted = _recover_cqt_window(item, center, audio, magnitude, midi, changes,
+                                                  sample_rate, cancel_requested)
+            reanalysis_attempts += int(attempted)
             item["_start_seconds"] = start / sample_rate
             index = len(windows)
             previous_gap = (start - starts[index - 1]) / sample_rate if index else 0.0
@@ -236,13 +279,15 @@ def analyze_song_chords(
     _check_cancelled(cancel_requested)
     windows = _smooth_labels(windows)
     events = _merge_events(windows, hop_seconds, window_seconds, duration, include_shapes=False)
+    event_count_before_limit = len(events)
+    events = _limit_timeline_events(events, 4096)
     reliable = sum(item["chord_type"] != "unknown" for item in windows)
     rows = []
     for event in events:
         row = asdict(event)
         row["register"] = row["spacing"] = "unknown"
+        row["evidence"]["pitch_method"] = "CQT"
         if row["chord_type"] != "unknown":
-            row["evidence"]["pitch_method"] = "CQT"
             row["evidence"]["bass_pitch_class"] = row["bass_pc"]
         rows.append(row)
     return {
@@ -257,6 +302,9 @@ def analyze_song_chords(
             "input_rms_dbfs": round(20 * math.log10(max(input_rms, 1e-12)), 3),
             "analyzed_frame_count": len(windows), "active_frame_count": active,
             "reliable_frame_count": reliable, "unknown_frame_count": len(windows) - reliable,
+            "event_count_before_limit": event_count_before_limit,
+            "events_truncated": event_count_before_limit > 4096, "max_events": 4096,
+            "timeline_limit_policy": "omitted_candidates_become_unknown_without_time_gaps",
             "score_semantics": "heuristic_evidence_not_accuracy_probability",
             "chord_template_count": len(CHORD_INTERVALS), "cqt_bins_per_octave": 36,
             "pitch_range_midi": [int(midi[0]), int(midi[-1])],
@@ -268,6 +316,11 @@ def analyze_song_chords(
             "cqt_batch_observations": batch_size,
             "boundary_policy": "normalized_stft_changes_bound_cqt_evidence_no_audio_upsampling",
             "cqt_frame_hop_seconds": 512 / sample_rate,
+            "reanalysis_policy": "two_bounded_widths_agree_with_original_candidate_and_temporal_support",
+            "reanalysis_window_seconds": [.3, 1.0],
+            "reanalysis_attempted_frame_count": reanalysis_attempts,
+            "reanalysis_recovered_frame_count": sum(bool(item.get('evidence', {}).get('reanalysis_recovered')) for item in windows),
+            "uncertain_candidate_frame_count": sum(item['chord_type'] == 'unknown' and bool(item.get('alternatives')) for item in windows),
         },
         "limitations": ["identical_pitch_sets_can_have_multiple_names",
                         "missing_notes_melody_percussion_and_overtones_can_confuse_templates",

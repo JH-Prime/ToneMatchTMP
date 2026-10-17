@@ -51,14 +51,21 @@ def verify(source, method='cqt'):
             restored = load_result(root / 'result.json', 'en')
             assert restored['analysis_kind'] == 'chords'
             assert restored['chord_voicing']['method_id'] == method
+            assert restored['chord_voicing'] == json.loads(json.dumps(result['chord_voicing']))
             save_html(restored, root / 'result.html')
             pdf = save_chart_pdf(restored, root / 'chart.pdf')
             assert pdf['chart_pages'] > 0
         chords = result['chord_voicing']
+        unresolved = [row for row in chords['events'] if row['chord_type'] == 'unknown']
+        candidate_seconds = sum(row['end_seconds'] - row['start_seconds'] for row in unresolved if row.get('alternatives'))
+        unknown_seconds = sum(row['end_seconds'] - row['start_seconds'] for row in unresolved)
         checks.append(dict(start_seconds=start, duration_seconds=result['source']['duration_seconds'],
                            elapsed_seconds=round(elapsed, 3), event_count=chords['event_count'],
                            tonal_coverage=chords['tonal_coverage'], diagnostics=chords['diagnostics'],
                            progress_updates=len(updates), progress_monotonic=True,
+                           uncertain_candidate_seconds=round(candidate_seconds, 3),
+                           unknown_without_candidates_seconds=round(unknown_seconds - candidate_seconds, 3),
+                           unknown_details_roundtrip=True,
                            json_edit_reopen_html_pdf=True))
     cancelled = False
     def progress(value, _message):

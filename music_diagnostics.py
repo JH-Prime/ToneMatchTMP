@@ -1,6 +1,7 @@
 """모델 다운로드·장치 재생 없이 새 음악 작업 경로와 배포 의존성을 검사한다."""
 
 from pathlib import Path
+from copy import deepcopy
 import shutil
 import tempfile
 import wave
@@ -67,6 +68,26 @@ def run_music_self_test():
         save_json(chord_result, root / 'fft.json')
         fft_restored = load_result(root / 'fft.json', 'en')
         method_ok = method_ok and fft_restored['chord_voicing']['method_id'] == 'fft' and fft_restored['model_guide'] == 'FFT'
+        # Exercise abstention persistence/export inside the frozen runtime too.
+        # This deliberately abstained synthetic CQT event is not an accuracy test.
+        from voicing import _unknown_window
+        from report import save_html
+        uncertain = deepcopy(chord_result)
+        uncertain['chord_voicing'] = deepcopy(analysis)
+        unknown = _unknown_window(analysis['events'][0], 'temporal_instability')
+        unknown.update(start_seconds=0., end_seconds=3., candidate_shapes=[])
+        unknown.pop('_start_seconds', None)
+        unknown.pop('_evidence_seconds', None)
+        uncertain['chord_voicing'].update(events=[unknown], event_count=1, tonal_coverage=0.)
+        save_json(uncertain, root / 'uncertain.json')
+        uncertainty_restored = load_result(root / 'uncertain.json', 'en')
+        restored_event = uncertainty_restored['chord_voicing']['events'][0]
+        save_html(uncertainty_restored, root / 'uncertain.html')
+        uncertainty_pdf = save_chart_pdf(uncertainty_restored, root / 'uncertain.pdf')
+        uncertainty_ok = (restored_event['symbol'] == '?' and bool(restored_event['alternatives'])
+                          and restored_event['evidence']['uncertainty_reason'] == 'temporal_instability'
+                          and 'adjacent observations' in (root / 'uncertain.html').read_text(encoding='utf-8')
+                          and uncertainty_pdf['chart_pages'] == 1)
         bank = StemBank(source)
         player = None
         try:
@@ -100,6 +121,7 @@ def run_music_self_test():
               "mixer_export": bool(export_ok), "pdf_font": bool(pdf_ok), "portaudio_runtime": portaudio_ok,
               "qc_catalog": bool(catalog_ok), "qc_recipes": bool(recipes_ok),
               "chords_only_reopen": bool(reopen_ok), "cqt_detuned": bool(detuned_ok),
-              "fft": bool(fft_ok), "method_reopen": bool(method_ok)}
+              "fft": bool(fft_ok), "method_reopen": bool(method_ok),
+              "uncertainty_reopen_exports": bool(uncertainty_ok)}
     return {"ok": all(checks.values()), **checks, "audible_output_tested": False,
             "real_song_accuracy_measured": False}

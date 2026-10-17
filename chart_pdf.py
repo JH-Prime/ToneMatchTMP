@@ -10,7 +10,8 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.lib.pagesizes import A4
 
-from chord_chart import build_chord_chart, initial_chart_settings
+from chord_chart import build_chord_chart, initial_chart_settings, uncertainty_description
+from i18n import tr
 from chord_edits import effective_voicing
 from stem_removal import _commit_new_output
 from voicing import pitch_class_names
@@ -113,6 +114,8 @@ def _draw_chart_page(canvas, chart, page, title, subtitle, language):
 def _detail_lines(page, events, language):
     """마디 내 모든 구간과 원래 이벤트 ID·근거·후보를 빠짐없이 연결한다."""
     lines = []
+    if events and all(event.get("chord_type", "unknown") == "unknown" for event in events) and any(event.get("alternatives") for event in events):
+        lines.extend(_wrap(tr("ui.voicing_candidates_available", language)))
     seen = set()
     for bar in page["bars"]:
         for segment in bar["segments"]:
@@ -122,7 +125,10 @@ def _detail_lines(page, events, language):
             line = (f'{bar["number"]} | {segment["absolute_start_seconds"]:.2f}-'
                     f'{segment["absolute_end_seconds"]:.2f}s | {identifier}{label}')
             lines.extend(_wrap(line))
-            if index is None or index in seen:
+            if index is None:
+                lines.extend(_wrap("  " + uncertainty_description(segment, language)))
+                continue
+            if index in seen:
                 continue
             seen.add(index)
             event = events[index]
@@ -130,8 +136,12 @@ def _detail_lines(page, events, language):
                 detail = ("사용자 수정; 원래 추정: " if language == "ko" else "User edit; original estimate: ")
                 lines.extend(_wrap("  " + detail + str(event.get("original_symbol", "?"))))
                 continue
+            reason = uncertainty_description(event, language)
+            if reason:
+                lines.extend(_wrap("  " + reason))
             evidence = event.get("evidence") or {}
-            notes = pitch_class_names(evidence.get("observed_pitch_classes", event.get("pitch_classes", []))) or "?"
+            fallback_notes = [] if event.get("chord_type", "unknown") == "unknown" else event.get("pitch_classes", [])
+            notes = pitch_class_names(evidence.get("observed_pitch_classes", fallback_notes)) or "?"
             candidates = ", ".join(str(candidate.get("symbol", "?")) for candidate in event.get("alternatives", [])[:3]) or "-"
             detail = (f"  관측음: {notes} | 후보: {candidates}" if language == "ko"
                       else f"  Observed: {notes} | Candidates: {candidates}")

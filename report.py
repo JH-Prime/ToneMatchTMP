@@ -10,6 +10,7 @@ from urllib.parse import urlsplit
 from engine import human_feature_rows
 from chord_edits import effective_voicing
 from i18n import tr, voicing_context_lines
+from chord_chart import uncertainty_description
 from voicing import pitch_class_names
 
 
@@ -259,14 +260,19 @@ def save_html(result: dict, path: str | Path) -> None:
         f"<p>{html.escape(line)}</p>"
         for line in voicing_context_lines(voicing_analysis, language)
     )
+    events = voicing_analysis.get("events", [])
+    if events and all(event.get("chord_type", "unknown") == "unknown" for event in events) and any(event.get("alternatives") for event in events):
+        voicing_context += f"<p>{html.escape(tr('ui.voicing_candidates_available', language))}</p>"
     voicing_offset = float(voicing_analysis.get("source_start_seconds", source.get("start_seconds", 0.0)))
     voicing_rows = []
     for event in voicing_analysis.get("events", []):
         unknown = event.get("chord_type", "unknown") == "unknown"
         evidence = event.get("evidence") or {}
-        observed = evidence.get("observed_pitch_classes", event.get("pitch_classes", ()))
-        notes = "—" if unknown else pitch_class_names(observed) or "—"
+        observed = evidence.get("observed_pitch_classes", () if unknown else event.get("pitch_classes", ()))
+        notes = pitch_class_names(observed) or "—"
         notes_html = html.escape(notes)
+        if unknown:
+            notes_html = f"{html.escape(tr('ui.voicing_observed_notes', language))}: {notes_html}"
         if not unknown and "observed_pitch_classes" not in evidence:
             notes_html = f"{html.escape(tr('ui.voicing_template_notes', language))}: {notes_html}"
         if not unknown and "observed_pitch_classes" in evidence:
@@ -286,15 +292,17 @@ def save_html(result: dict, path: str | Path) -> None:
         evidence_lines = []
         if event.get('manual_edit'):
             evidence_lines.append(tr('edit.manual', language))
-        if not unknown:
-            if evidence.get("ambiguous"):
-                evidence_lines.append(tr("ui.voicing_ambiguous", language))
-            alternatives = [str(item.get("symbol", "?")) for item in event.get("alternatives", ())[:3]]
-            if alternatives:
-                evidence_lines.append(tr("ui.voicing_alternatives", language) + ": " + ", ".join(alternatives))
-            if "supported_window_count" in evidence and "analyzed_window_count" in evidence:
-                evidence_lines.append(tr("ui.voicing_window_support", language,
-                                         supported=evidence["supported_window_count"], total=evidence["analyzed_window_count"]))
+        reason = uncertainty_description(event, language)
+        if reason:
+            evidence_lines.append(reason)
+        if evidence.get("ambiguous"):
+            evidence_lines.append(tr("ui.voicing_ambiguous", language))
+        alternatives = [str(item.get("symbol", "?")) for item in event.get("alternatives", ())[:3]]
+        if alternatives:
+            evidence_lines.append(tr("ui.voicing_alternatives", language) + ": " + ", ".join(alternatives))
+        if "supported_window_count" in evidence and "analyzed_window_count" in evidence:
+            evidence_lines.append(tr("ui.voicing_window_support", language,
+                                     supported=evidence["supported_window_count"], total=evidence["analyzed_window_count"]))
         evidence_html = "".join(f"<br>{html.escape(line)}" for line in evidence_lines)
         unknown_label = f"<br>{html.escape(tr('ui.voicing_unknown', language))}" if unknown else ""
         voicing_rows.append(

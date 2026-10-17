@@ -422,6 +422,7 @@ TEXT: dict[str, dict[str, str]] = {
     "ui.chart_caption_mix": {"ko":"4마디 × 4줄 / 페이지 · ? = 미확정 · ↳ = 앞 마디에서 이어짐\n클릭: 재생 위치 선택 · 더블클릭: 아래 근거·후보로 이동 · Enter: 코드 수정","en":"4 bars × 4 rows / page · ? = undetermined · ↳ = continued\nClick: seek · Double-click: evidence/candidates below · Enter: edit chord"},
     "ui.voicing_intro": {"ko":"코드 기호 아래에서 관측음·분석 근거·다른 후보를 확인하세요.","en":"See observed notes, evidence and alternative candidates below the chord symbols."},
     "ui.voicing_empty": {"ko": "신뢰할 수 있는 코드 구간을 찾지 못했습니다.", "en": "No sufficiently reliable chord segment was found."},
+    "ui.voicing_candidates_available": {"ko": "코드를 확정하지 못했습니다. 아래 후보·근거를 확인하거나 직접 수정하세요.", "en": "Chords remain unresolved. Review the candidates and evidence below, or edit them."},
     "ui.voicing_source_guitar_stem": {"ko": "분석 대상 · AI가 분리한 기타 신호. 코드는 추정 후보이며 실제 현·프렛 검출은 아닙니다.", "en": "Analyzed source · AI-isolated guitar. Chords are estimates, not detected strings or frets."},
     "ui.voicing_source_provided_audio": {"ko": "분석 대상 · 사용자가 선택한 오디오. 기타 외 악기가 포함되면 전체 화성이 반영될 수 있습니다.", "en": "Analyzed source · User-selected audio. Other instruments may contribute to the harmony."},
     "ui.voicing_source_original_mix": {"ko":"전체 음원을 바탕으로 추정한 곡의 화성입니다. 특정 악기의 연주나 운지를 뜻하지 않습니다.","en":"Song harmony estimated from the whole recording, not an instrument part or fingering."},
