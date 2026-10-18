@@ -1,26 +1,21 @@
 # v0.1.05 session checkpoint
 
-- Status: Source, actual-sample and hidden frozen build checks complete; preparing immutable archive and publication.
-- Updated: 2026-10-18 16:32:22 Asia/Seoul.
-- Active plan: plan/20261011-232025--work-plan--v0-1-05-uncertain-chords--v01.md.
-- Approval: User replied 진행해 to the uncertainty/reanalysis/UI/persistence/test/release proposal.
-- No screen manipulation, GUI windows, audio playback, or hardware testing.
-- Clean baseline: completed v0.1.04 at main fb1e4ba; preserve all published artifacts.
-- Writable scope: classifier/reanalysis, chart/edit validation, app/report/PDF display, related tests and QA helpers, version/release documentation and packaging helpers, run records.
-- Contract and regression tests precede implementation. No new dependency or C++ ABI change planned.
-- Verification: focused tests, guarded tools/verify_headless.py, known-harmony comparison, local-only Room 335 comparison, independent read-only review, hidden frozen self-test and fresh archive verification.
-- Current blockers: none. Native visual/click tests remain deferred by user instruction.
-- Completed: tests/test_uncertain_chords.py five red-to-green tests; existing chord_path two tests and chord_scores two tests pass. Classifier preserves weak/temporal candidates, local reasons, and time; unknown groups split by cause/candidate identity; output limit distinguished.
-- Contract: unknown symbol '?' stays; evidence.uncertainty_reason enum (low_signal, insufficient_tonal_evidence, weak_match, temporal_instability, unobserved_gap, output_limit). Optional boolean reanalysis_recovered applies only to known events. Alternatives max3; no new schema/dependency.
-- Risk: naive short-window retry falsely labels seed17 white noise; require two alternate windows agreeing, original candidate support, and ordinary temporal support before promotion.
-- Completed: bounded CQT retry five red-to-green tests; seven existing song tests pass. Model32/display34 checks and offscreen10 PDF pages pass. Recovery remains unproven on real annotated songs; no accuracy claim.
-- Broad suite:346 tests,92 GUI tests deferred; five failures in two legacy expectations now adjusted to approved contract (output_limit reason allowed; unknown candidates visible as details, never main event labels). Production rules were not weakened.
-- Approved bounded repair scope (first review loop): candidate-sensitive unknown grouping can produce more than10000 CQT events and break effective_voicing/import. Allowed voicing.py/song_chords.py and related tests; enforce explicit output_limit with existing semantic fallback, make budget selection linear after ranking, prove timeline coverage and import compatibility. Do not raise input duration or silently drop time. Then re-verify and re-review before release.
-- Repair result: CQT4096-event cap; O(1) greedy adjacency accounting after ranking;100random parity cases and dense integration test pass. Independent re-review22tests and24001events pass actual load_result, no further actionable findings. Repair loop closed.
-- Broad expectation rerun passed346tests in48.325s before newest dense/budget/self-test changes; final rerun required.
-- Final source verification: 348 tests pass in63.350s with92GUI-containing tests deferred; current source hashes in ../work/v105-headless-tests.json. 32 quality cases pass with0correct/incorrect newly recognized seconds;11tracefixtures unchanged0.993576104655699 agreement. Existing heavy-noise false positives remain; no real-song accuracy claim.
-- Room335 full252.6098866213s and30–90s excerpts pass CQT/FFT progress/cancel/JSON/edit/HTML/PDF; source unchanged. CQT coverage.4951/.51,candidate evidence2.25s,recovered0. FFT coverage.3587/.4242,candidate evidence113.1s full. Reports ../work/v105-actual-cqt.json andv105-actual-fft.json.
-- Version0.1.05/date2026-10-17,QA source passed/frozenpending; package_v105.py andpublish_v105.py adapted from immutable v104 helpers outside repo inwork/. Hiddenbuild started09:47:17KST with SkipTests (guarded suite already passed),SkipZip andexistingZig0.15.2. No new C++ABI.
-- Next: complete frozen diagnostics, updateQA/docs, finalize+freshverify immutableZIP, sourcecommit/tag/push/publication andpostpublicationrecords. FFT preserves candidates but has no new recovery frontend. No v105archive orpublicrelease yet.
-- October18 resume: previous PyInstaller build completed but packaging stopped before frozen receipt; no process remained. Unchanged348-test source hashes confirmed, full hidden build rerun started16:23:29KST, session1544. Source reference date staysOctober17; final verification/publication dates recorded separately. Feature commit626fba9 local. Read-only release-helper review delegated; no UI/audio operation.
-- Final build exited0; stage/source/devsource/native hashes pass, frozen music_workflow.uncertainty_reopen_exports=true and allrequired CQT/FFT/mixer/PDF/native tests pass. QAstatuspassed with17packagingwarnings andexplicit92GUIdeferred. Helper review approved source_commit binding andexactZIPchecksums;3offlinehelpertestsred-to-green. Next: commit sourcefreeze, package_v105.py finalize thenverify (requirescleanHEAD), tagandpush verifiedcommit, publish_v105.py, publicreadback andpostpublicationrecords. No archivecreatedyet.
+- Status: Complete; verified developer prerelease published.
+- Updated: 2026-10-18 23:47:33 Asia/Seoul.
+- Active completed plan: plan/20261011-232025--work-plan--v0-1-05-uncertain-chords--v01.md.
+- Approval: User approved uncertainty evidence, bounded reanalysis, UI/export/persistence and developer release.
+- Operating constraint honored: no screen manipulation, GUI windows, audio playback or hardware/physical-print tests.
+- Release: https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.05
+- Immutable tag/source commit: 83e88c10f62f6b174b2f95cf0e68b751a14f4db0.
+- Published: 2026-10-18 23:46:38 KST. Anonymous public readback passed23:47:33KST.
+- Archive: ToneMatchTMP-v0.1.05-Windows-x64-Portable-Dev.zip,349587911bytes.
+- SHA256: BD6638AD742E71039125F996E62B44054265053EDF04014326CC1000699A52E0.
+- Three verified assets: ZIP,SHA256SUMS(468bytes),ARCHIVE-VERIFICATION.json(698bytes). Remote sizes/digests match local files.
+- Implemented: unknown primary '?' remains, observed notes/up to3candidates and6finite reasons retained; bounded CQT .3/1.0s agreement review;4096event budget; UI/HTML/PDF/JSON/manualedit consistency. FFT preserves evidence without new retry pass. No dependency or C++ABI change.
+- Verification:348guarded source tests,92GUI-containing tests deferred;32synthetic CQT/FFT cases passed,0newcorrect/incorrect recognized seconds;11tracefixtures unchanged0.993576104655699 agreement;3offline release-helper regressions. Independent analyzer/helper reviews approved after bounded repairs.
+- Actual local Room335 full252.6098866213s+excerpt tests pass CQT/FFT progress/cancel/sourcepreservation/edit/reopenHTMLPDF. CQTcoverage.4951,candidateevidence2.25s,recovered0;FFTcoverage.3587,candidateevidence113.1s. Coverage is not accuracy. Useraudio was not uploaded or packaged.
+- Final hidden Windows build passed;17optional packagingwarnings disclosed. Frozen andfresh-extracted workflow tests pass includinguncertainty_reopen_exports. Fresh archive checked5464manifestfiles and101sourceinputs,clean source_commit binding,licenses/fonts/nativeparity and no privatepaths/media/weights/JITcaches.
+- Evidence: QA_REPORT_v0.1.05.json,BUILD_HISTORY.md,run receipts; external work/v105-*.json andrelease/*v0.1.05*.
+- Existing v0.1.04 remains immutable. Preserve previous portable folder/original results for rollback.
+- Limits: no demonstrated recovery/accuracy gain, heavy-noise false positives remain; nativeUI,listening,clean-machine,GPU,physicalprinting untested.
+- Next: no required work remains for this approved patch. User feedback or new accuracy scope should become v0.1.06; do not overwrite publishedtag/assets. Postpublication docs are a separate main commit.

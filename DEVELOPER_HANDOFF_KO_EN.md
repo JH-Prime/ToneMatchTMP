@@ -4,6 +4,8 @@
 
 Source and frozen executable checks passed on 2026-10-18. Fresh-archive validation and publication
 remain separate release gates, with a source-commit-bound receipt and public asset digest readback.
+Both gates passed: v0.1.05 was published at 2026-10-18 23:46:38 KST; unauthenticated readback matched all three assets.
+Immutable source/tag commit: `83e88c10f62f6b174b2f95cf0e68b751a14f4db0`. The fresh ZIP has 5,464 manifest files and 101 source inputs.
 Use QA_REPORT_v0.1.05.json and the newest BUILD_HISTORY entry for current evidence; older versions below
 are historical and must not be reused as proof of this patch. Do not replace the published v0.1.04 tag/assets.
 

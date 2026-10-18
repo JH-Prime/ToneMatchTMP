@@ -3,15 +3,15 @@
 Plan Type: Work plan
 Workstream: ToneMatchTMP v0.1.05 uncertain chord handling
 Version: 01
-Status: Source and hidden frozen build verified; archive/publication gates pending
+Status: Complete; verified developer prerelease published and publicly read back
 Created: 2026-10-11 23:20:25 Asia/Seoul
-Last Updated: 2026-10-18 16:32:22 Asia/Seoul
+Last Updated: 2026-10-18 23:47:33 Asia/Seoul
 Related Plan: Completed v0.1.04 chord trace and device lifecycle plan
-Current Completion State: Candidate preservation, bounded CQT reanalysis and model/display integration implemented
+Current Completion State: Approved uncertainty implementation, verification and v0.1.05 publication complete
 Completed So Far: 348 guarded tests, 32 quality cases, 11 unchanged trace fixtures, CQT/FFT actual sample/export checks, independent review and offline Korean/English PDF inspection
-Remaining Work: Independent archive verification, publication and immutable release records
+Remaining Work: None in the approved patch scope; native UI/listening and real-song accuracy remain disclosed limitations
 Current Blockers: None within the no-screen operating constraint
-Next Step: Freeze source, create and independently verify the developer archive, then publish verified assets
+Next Step: User review of v0.1.05; any newly reported fix starts a separately scoped v0.1.06 patch
 
 ## Approval and authority
 
@@ -103,13 +103,13 @@ The definition of done is an end-to-end tested uncertainty path, bounded and jus
 
 ## Scoreboard
 
-Current Score: 48/100
+Current Score: 49/100
 Score Source: provisional
-Last Updated: 2026-10-18 16:32:22 Asia/Seoul
-Rationale: Source, actual-file, frozen workflow, native parity and independent review pass. Archive/publication still require proof; no chord accuracy gain is claimed.
+Last Updated: 2026-10-18 23:47:33 Asia/Seoul
+Rationale: Approved patch delivered with source, frozen, fresh-ZIP and public asset proof; user acceptance and real-song accuracy gains remain unmeasured.
 What Improved: The approved scope separates missing evidence from ambiguous evidence and includes the complete display and persistence path.
-What Remains Unsatisfactory: Candidate loss, blank uncertainty display, and unmeasured recovery behavior remain in the shipped version.
-Next Score-Maintenance Action: Require matching source receipts, frozen uncertainty roundtrip and independently extracted archive before publication; do not claim recovery gains.
+What Remains Unsatisfactory: Conservative recovery showed no new accepted intervals on the measured cases; native interaction and real-song ground-truth accuracy are unmeasured.
+Next Score-Maintenance Action: Preserve verified assets and original analysis, collect user feedback, and scope any future accuracy work separately without claiming unmeasured gains.
 
 ### Score history
 
@@ -118,8 +118,11 @@ Next Score-Maintenance Action: Require matching source receipts, frozen uncertai
 - 2026-10-14 20:40:44 Asia/Seoul — 47 provisional: Earlier guarded346-test run passed after legacy expectation updates; dense timeline repair passes focused tests and independent re-review. Frozen/actual/versioned gates pending.
 - 2026-10-18 16:23:50 Asia/Seoul — 47 provisional retained: Final348 tests,32qualitycases and CQT/FFT real-file checks passed; no demonstrated accuracy gain. Interrupted packaging must finish before delivery.
 - 2026-10-18 16:32:22 Asia/Seoul — 48 provisional: Hidden build and complete frozen workflow pass, including uncertainty exports and native ABI2; package inputs match verified source. Publication not yet complete.
+- 2026-10-18 23:47:33 Asia/Seoul — 49 provisional: Fresh extraction and public three-asset verification pass; v0.1.05 delivered without altering v0.1.04. No user score or accuracy improvement assumed.
 
 ## Progress log
+
+- 2026-10-18 23:47:33 Asia/Seoul — Fresh archive verification passed against clean commit83e88c10f62f6b174b2f95cf0e68b751a14f4db0:5464manifestfiles,101sourceinputs andcoldfrozenuncertainty/nativeworkflow. ZIP349587911bytes SHA256BD6638AD742E71039125F996E62B44054265053EDF04014326CC1000699A52E0. Clean checkout preserved from sourcefreeze through publication. Main/tag pushed; developer prerelease published23:46:38KST; anonymous API readback confirmed all3asset sizes/digests. This postpublication documentation records the external gates without rewriting the frozen tag/archive.
 
 - 2026-10-18 16:32:22 Asia/Seoul — Full build exited0 after frozen diagnostics; CQT/FFT/edit/reopen/uncertainty HTML/PDF, mixer export, font and native parity pass. Seventeen optional dependency/hook warnings disclosed. Helper re-review approved exact clean-commit binding/checksums. QA/docs finalized for source freeze; archive and publication receipts remain external gates. No screen interaction, playback, clean-machine or physical-print testing performed.
 
