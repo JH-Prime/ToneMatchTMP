@@ -8,17 +8,35 @@
 from __future__ import annotations
 
 
-APP_VERSION = "0.1.04"
+APP_VERSION = "0.1.05"
 TARGET_FIRMWARE = "1.8.58"
 MODEL_GUIDE_REVISION = "Rev. J (2026-07)"
-BUILD_DATE = "2026-10-11"
+BUILD_DATE = "2026-10-17"
 
 
 # 앱 내부의 변경 기록 화면과 배포 문서가 함께 사용하는 단일 원본이다.
 # 기능 버전 0.1.01 이후 수정 릴리스는 0.1.02부터 올리며 공개 산출물을 덮어쓰지 않는다.
 CHANGELOG: list[dict] = [
     {
-        "version": "0.1.04", "date": BUILD_DATE,
+        "version": "0.1.05", "date": BUILD_DATE,
+        "status": "개발자 프리릴리스", "status_en": "Developer prerelease",
+        "changes": [
+            "미확정 코드의 관측음·최대 3개 후보·판정 보류 사유를 보존하고 화면·HTML·PDF에 표시",
+            "CQT의 후보가 있는 미확정 구간을 0.3초·1.0초 증거로 제한 재검토하고 합의·기존 관측음·시간 지지 확인",
+            "CQT 최대 4096개 이벤트와 출력 제한 사유로 긴 타임라인의 크기·공백 의미 유지",
+            "JSON 재열기와 수동 수정·복원에서 미확정 근거 보존; FFT 후보 보존은 적용하되 새 재분석은 CQT 전용",
+        ],
+        "changes_en": [
+            "Preserve observed notes, up to three candidates and abstention reasons in UI, HTML and PDF",
+            "Bounded CQT review with 0.3/1.0-second evidence, agreement, original-note and temporal-support gates",
+            "Keep a 4096-event CQT output budget and explicit output-limit reasons across the timeline",
+            "Preserve uncertainty through JSON reopen and edit/restore; FFT retains candidates without a new retry pass",
+        ],
+        "known_issues": ["후보·검출 비율·근거 점수는 정답률이 아니며 미확정 코드 복구를 보장하지 않음", "화면 조작·실청·실제 인쇄는 검증하지 않음"],
+        "known_issues_en": ["Candidates, coverage and evidence scores are not accuracy; recovery is not guaranteed", "Native interaction, listening and physical printing untested"],
+    },
+    {
+        "version": "0.1.04", "date": "2026-10-11",
         "status": "개발자 프리릴리스", "status_en": "Developer prerelease",
         "changes": [
             "분석 완료·실패·취소 후 멀티이펙터 선택 잠금 복구",

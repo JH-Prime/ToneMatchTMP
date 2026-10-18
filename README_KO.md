@@ -1,9 +1,39 @@
-# ToneMatch TMP 0.1.04
+# ToneMatch TMP 0.1.05
 
 권한 있는 로컬 오디오·영상 또는 Windows 녹음을 분석하는 비공식 Windows 도구입니다.
 전체 음원 코드표와 Fender Tone Master Pro 또는 Quad Cortex용 시작점 톤 레시피 3개를 제공합니다.
-빌드 기준일: 2026-10-11 KST. 서명되지 않은 CPU 개발자 프리릴리스이며,
-검증 범위는 [QA 보고서](QA_REPORT_v0.1.04.json)와 [빌드 이력](BUILD_HISTORY.md)을 확인하세요.
+소스 기준일: 2026-10-17 KST. 서명되지 않은 CPU 개발자 프리릴리스입니다.
+2026-10-18 소스·실행파일 검증을 통과했습니다. 최종 ZIP·게시 증거는 릴리스 첨부 보고서로 별도 기록합니다.
+최종 검증 범위는 [v0.1.05 QA 보고서](QA_REPORT_v0.1.05.json)와 [빌드 이력](BUILD_HISTORY.md)에 기록합니다.
+
+## 0.1.05 변경 사항
+
+- 코드를 확정하지 못한 구간도 관측한 음과 최대 3개 후보를 아래에 표시합니다.
+  본문은 계속 `?`로 남으며 후보를 확정 코드처럼 표시하거나 앞뒤 코드로 채우지 않습니다.
+- 낮은 음량, 부족한 음정 근거, 비슷하거나 약한 후보, 짧은 시간 지지, 미관측 공백,
+  출력 제한을 구별합니다. `?`는 코드가 없다는 뜻도, 음악 기호 `N.C.`도 아닙니다.
+- CQT는 후보가 있는 일부 미확정 관측에 한해 0.3초·1.0초 길이로 다시 확인합니다.
+  화성 변화 경계 안에서 기존 CQT 결과를 재사용하며 두 길이의 코드 일치, 원래 관측음,
+  충분한 근거와 시간 지지를 요구합니다. 반복해서 답을 만들거나 무음을 코드로 채우지 않습니다.
+- FFT에도 후보·미확정 사유 보존을 적용하지만 위의 새 재검토는 **CQT 전용**입니다.
+  CQT 결과는 최대 4096개 이벤트로 제한하며 한도로 생략된 부분은 출력 제한으로 표시합니다.
+- 화면·HTML·PDF·JSON 재열기에서 후보와 사유를 유지합니다. 직접 수정한 코드는 자동
+  추정 근거와 구별하며 원본 복원 시 이전 후보를 다시 볼 수 있습니다. 기타 운지는 추가하지 않습니다.
+
+후보 표시나 검출 비율 증가가 정답률 향상을 뜻하지 않습니다. 모든 누락 코드를 복구하거나
+실제 곡의 채보 정확도를 보장하지 않으며, 기존 결과와 보관한 v0.1.04 폴더는 유지하세요.
+
+확인된 소스 검증: 창 생성을 차단한 테스트 348개 통과, 실제 GUI 테스트 92개 보류입니다.
+CQT/FFT 합성 비교 32개 사례를 통과했고, 새로 채택된 정답·오답 구간은 모두 0초였습니다.
+11개 합성 코드 추적 사례의 시간 가중 기호 일치율은 이전 버전과 같은 99.36%로,
+실제 곡 정답률이 아닙니다. 로컬 Room 335 CQT 검사(252.61초)는 검출 비율 49.51%를
+유지하면서 미확정 후보 근거 2.25초를 보존했고, 재검토로 복구된 관측은 0개였습니다.
+같은 전체 파일의 FFT 검사도 통과했으며 검출 비율 35.87%를 유지하고 미확정 후보 근거
+113.10초를 보존했습니다. 후보가 더 많이 나오는 것이 더 정확하다는 뜻은 아닙니다.
+실행파일의 CQT/FFT·미확정 근거 재열기/내보내기·PDF 글꼴·믹서 저장·C++ ABI 2 검증을 통과했습니다.
+게시 전에는 ZIP을 새로 풀어 검증하고 공개 자산 해시까지 대조하며, 결과는 별도 압축 검증 보고서에 남깁니다.
+
+아래 v0.1.04 이하 항목의 수치·검증 기록은 해당 과거 버전에 대한 기록입니다.
 
 ## 0.1.04 변경 사항
 
@@ -69,7 +99,7 @@
 ## 설치와 분석
 
 1. 개발자 ZIP을 새 폴더에 **전부 압축 해제**하고 SHA-256을 확인합니다.
-   `ToneMatchTMP-v0.1.04.exe`를 실행합니다. EXE만 옮기지 마세요.
+   검증·게시된 패키지의 `ToneMatchTMP-v0.1.05.exe`를 실행합니다. EXE만 옮기지 마세요.
 2. `톤 분석`에서 로컬 오디오/영상 또는 권한 있는 PC 재생음 녹음을 선택합니다.
 3. 시작/끝 초를 정합니다. 최소 3초, 최대 20분이며 끝 `0`은 파일 끝까지입니다.
 4. 풀믹스는 AI 기타 분리, 이미 기타만 있는 파일은 분리 생략을 선택합니다.
@@ -151,10 +181,15 @@ Git clone은 큰 FFmpeg/DLL 바이너리를 포함하지 않습니다. FFmpeg는
 py -3.12 -m venv ..\.venv
 & ..\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 & ..\.venv\Scripts\python.exe tools\build_native.py --zig C:\Tools\zig-0.15.2\zig.exe
-& ..\.venv\Scripts\python.exe -W error -m unittest discover -s tests -v
-& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.1.02.json
-& .\build.ps1 -ZigPath C:\Tools\zig-0.15.2\zig.exe
+& ..\.venv\Scripts\python.exe -W error tools\verify_headless.py --output .\headless-v0.1.05.json
+& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.1.05.json
+& .\build.ps1 -SkipTests -ZigPath C:\Tools\zig-0.15.2\zig.exe
 ```
+
+위 순서는 화면을 열지 않는 회귀 검증이 통과한 뒤 빌드에서 테스트 재실행만 생략합니다.
+`verify_headless.py`는 Tk 창 생성을 금지하고 GUI 포함 테스트를 보류 목록에 기록합니다.
+전체 unittest discovery와 `-SkipTests` 없는 빌드는 창을 만드는 테스트를 포함하므로
+화면 조작이 허용된 별도 검증에서만 실행하세요. 보류한 GUI 검증을 완료로 간주하지 않습니다.
 
 Zig 0.15.2 Windows x64 공식 ZIP SHA-256:
 `3a0ed1e8799a2f8ce2a6e6290a9ff22e6906f8227865911fb7ddedc3cc14cb0c`.
@@ -164,7 +199,7 @@ CUDA 소스 개발은 `enable_cuda.ps1`와 별도 호환 GPU 환경을 사용하
 실제로 스피커를 울리거나 AI 모델을 실행하지 않습니다.
 실제 캐시 모델 검사는 `--stem-self-test-source`와 `--stem-self-test-output` CLI를 사용합니다.
 
-현재 개발 버전은 0.1.04이며 다음 버그 수정은 0.1.05로 진행합니다. 기존 릴리스를 교체하지 않습니다.
+현재 개발 버전은 0.1.05이며 게시 후 다음 버그 수정은 0.1.06으로 진행합니다. 기존 릴리스를 교체하지 않습니다.
 인수인계는 [DEVELOPER_HANDOFF_KO_EN.md](DEVELOPER_HANDOFF_KO_EN.md),
 알고리즘 근거는 [TRANSCRIPTION_RESEARCH_KO.md](TRANSCRIPTION_RESEARCH_KO.md)를 확인하세요.
 

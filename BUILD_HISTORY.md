@@ -8,6 +8,7 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 | 버전 | 상태 | 범위 |
 |---|---|---|
+| `0.1.05` | 소스·실행파일 검증 완료, 독립 ZIP 검증 후 게시 | 미확정 근거·후보·사유 보존, CQT 제한 재검토, 4096 이벤트 예산, 표시·저장 일치 |
 | `0.1.04` | 독립 ZIP 검증 완료·개발자 프리릴리스 게시 | 분석 종료 장비 잠금 복구, 코드 모드 장비 선택, 50ms CQT 관측·경계·시간 가중 경로 |
 | `0.1.03` | 소스·실행 파일 검증 완료, 독립 ZIP 검증 후 게시 | 코드 UI·폰트·장비 목록 진입점 정리, 원본 CQT/FFT 선택과 저장 방식 보존 |
 | `0.1.02` | 검증 완료·개발자 프리릴리스 게시 | Quad Cortex 목록·내장 추천, AI 독립 코드 모드, CQT 튜닝 보정 |
@@ -25,6 +26,45 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 | `0.0.03` | 포터블 개발 프리뷰 빌드 완료 | 포터블 개발 ZIP, 한·영 handoff, 로그·빌드 이력, NumPy 코드/보이싱 분석(실험) |
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
+
+## v0.1.05 build verification — 2026-10-18 KST
+
+Source reference remains 2026-10-17; final hidden Windows build/self-test passed on 2026-10-18.
+Independent ZIP verification and developer prerelease publication are separate external gates.
+No archive digest, tag commit or publication time is asserted until those operations are verified.
+Frozen checks include CQT/FFT, manual edit/method reopen, uncertainty JSON/HTML/PDF roundtrip,
+mixer export, bundled PDF font and C++ ABI 2 float32/float64 parity. Seventeen packaging warnings
+concern optional PyInstaller imports/hooks, Numba TBB and torch deprecations; required runtime checks pass.
+Three offline release-helper tests verify exact checksum entries and archive-to-tag commit binding.
+
+Scope: preserve observed notes, up to three supported alternatives and explicit abstention reasons
+when a primary chord remains unknown. UI/HTML/PDF/reopened JSON now expose that evidence below `?`;
+manual correction and original restoration continue to separate user decisions from automatic evidence.
+Distinguish low signal, insufficient tonal evidence, weak/competing matches, temporal rejection,
+unobserved gaps and output-limit omissions. Unknown does not mean that the music contains no chord.
+
+CQT reuses its computed transform for bounded 0.3/1.0-second reviews of candidate-bearing unknowns.
+Agreement on an original candidate, required original observed tones, stronger evidence and existing
+temporal support are required; unresolved evidence may stay unresolved. FFT preserves candidates/reasons
+without a new alternate-length retry. A 4096-event CQT budget retains complete timeline coverage and
+labels omitted detail with `output_limit`. The existing C++ ABI and dependencies are unchanged.
+
+Final source verification: 348 guarded headless tests passed in 63.350 seconds, with 92 native GUI cases deferred.
+CQT/FFT synthetic comparison: 32 cases passed; newly correct and newly incorrect recognized durations
+are both 0 seconds. Eleven trace sequences retain strict duration-weighted symbol agreement
+`0.993576104655699`, unchanged from v0.1.04. Room 335 CQT full-file duration is `252.6098866213` seconds;
+recognized coverage remains `0.4951`, unresolved candidate evidence is `2.25` seconds, and recovered
+observation count is `0`. This is not proof of improved accuracy, recovery rate or speed. Actual-song
+reference annotations are unavailable; coverage and candidate counts are not correctness measurements.
+Real-file FFT (`v105-actual-fft.json`) passed: full-file 252.6098866213 seconds, runtime 3.387 seconds,
+349 events, unchanged coverage 0.3587, candidate-bearing unknown duration 113.10 seconds and unknown
+without candidates 48.91 seconds. The 30-90 second excerpt took 0.731 seconds, with 83 events,
+coverage 0.4242, candidate-bearing unknown duration 25.5 seconds and candidate-free unknown duration
+9.3 seconds. Progress/cancellation/source preservation and JSON edit/reopen/HTML/PDF checks passed.
+Timings are observations from this run, not speed or accuracy guarantees.
+Current source evidence is recorded in parent-session-runs/v0-1-05/; final counts and limits belong in
+QA_REPORT_v0.1.05.json. Offscreen PDF checks do not imply native UI clicks, listening or physical printing.
+Previous published v0.1.04 assets, dates and hashes remain immutable. Keep original analysis results for rollback.
 
 ## v0.1.04 publication record — 2026-10-11 KST
 

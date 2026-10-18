@@ -1,9 +1,40 @@
-# ToneMatch TMP 0.1.04
+# ToneMatch TMP 0.1.05
 
 An unofficial Windows tool for authorized local audio/video and Windows capture:
 whole-mixture chord charts plus three starting-point Fender Tone Master Pro or Quad Cortex recipes.
-Build reference: 2026-10-11 KST. Unsigned CPU developer prerelease.
-See [한국어 사용 안내](README_KO.md), [QA](QA_REPORT_v0.1.04.json) and [build history](BUILD_HISTORY.md).
+Source reference: 2026-10-17 KST. Unsigned CPU developer prerelease.
+Source and frozen executable checks passed on 2026-10-18; final ZIP/publication evidence is recorded separately in release assets.
+See [한국어 사용 안내](README_KO.md), [v0.1.05 QA](QA_REPORT_v0.1.05.json) and [build history](BUILD_HISTORY.md).
+
+## Added in 0.1.05
+
+- Unresolved intervals retain observed notes, up to three supported candidates and a reason.
+  Their primary chart label remains `?`; candidates appear below, not as confirmed chord names.
+- Distinguish quiet signal, insufficient tonal evidence, weak/competing matches, insufficient
+  temporal support, unobserved gaps and output-limit omissions. Unknown does not mean N.C.
+- CQT may review a candidate-bearing unresolved observation at bounded 0.3/1.0-second lengths,
+  reusing the current transform and harmonic boundaries. Both lengths must agree with an original
+  candidate, required original observed notes and temporal support. No recursive guess-filling.
+- FFT also preserves candidates/reasons but does not receive this new alternate-length retry.
+  CQT output has a 4096-event budget with explicit output-limit gaps, preserving timeline coverage.
+- UI, HTML, PDF and reopened JSON retain uncertainty details. Manual corrections remain separate
+  from automatic evidence; restoring the original result brings its candidates back. No fingerings.
+
+Candidate availability and coverage are not accuracy. Recovery of every missed chord, higher
+real-song accuracy and faster analysis are not guaranteed. Keep v0.1.04 and original results for rollback.
+
+Verified source evidence: 348 guarded headless tests passed; 92 native GUI cases remain deferred.
+The 32-case CQT/FFT comparison passed with zero newly correct or incorrect recognized seconds.
+The eleven-sequence timing corpus retained 99.36% duration-weighted symbol agreement, unchanged
+from the previous version. These are development fixtures, not a real-song accuracy benchmark.
+On the local 252.61-second Room 335 CQT check, recognized coverage remained 49.51%; 2.25 seconds
+of unresolved candidate evidence were retained, with zero recovered observations. The full-file FFT
+check passed with unchanged 35.87% coverage and 113.10 seconds of unresolved candidate evidence;
+candidate availability is not a comparison of accuracy. Frozen CQT/FFT, uncertainty reopen/export,
+PDF font, mixer export and C++ ABI 2 parity checks passed. An independently extracted archive and
+matching public asset digests are required before publication; see the external archive-verification receipt.
+
+The figures and verification in the v0.1.04 and older sections below are historical, not current-patch proof.
 
 ## Added in 0.1.04
 
@@ -68,7 +99,7 @@ Ambiguous names (e.g. C6/Am7), melody, percussion, harmonics and omitted notes r
 ## Start
 
 Extract the **entire** developer ZIP to a new directory, verify SHA-256, then run
-`ToneMatchTMP-v0.1.03.exe`. Do not move only the EXE.
+`ToneMatchTMP-v0.1.05.exe` once its package has been verified and published. Do not move only the EXE.
 Choose authorized local media or PC capture, then a range of 3 seconds to 20 minutes;
 end `0` means through the end subject to that cap.
 Full-mix tone analysis isolates guitar; already-guitar audio can skip isolation.
@@ -124,10 +155,15 @@ and rebuild the native DLL with pinned Zig 0.15.2.
 py -3.12 -m venv ..\.venv
 & ..\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 & ..\.venv\Scripts\python.exe tools\build_native.py --zig C:\Tools\zig-0.15.2\zig.exe
-& ..\.venv\Scripts\python.exe -W error -m unittest discover -s tests -v
-& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.1.02.json
-& .\build.ps1 -ZigPath C:\Tools\zig-0.15.2\zig.exe
+& ..\.venv\Scripts\python.exe -W error tools\verify_headless.py --output .\headless-v0.1.05.json
+& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.1.05.json
+& .\build.ps1 -SkipTests -ZigPath C:\Tools\zig-0.15.2\zig.exe
 ```
+
+This no-screen sequence skips a repeated build-time test run only after the guarded headless
+receipt passes. The runner forbids Tk construction and records deferred GUI cases. Full unittest
+discovery and builds without `-SkipTests` include window-creating tests; use them only in a separately
+authorized interactive verification session. Deferred native UI tests are not considered passed.
 
 Official Zig 0.15.2 Windows x64 ZIP SHA-256:
 `3a0ed1e8799a2f8ce2a6e6290a9ff22e6906f8227865911fb7ddedc3cc14cb0c`.
@@ -137,7 +173,7 @@ PDF/font, PortAudio loading and native parity without audible output or actual m
 The separate `--stem-self-test-source` / `--stem-self-test-output` CLI checks an already
 cached CPU model, writes redacted JSON and cleans temporary audio.
 
-Post-publication fixes advance to 0.1.03; published releases are immutable.
+After v0.1.05 publication, fixes advance to 0.1.06; published releases are immutable.
 Read [handoff](DEVELOPER_HANDOFF_KO_EN.md) and [research](TRANSCRIPTION_RESEARCH_KO.md).
 Application source: MIT. See `THIRD_PARTY_NOTICES.txt`, inventory and `licenses/`.
 Fender, Tone Master, Neural DSP and Quad Cortex are their owners' trademarks;

@@ -1,6 +1,61 @@
-# ToneMatch TMP v0.1.04 — 개발 인수인계 / Developer Handoff
+# ToneMatch TMP v0.1.05 — 개발 인수인계 / Developer Handoff
 
-## Current v0.1.04 / 현행 — 2026-10-11 KST
+## Current v0.1.05 / 현행 — 2026-10-17 KST
+
+Source and frozen executable checks passed on 2026-10-18. Fresh-archive validation and publication
+remain separate release gates, with a source-commit-bound receipt and public asset digest readback.
+Use QA_REPORT_v0.1.05.json and the newest BUILD_HISTORY entry for current evidence; older versions below
+are historical and must not be reused as proof of this patch. Do not replace the published v0.1.04 tag/assets.
+
+Unknown primary events retain `chord_type='unknown'` and `symbol='?'`. Preserve measured pitch classes
+and at most three locally supported alternatives without promoting them to accepted chords.
+The optional `evidence.uncertainty_reason` enum is `low_signal`, `insufficient_tonal_evidence`,
+`weak_match`, `temporal_instability`, `unobserved_gap`, or `output_limit`; validate it on JSON import.
+Missing legacy metadata remains generically unresolved. A quiet signal is not the music-theory label N.C.
+Group unresolved evidence locally rather than merging unrelated candidates into one song-wide guess.
+
+CQT retries are bounded: only an unresolved observation with existing candidates may be checked at
+0.3/1.0-second widths within the existing harmonic boundaries, reusing the current CQT matrix.
+Both widths must agree on the complete root/type/slash symbol already in the primary candidates.
+Required tones must be present in the primary observed-note evidence, stronger support gates apply,
+and the existing temporal filter still decides acceptance. Similar/clipped widths are not independent
+confirmation; no recursive retry, cross-method fallback, or automatic neighboring-chord fill is added.
+`reanalysis_recovered` is operational metadata, not a confidence or calibrated probability.
+FFT retains candidate/reason metadata but does **not** receive this alternate-length retry pass.
+
+CQT output is bounded to 4096 events. Preserve time coverage and mark limit-induced omissions with
+`output_limit`, not silence or weak evidence. Manual corrections remain separate; their effective view
+clears stale automatic evidence, while undo/original restoration keeps raw analysis intact.
+UI, HTML, PDF, chart normalization and JSON reopen must agree. No fingerings are reintroduced.
+
+Final source checks: 348 guarded headless tests passed in 63.350 seconds; 92 native GUI cases deferred.
+The 32-case CQT/FFT comparison passed with zero newly correct and zero newly incorrect recognized seconds.
+The eleven-sequence trace corpus retained duration-weighted strict symbol agreement
+`0.993576104655699`, unchanged from v0.1.04. These development fixtures do not prove an accuracy gain
+or a universal absence of false positives. Room 335 CQT: duration `252.6098866213` seconds,
+recognized coverage `0.4951` unchanged, unresolved candidate evidence `2.25` seconds, recovered observations `0`.
+The real-file FFT receipt `v105-actual-fft.json` passed: full-file coverage `0.3587` unchanged,
+349 events, `113.10` candidate-bearing unknown seconds and `48.91` unknown-without-candidate seconds.
+The 30-90 second excerpt has 83 events, `0.4242` coverage, `25.5` candidate and `9.3` empty-unknown seconds.
+Progress, cancellation, unchanged source and JSON edit/reopen/HTML/PDF checks passed on both ranges.
+Room 335 has no verified chord annotation: runtime, coverage and candidates are operational measures only.
+No speedup, real-song accuracy, or guaranteed recovery claim is authorized by these observations.
+The Python/NumPy/librosa path and C++ ABI 2 remain; no new dependency or native rewrite is introduced.
+
+Use `tools/verify_headless.py` with warnings as errors; its Tk/Toplevel guard prevents windows.
+Only after that receipt passes may a no-screen build use `build.ps1 -SkipTests`; disclose all deferred
+native UI tests. Never start playback, a browser or visible app to verify this user's current request.
+Check the frozen CQT/FFT workflow and reopened uncertainty exports, then verify a newly extracted ZIP
+and public asset digests before changing publication state to complete. Keep private audio and paths out.
+The frozen `music_workflow` contract now also requires `uncertainty_reopen_exports`: candidate/reason
+metadata must survive validated JSON reopening and HTML/PDF export without promoted primary labels.
+
+미확정은 곡에 코드가 없다는 뜻이 아닙니다. 후보는 아래에 제시하되 본문 `?`를 임의 코드로
+바꾸지 마세요. 재검토 후에도 근거가 부족하면 미확정을 유지합니다. 소스 구현과 배포 검증은
+별도 단계입니다. 소스·실행파일은 통과했고 ZIP·게시는 외부 릴리스 증거를 확인하세요. 롤백은 보관한 v0.1.04 폴더와
+원본 결과를 사용하며, 이후 공개 수정은 v0.1.06으로 진행합니다.
+
+## Historical v0.1.04 / 이전 — 2026-10-11 KST
 
 Use QA_REPORT_v0.1.04.json and the newest BUILD_HISTORY entry; older sections are historical.
 CQT uses 0.6-second evidence, 0.05-second observation hops and bounded 120-observation batches.
