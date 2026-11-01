@@ -1,7 +1,7 @@
 # v0.1.06 session checkpoint
 
-- Status: Source, actual-file and frozen build accepted; archive verification pending.
-- Updated: 2026-11-01 16:52:40 Asia/Seoul.
+- Status: Complete; verified v0.1.06 developer prerelease published.
+- Updated: 2026-11-01 17:00:09 Asia/Seoul.
 - Active plan: plan/20261031-062555--revision-plan--v0-1-06-conservative-precision--v02.md.
 - Approval: User approved the preceding precision scope with “넵 승인할게요”, including testing, developer ZIP and GitHub release.
 - Scope: retain CQT/FFT; improve harmonic evidence, arpeggio retention, omitted-tone/extension/bass decisions; no new UI or external model.
@@ -10,8 +10,9 @@
 - Phase: Release under approved revision 02. Final 387 tests, 62 precision, 32 uncertainty, 11 trace comparisons and independent analyzer review pass. Actual CQT/FFT workflows and frozen self-test pass; native ABI 2 unchanged.
 - Writable scope: chord analyzers, directly affected tests/verification tools, version/build/release metadata and documentation. Preserve published assets.
 - Risks: false confident labels, melody/arpeggio confusion, harmonic deletion/duplication, bass instability, runtime and import/export compatibility.
-- Current next step: Freeze source with final documentation/QA, build exclusive ZIP, fresh-extract and verify against clean HEAD, then tag/push/publish and read back asset digests. No screen or playback allowed. Previous FFT low-bass experiment is deferred; final FFT peak function exactly matches v0.1.05.
+- Current next step: No required work remains in v0.1.06. Preserve source/tag 7563242b054065f8893a6c6e344046e188e0b947 and all published assets; future fixes use v0.1.07. No screen manipulation or playback was performed. FFT low-bass experiment remains deferred.
 - Current evidence: Six versioned reports in workspace work directory; final source suite 387 pass / 92 GUI deferred. Precision newly correct 14.4s / newly wrong 0s. Actual CQT coverage43.22%, FFT43.23%; real-song correctness unknown. Frozen all gates true, 17 optional packaging warnings documented.
+- Delivery: Fresh ZIP verifies 5,470 files/106 source inputs, all manifest/source hashes, exclusions and cold frozen runtime. Published 2026-11-01 16:59:32 KST at https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.06. Unauthenticated public readback matched all three assets. ZIP 349,632,507 bytes; SHA-256 205f87491f035c89b94f4090f533e02f3af289bdd4998d0efab6e3116e4e0738. Publication and public-readback receipts remain in workspace work directory; archive verification is a public release asset.
 
 ## Historical checkpoints (superseded status retained as evidence)
 

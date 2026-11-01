@@ -8,7 +8,7 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 | 버전 | 상태 | 범위 |
 |---|---|---|
-| `0.1.06` | 소스·실행파일 검증 통과·독립 ZIP 검증 후 게시 | CQT 구성음 근거 보완, 일부 7·9화음 완전5도 생략, 저신호 예외 수정, FFT 기존 배음 억제 유지 |
+| `0.1.06` | 독립 ZIP 검증 완료·개발자 프리릴리스 게시 | CQT 구성음 근거 보완, 일부 7·9화음 완전5도 생략, 저신호 예외 수정, FFT 기존 배음 억제 유지 |
 | `0.1.05` | 독립 ZIP 검증 완료·개발자 프리릴리스 게시 | 미확정 근거·후보·사유 보존, CQT 제한 재검토, 4096 이벤트 예산, 표시·저장 일치 |
 | `0.1.04` | 독립 ZIP 검증 완료·개발자 프리릴리스 게시 | 분석 종료 장비 잠금 복구, 코드 모드 장비 선택, 50ms CQT 관측·경계·시간 가중 경로 |
 | `0.1.03` | 소스·실행 파일 검증 완료, 독립 ZIP 검증 후 게시 | 코드 UI·폰트·장비 목록 진입점 정리, 원본 CQT/FFT 선택과 저장 방식 보존 |
@@ -27,6 +27,22 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 | `0.0.03` | 포터블 개발 프리뷰 빌드 완료 | 포터블 개발 ZIP, 한·영 handoff, 로그·빌드 이력, NumPy 코드/보이싱 분석(실험) |
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
+
+## v0.1.06 publication record — 2026-11-01 KST
+
+Published at **2026-11-01 16:59:32 Asia/Seoul**:
+[v0.1.06 developer prerelease](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.06).
+
+- Immutable source/tag commit: `7563242b054065f8893a6c6e344046e188e0b947`.
+- Fresh archive: 5,470 manifest files and 106 source inputs; exact clean-commit binding, source/receipt
+  hashes, private-path/media/model exclusions, native ABI and cold CQT/FFT self-test all passed.
+- ZIP: `ToneMatchTMP-v0.1.06-Windows-x64-Portable-Dev.zip`, **349,632,507 bytes**.
+- ZIP SHA-256: `205f87491f035c89b94f4090f533e02f3af289bdd4998d0efab6e3116e4e0738`.
+- All three public assets (ZIP, SHA256SUMS, ARCHIVE-VERIFICATION) matched local sizes/digests in
+  authenticated publication and independent unauthenticated public readback.
+
+This publication record is a later documentation-only commit; the tag and published archive remain
+bound to the verified source commit above. Keep v0.1.05 intact for rollback. Subsequent fixes use v0.1.07.
 
 ## v0.1.06 source acceptance — 2026-11-01 KST
 

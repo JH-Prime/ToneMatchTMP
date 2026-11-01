@@ -3,6 +3,8 @@
 권한 있는 로컬 오디오·영상 또는 Windows 녹음에서 전체 음원 코드표와
 Fender Tone Master Pro·Quad Cortex용 시작점 톤 레시피를 만드는 비공식 Windows 도구입니다.
 소스 기준일: 2026-11-01 KST. 서명되지 않은 CPU 개발자 프리릴리스입니다.
+독립 ZIP 검증 후 게시했습니다: [v0.1.06 다운로드](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.06).
+2026-11-01 로그인 없는 공개 조회에서도 배포 파일 3개의 크기·해시 일치를 확인했습니다.
 검증 상태는 [v0.1.06 QA 보고서](QA_REPORT_v0.1.06.json)와 [빌드 이력](BUILD_HISTORY.md)에 기록합니다.
 소스·로컬 실제 파일·실행파일 검증을 통과했습니다. 새 ZIP 검증과 공개 게시 여부는
 별도 압축 검증 보고서와 릴리스 페이지에서 확인합니다.

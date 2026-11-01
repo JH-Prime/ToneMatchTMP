@@ -3,15 +3,15 @@
 Plan Type: Revision plan
 Workstream: ToneMatchTMP v0.1.06 chord precision
 Version: 02
-Status: Source and frozen build accepted; preparing clean-commit archive verification
+Status: Complete; verified v0.1.06 developer prerelease published
 Created: 2026-10-31 06:25:55 Asia/Seoul
-Last Updated: 2026-11-01 16:52:40 Asia/Seoul
+Last Updated: 2026-11-01 17:00:09 Asia/Seoul
 Supersedes: plan/20261022-214321--work-plan--v0-1-06-chord-precision--v01.md
-Current Completion State: Source, actual-file, C++ and frozen workflow verification passed
-Completed So Far: Approved implementation, 387 final tests, all comparisons, actual checks, docs and hidden build
-Remaining Work: Clean source commit, fresh archive verification, tag/push/publication and public readback
-Current Blockers: None identified; release stages still pending
-Next Step: Freeze reviewed source, create immutable archive and verify a fresh extraction before publication
+Current Completion State: Approved scope delivered with exact source/archive binding and public asset verification
+Completed So Far: Implementation, tests, comparisons, review, actual-file checks, hidden build, fresh ZIP, tag/push, publication and public readback
+Remaining Work: None within this approved revision; real-song annotation and native interaction remain disclosed future work
+Current Blockers: None
+Next Step: Preserve published v0.1.06; any subsequent patch uses v0.1.07
 
 ## Approval and revised objective
 
@@ -79,13 +79,13 @@ Completion means the approved narrower implementation is tested, reviewed, packa
 
 ## Scoreboard
 
-Current Score: 47/100
+Current Score: 50/100
 Score Source: provisional
-Last Updated: 2026-11-01 16:52:40 Asia/Seoul
-Score Rationale: Controlled comparisons, actual workflows and frozen build pass; archive and public delivery remain pending.
+Last Updated: 2026-11-01 17:00:09 Asia/Seoul
+Score Rationale: Approved conservative release is publicly delivered with matched assets; provisional score remains capped pending user feedback.
 What Improved: The risky residual inference is no longer a required release objective; known failures have explicit bounded repairs.
-What Remains Unsatisfactory: Real-song accuracy remains unmeasured and the new archive is not yet publicly verified.
-Next Score Action: Demonstrate clean regressions and comparisons, then finish a verified portable prerelease.
+What Remains Unsatisfactory: Independent real-song accuracy and native visual/listening tests remain unmeasured; no universal accuracy claim is made.
+Next Score Action: Observe user feedback; preserve evidence and address future regressions in a new patch.
 
 ### Score history
 
@@ -94,6 +94,7 @@ Next Score Action: Demonstrate clean regressions and comparisons, then finish a 
 - 2026-10-31 06:25:55 Asia/Seoul — 35 provisional: User approved this conservative revision; acceptance remains pending.
 - 2026-11-01 10:50:15 Asia/Seoul — 43 provisional: Source and comparison acceptance demonstrated.
 - 2026-11-01 16:52:40 Asia/Seoul — 47 provisional: Actual-file and frozen runtime verification passed; publication pending.
+- 2026-11-01 17:00:09 Asia/Seoul — 50 provisional: Verified developer prerelease delivered; not a user score or acoustic accuracy percentage.
 
 ## Progress log
 
@@ -103,3 +104,4 @@ Next Score Action: Demonstrate clean regressions and comparisons, then finish a 
 - 2026-11-01 10:50:00 Asia/Seoul — Source accepted: 387 guarded tests pass, 92 GUI cases disclosed as deferred. Precision 62, uncertainty 32 and trace 11 cases pass their strict individual gates. Precision newly correct 14.4s, newly incorrect 0s; trace agreement unchanged. Independent reviewer confirmed exact FFT restoration, 98,400 scalar/vector scores, CQT quiet handling and observed-only omission evidence. Metadata advanced to v0.1.06; provisional score 43. Actual-file/build/archive/publication remain pending.
 - 2026-11-01 10:51:08 Asia/Seoul — Final versioned source receipt passes 387 tests in 69.655s with 92 GUI cases deferred. Authorized full-file and excerpt checks pass for CQT/FFT including cancellation, progress and exports. CQT coverage fell to 43.22%; FFT is 43.23%, neither a correctness ranking. Started hidden no-screen build with the existing pinned Zig 0.15.2 toolchain; no new download. QA records source/actual checks as passed and frozen build as pending.
 - 2026-11-01 16:52:40 Asia/Seoul — Resumed after usage interruption. Build completed with no new source changes. Frozen harmonic rejection, omission evidence, CQT/FFT, exports/mixer and native ABI 2 parity pass. Reviewed 17 optional packaging warnings and finalized QA as source/frozen passed, retaining external archive/publication gates. Documentation now distinguishes all completed stages from pending delivery. Parent reviewed strict comparison implementation; no gate weakening or new blocker found.
+- 2026-11-01 17:00:09 Asia/Seoul — Completed: source/tag 7563242b054065f8893a6c6e344046e188e0b947, fresh ZIP 5,470 files/106 source inputs, 349,632,507 bytes, SHA-256 205f87491f035c89b94f4090f533e02f3af289bdd4998d0efab6e3116e4e0738. Published 16:59:32 KST; unauthenticated readback verified all three asset sizes/digests. Final documentation-only checkpoint follows publication without changing tag/assets.

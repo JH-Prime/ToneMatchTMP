@@ -3,6 +3,8 @@
 An unofficial Windows tool for whole-mixture chord charts and starting-point Fender Tone Master Pro
 or Quad Cortex recipes from authorized local audio/video and Windows capture.
 Source reference: 2026-11-01 KST. Unsigned CPU developer prerelease.
+Published after fresh-archive verification: [download v0.1.06](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.06).
+Unauthenticated public readback matched all three asset sizes/digests on 2026-11-01.
 See [한국어 사용 안내](README_KO.md), [v0.1.06 QA](QA_REPORT_v0.1.06.json) and [build history](BUILD_HISTORY.md).
 Source, local real-file and frozen executable checks passed. The external archive-verification receipt
 and release page record fresh-ZIP verification and publication; those are separate release gates.

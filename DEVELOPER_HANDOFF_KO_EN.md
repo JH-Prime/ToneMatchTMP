@@ -2,6 +2,13 @@
 
 ## Current v0.1.06 / 현행 — 2026-11-01 KST
 
+Delivery completed at 2026-11-01 16:59:32 Asia/Seoul. Fresh ZIP verification passed with 5,470 files
+and 106 source inputs, bound to immutable tag commit `7563242b054065f8893a6c6e344046e188e0b947`.
+Unauthenticated readback matched all three published assets. See the newest BUILD_HISTORY record
+and [v0.1.06 release](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.06).
+Do not replace the tag/assets; subsequent fixes use v0.1.07. The stage descriptions below preserve
+the source/frozen acceptance record included in the immutable archive.
+
 Source, local real-file and frozen executable verification passed. Independent archive and publication
 remain separate acceptance stages; consult [QA_REPORT_v0.1.06.json](QA_REPORT_v0.1.06.json) and the latest
 BUILD_HISTORY entry before claiming delivery. No real-song accuracy measurement is available.
