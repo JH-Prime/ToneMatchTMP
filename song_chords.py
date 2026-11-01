@@ -139,28 +139,57 @@ def _bounded_evidence(center, width, changes, duration):
     return start, min(right, start + width)
 
 
-def _classify_cqt_region(audio, magnitude, midi, sample_rate, region):
-    """Classify one bounded interval using the already-computed CQT matrix."""
-    region_start, region_end = region
-    clip = audio[round(region_start * sample_rate):round(region_end * sample_rate)]
-    rms = math.sqrt(float(np.einsum('ij,ij->', clip, clip, dtype=np.float64)) / clip.size) if clip.size else 0.0
-    salience = np.zeros(len(midi))
-    if magnitude is not None:
-        first = max(0, math.ceil(region_start * sample_rate / 512))
-        last = min(magnitude.shape[1], max(first + 1, math.ceil(region_end * sample_rate / 512)))
-        if first < last:
-            profile = np.median(magnitude[:, first:last], axis=1)
-            padded = np.pad(profile, (1, 1))
-            salience = np.maximum.reduce([padded[0:-2:3], padded[1:-1:3], padded[2::3]])
-            salience = np.maximum(0, salience - float(np.median(salience)))
+def _classify_cqt_profile(profile, midi, rms):
+    """Require resolved notes before octave folding an aggregate CQT profile."""
+    # Check diffuseness before peak picking removes the noise floor: otherwise
+    # random maxima can look like a sparse tonal spectrum.
+    raw = np.pad(profile, (1, 1))
+    raw_notes = np.maximum.reduce([raw[0:-2:3], raw[1:-1:3], raw[2::3]])
+    raw_chroma = np.bincount(midi % 12, weights=raw_notes, minlength=12)
+    diffuse = (float(np.exp(np.mean(np.log(np.maximum(raw_chroma, 1e-12)))))
+               / max(float(np.mean(raw_chroma)), 1e-12)) > .85
+    # Adjacent CQT filters respond to the same tone. Only resolved local peaks
+    # may vote for a note; filter shoulders are not extensions.
+    neighbors = np.pad(profile, (1, 1))
+    profile = np.where((profile >= neighbors[:-2]) & (profile >= neighbors[2:]), profile, 0)
+    padded = np.pad(profile, (1, 1))
+    salience = np.maximum.reduce([padded[0:-2:3], padded[1:-1:3], padded[2::3]])
+    salience = np.maximum(0, salience - float(np.median(salience)))
+    # Weak onset/edge responses across octaves must not sum to a new pitch
+    # class. Apply the classifier's presence floor before octave folding.
+    salience[salience < .12 * float(np.max(salience))] = 0
     chroma = np.bincount(midi % 12, weights=salience, minlength=12)
     total = float(np.sum(chroma))
     if total:
         chroma /= total
     flatness = float(np.exp(np.mean(np.log(np.maximum(chroma, 1e-12))))) / max(float(np.mean(chroma)), 1e-12)
-    if flatness > .85:
+    if diffuse or flatness > .85:
         chroma[:] = 0
     return _classify_window(chroma, salience, salience, rms, midi=midi)
+
+
+def _classify_cqt_region(audio, magnitude, midi, sample_rate, region):
+    """Classify a bounded interval without extending sustained notes with a passing tone."""
+    region_start, region_end = region
+    clip = audio[round(region_start * sample_rate):round(region_end * sample_rate)]
+    rms = math.sqrt(float(np.einsum('ij,ij->', clip, clip, dtype=np.float64)) / clip.size) if clip.size else 0.0
+    if magnitude is not None:
+        first = max(0, math.ceil(region_start * sample_rate / 512))
+        last = min(magnitude.shape[1], max(first + 1, math.ceil(region_end * sample_rate / 512)))
+        if first < last:
+            frames = magnitude[:, first:last]
+            primary = _classify_cqt_profile(np.median(frames, axis=1), midi, rms)
+            evidence = primary['evidence']
+            # Transform bleed from neighboring audio must not rescue silence.
+            if evidence.get('uncertainty_reason') == 'low_signal':
+                return primary
+            # A minority-note union may rescue fully sequential evidence only
+            # when the median retains no pitches at all. Never replace a
+            # supported chord, complete a sustained dyad, or add an extension.
+            if primary['chord_type'] != 'unknown' or evidence.get('observed_pitch_classes'):
+                return primary
+            return _classify_cqt_profile(np.quantile(frames, .7, axis=1), midi, rms)
+    return _classify_cqt_profile(np.zeros(3 * len(midi)), midi, rms)
 
 
 def _recover_cqt_window(primary, center, audio, magnitude, midi, changes, sample_rate, cancel_requested=None):

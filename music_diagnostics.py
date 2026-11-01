@@ -33,6 +33,21 @@ def run_music_self_test():
               and all(not event['candidate_shapes'] for event in fft_analysis['events']))
     fft_edited = set_correction({'chord_voicing': fft_analysis}, 0, 'Dm9')
     fft_ok = fft_ok and effective_voicing(fft_edited)['events'][0]['symbol'] == 'Dm9'
+    # A resonant third partial plus a weak unrelated tone must not be promoted
+    # to an independently played fifth. The FFT low-bass gain is deferred.
+    frequency = 440 * 2 ** ((36 - 69) / 12)
+    harmonic_signal = sum((1 + 8 * np.exp(-((partial - 3) / 1.1) ** 2)) / partial
+                          * np.sin(2 * np.pi * frequency * partial * axis)
+                          for partial in range(1, 25))
+    harmonic_signal *= .2 / np.max(np.abs(harmonic_signal))
+    harmonic_signal += .006 * np.sin(2 * np.pi * 440 * 2 ** ((58 - 69) / 12) * axis)
+    harmonic_analysis = analyze_song_chords(
+        np.column_stack((harmonic_signal, -harmonic_signal)), rate, method='fft')
+    harmonic_ok = bool(harmonic_analysis['events']) and all(
+        row['chord_type'] == 'unknown' for row in harmonic_analysis['events'])
+    omitted = sum(.1 * np.sin(2 * np.pi * 440 * 2 ** ((note - 69) / 12) * axis)
+                  for note in (48, 52, 58))
+    omitted_analysis = analyze_song_chords(omitted[:, None], rate)
     detuned = sum(.1 * np.sin(2 * np.pi * 440 * 2 ** ((note - 69 + .30) / 12) * axis)
                   for note in (48, 52, 55))
     tuned_analysis = analyze_song_chords(detuned[:, None], rate)
@@ -68,6 +83,17 @@ def run_music_self_test():
         save_json(chord_result, root / 'fft.json')
         fft_restored = load_result(root / 'fft.json', 'en')
         method_ok = method_ok and fft_restored['chord_voicing']['method_id'] == 'fft' and fft_restored['model_guide'] == 'FFT'
+        # The declared C7 interpretation must not turn the absent G into an
+        # observed note when the frozen runtime saves and reopens its evidence.
+        omitted_result = deepcopy(chord_result)
+        omitted_result['chord_voicing'] = omitted_analysis
+        save_json(omitted_result, root / 'omitted-fifth.json')
+        omitted_restored = load_result(root / 'omitted-fifth.json', 'en')
+        omitted_events = omitted_restored['chord_voicing']['events']
+        omitted_ok = bool(omitted_events) and all(
+            row['symbol'] == 'C7' and set(row['pitch_classes']) == {0, 4, 10}
+            and set(row['evidence']['required_pitch_classes']) == {0, 4, 10}
+            for row in omitted_events)
         # Exercise abstention persistence/export inside the frozen runtime too.
         # This deliberately abstained synthetic CQT event is not an accuracy test.
         from voicing import _unknown_window
@@ -122,6 +148,7 @@ def run_music_self_test():
               "qc_catalog": bool(catalog_ok), "qc_recipes": bool(recipes_ok),
               "chords_only_reopen": bool(reopen_ok), "cqt_detuned": bool(detuned_ok),
               "fft": bool(fft_ok), "method_reopen": bool(method_ok),
-              "uncertainty_reopen_exports": bool(uncertainty_ok)}
+              "uncertainty_reopen_exports": bool(uncertainty_ok),
+              "fft_harmonic_rejection": bool(harmonic_ok), "omitted_fifth_reopen": bool(omitted_ok)}
     return {"ok": all(checks.values()), **checks, "audible_output_tested": False,
             "real_song_accuracy_measured": False}

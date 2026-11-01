@@ -1,4 +1,44 @@
-# ToneMatch TMP 0.1.05
+# ToneMatch TMP 0.1.06
+
+An unofficial Windows tool for whole-mixture chord charts and starting-point Fender Tone Master Pro
+or Quad Cortex recipes from authorized local audio/video and Windows capture.
+Source reference: 2026-11-01 KST. Unsigned CPU developer prerelease.
+See [한국어 사용 안내](README_KO.md), [v0.1.06 QA](QA_REPORT_v0.1.06.json) and [build history](BUILD_HISTORY.md).
+Source, local real-file and frozen executable checks passed. The external archive-verification receipt
+and release page record fresh-ZIP verification and publication; those are separate release gates.
+
+## Changed in 0.1.06
+
+- CQT requires resolved note peaks before combining octaves, reducing false notes from filter
+  shoulders and weak responses. It keeps the sustained interpretation first and considers
+  sequential-note evidence only when that interpretation contains no observed pitches.
+- Selected seventh/ninth chords may omit the perfect fifth when the root, third and named
+  extensions are supported. The absent fifth is never reported as an observed note.
+- Quiet CQT regions preserve their unresolved state without an optional-field error or a chord
+  inferred from neighboring sound. Unknown intervals, explanations and candidates remain available.
+- FFT peak extraction keeps the exact v0.1.05 behavior. The attempted low-bass recovery change
+  was deferred after harmonic false positives; some valid overlapping low-bass chords remain unresolved.
+
+Verification: 387 guarded headless tests passed; 92 native GUI tests are deferred. The 62-case
+CQT/FFT precision comparison passed all per-case gates: correctly recognized duration increased
+from 55.743 to 76.117 seconds and incorrectly recognized duration decreased from 29.090243 to
+23.116243 seconds. Previously unresolved intervals contributed 14.4 newly correct seconds and
+zero newly incorrect seconds. The 32-case uncertainty comparison passed; eleven trace sequences
+retained 99.36% duration-weighted symbol agreement. These are development fixtures, not measured
+real-song accuracy or a guarantee that every chord is correct. No UI, dependency or C++ ABI change
+is included. Native interaction, listening and physical printing were not tested.
+
+The local 252.61-second Room 335 file and its 30–90 second excerpt passed CQT/FFT progress,
+cancellation, unchanged-input, edit/reopen and HTML/PDF checks. Full-file recognized coverage was
+43.22% for CQT (previously 49.51%) and 43.23% for FFT (previously 35.87%). CQT abstains more often
+on this input; neither change demonstrates accuracy or establishes which method is better.
+
+Keep the v0.1.05 portable folder and original results for rollback. Reanalyze a file to use the new
+logic; saved automatic results and manual corrections are not silently rewritten.
+
+## Historical v0.1.05 release record
+
+The following v0.1.05 and older dates, measurements and publication statements describe those releases only.
 
 An unofficial Windows tool for authorized local audio/video and Windows capture:
 whole-mixture chord charts plus three starting-point Fender Tone Master Pro or Quad Cortex recipes.
@@ -100,7 +140,7 @@ Ambiguous names (e.g. C6/Am7), melody, percussion, harmonics and omitted notes r
 ## Start
 
 Extract the **entire** developer ZIP to a new directory, verify SHA-256, then run
-`ToneMatchTMP-v0.1.05.exe` once its package has been verified and published. Do not move only the EXE.
+`ToneMatchTMP-v0.1.06.exe` once its package has been verified and published. Do not move only the EXE.
 Choose authorized local media or PC capture, then a range of 3 seconds to 20 minutes;
 end `0` means through the end subject to that cap.
 Full-mix tone analysis isolates guitar; already-guitar audio can skip isolation.
@@ -156,8 +196,8 @@ and rebuild the native DLL with pinned Zig 0.15.2.
 py -3.12 -m venv ..\.venv
 & ..\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 & ..\.venv\Scripts\python.exe tools\build_native.py --zig C:\Tools\zig-0.15.2\zig.exe
-& ..\.venv\Scripts\python.exe -W error tools\verify_headless.py --output .\headless-v0.1.05.json
-& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.1.05.json
+& ..\.venv\Scripts\python.exe -W error tools\verify_headless.py --output .\headless-v0.1.06.json
+& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.1.06.json
 & .\build.ps1 -SkipTests -ZigPath C:\Tools\zig-0.15.2\zig.exe
 ```
 
@@ -174,7 +214,7 @@ PDF/font, PortAudio loading and native parity without audible output or actual m
 The separate `--stem-self-test-source` / `--stem-self-test-output` CLI checks an already
 cached CPU model, writes redacted JSON and cleans temporary audio.
 
-After v0.1.05 publication, fixes advance to 0.1.06; published releases are immutable.
+The current source version is 0.1.06. After publication, fixes advance to 0.1.07; published releases are immutable.
 Read [handoff](DEVELOPER_HANDOFF_KO_EN.md) and [research](TRANSCRIPTION_RESEARCH_KO.md).
 Application source: MIT. See `THIRD_PARTY_NOTICES.txt`, inventory and `licenses/`.
 Fender, Tone Master, Neural DSP and Quad Cortex are their owners' trademarks;

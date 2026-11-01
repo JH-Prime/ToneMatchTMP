@@ -1,6 +1,56 @@
-# ToneMatch TMP v0.1.05 — 개발 인수인계 / Developer Handoff
+# ToneMatch TMP v0.1.06 — 개발 인수인계 / Developer Handoff
 
-## Current v0.1.05 / 현행 — 2026-10-17 KST
+## Current v0.1.06 / 현행 — 2026-11-01 KST
+
+Source, local real-file and frozen executable verification passed. Independent archive and publication
+remain separate acceptance stages; consult [QA_REPORT_v0.1.06.json](QA_REPORT_v0.1.06.json) and the latest
+BUILD_HISTORY entry before claiming delivery. No real-song accuracy measurement is available.
+
+CQT now requires resolved peaks and sufficient per-note evidence before octave folding. A diffuse
+profile is rejected before peak picking can make noise appear tonal. Keep the median interpretation
+first: the bounded 70th-percentile fallback is considered only when the median contains no observed
+pitches. It must not extend a supported chord or complete a sustained dyad with a passing note.
+Return `low_signal` directly; its missing optional `observed_pitch_classes` field is valid.
+
+The shared classifier permits an absent perfect fifth only for `7`, `maj7`, `min7`, `9`, `maj9`,
+and `min9`. Require root, third and all named extensions; retain strict altered-fifth and bare-triad
+requirements. Scalar/vector scores must agree. Never serialize the absent fifth as an observed or
+required pitch class. Manual corrections, unknown primary labels and alternatives retain their contracts.
+
+FFT `_independent_pitch_peaks` is exactly the v0.1.05 function. The attempted residual-envelope
+low-bass gain was deferred after a resonant single tone plus a weak unrelated tone produced a false
+chord. Keep the low-bass fixtures and weak-anchor controls; do not reintroduce that inference or claim
+the deferred gain shipped. No new dependency, model, UI or C++ ABI is introduced.
+
+Accepted source evidence against immutable v0.1.05 commit `83e88c10f62f6b174b2f95cf0e68b751a14f4db0`:
+
+- 387 guarded headless tests passed; 92 native GUI cases remain deferred.
+- 62 precision cases passed all per-case gates: correct duration 55.743 → 76.117 seconds;
+  incorrect duration 29.090243 → 23.116243 seconds; newly correct 14.4 and newly incorrect 0 seconds.
+- 32 uncertainty cases passed with zero newly correct/incorrect recognized seconds.
+- Eleven trace sequences retained strict duration-weighted symbol agreement `0.9935761046556986`.
+
+The local 252.6098866-second Room 335 file and 30–90 second excerpt passed both methods' progress,
+cancellation, unchanged-input, edit/reopen and HTML/PDF checks. Full-file recognized coverage is
+CQT `0.4322` (previously `0.4951`) and FFT `0.4323` (previously `0.3587`); excerpt coverage is
+`0.4809` and `0.5051`, respectively. More CQT abstention on this file is not proof of better accuracy.
+No ground-truth annotation supports an accuracy comparison or ranking of the methods.
+
+These are development fixtures, not independent song annotations. Derive synthetic boundaries from
+integer frame counts and keep strict annotation validation. Comparisons must bind their baseline and
+unchanged source hashes. Retain failed attempts separately; only accepted matching receipts belong
+in a release. Frozen diagnostics must also pass `fft_harmonic_rejection` and `omitted_fifth_reopen`.
+Finish hidden runtime, clean-commit archive binding, fresh-extraction and public digest checks before
+publication. Preserve v0.1.05 assets and original results for rollback. No playback, visible windows,
+hardware exercise or physical printing is part of this run; never package private audio or private paths.
+
+이번 버전은 CQT 근거 판정과 일부 7·9화음의 5도 생략 처리, 조용한 구간 오류를 보완합니다.
+FFT 저음 복구 실험은 오인식 때문에 보류했습니다. 합성 시험 수치를 실제 곡 정답률로 표시하지
+마세요. 소스 통과와 실행파일·ZIP·게시 완료는 별도 상태이며, 최신 QA와 외부 릴리스 증거로 확인합니다.
+
+## Historical v0.1.05 / 이전 — 2026-10-17 KST
+
+The current/next-version wording and results below are preserved records from that release.
 
 Source and frozen executable checks passed on 2026-10-18. Fresh-archive validation and publication
 remain separate release gates, with a source-commit-bound receipt and public asset digest readback.
@@ -94,7 +144,7 @@ Next patch after publication: 0.1.04. Rollback uses untouched v0.1.02 assets.
 현재 계약은 이 절입니다. CQT/FFT 선택·코드 즉시 수정·내보내기·화면을 함께 검증하고,
 분류 점수나 검출 비율을 정답률로 표현하지 마세요. 새 FFT/C++ 재작성은 이번 범위가 아닙니다.
 
-## Current v0.1.02 / 현행 — 2026-10-09 KST
+## Historical v0.1.02 / 이전 — 2026-10-09 KST
 
 Use README, QA_REPORT_v0.1.02.json and the newest BUILD_HISTORY entry for current evidence.
 Below v0.1.01/v0.0.x facts are historical. Do not overwrite published tags or assets.
@@ -111,7 +161,7 @@ keep old analysis JSONs because new purpose/device types need v0.1.02.
 현행 근거는 v0.1.02 QA와 최신 빌드 이력입니다. 아래 이전 릴리스의 검증을 새 검증으로 인용하지 마세요.
 코드 정확도·장비별 노브 값·분리 품질 개선은 입증되지 않았으며, 신규 UI와 경로의 동작을 검증합니다.
 
-## Current handoff / 현행 인수인계 — 2026-10-06 KST
+## Historical handoff / 이전 인수인계 — 2026-10-06 KST
 
 현행 계약은 이 절·README·QA_REPORT_v0.1.01.json·BUILD_HISTORY.md입니다.
 아래 v0.0.x 본문은 역사 자료이며 이전 버전 명령·검증·기타 우선 화성 동작은

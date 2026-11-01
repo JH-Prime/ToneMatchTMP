@@ -8,6 +8,7 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 | 버전 | 상태 | 범위 |
 |---|---|---|
+| `0.1.06` | 소스·실행파일 검증 통과·독립 ZIP 검증 후 게시 | CQT 구성음 근거 보완, 일부 7·9화음 완전5도 생략, 저신호 예외 수정, FFT 기존 배음 억제 유지 |
 | `0.1.05` | 독립 ZIP 검증 완료·개발자 프리릴리스 게시 | 미확정 근거·후보·사유 보존, CQT 제한 재검토, 4096 이벤트 예산, 표시·저장 일치 |
 | `0.1.04` | 독립 ZIP 검증 완료·개발자 프리릴리스 게시 | 분석 종료 장비 잠금 복구, 코드 모드 장비 선택, 50ms CQT 관측·경계·시간 가중 경로 |
 | `0.1.03` | 소스·실행 파일 검증 완료, 독립 ZIP 검증 후 게시 | 코드 UI·폰트·장비 목록 진입점 정리, 원본 CQT/FFT 선택과 저장 방식 보존 |
@@ -26,6 +27,34 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 | `0.0.03` | 포터블 개발 프리뷰 빌드 완료 | 포터블 개발 ZIP, 한·영 handoff, 로그·빌드 이력, NumPy 코드/보이싱 분석(실험) |
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
+
+## v0.1.06 source acceptance — 2026-11-01 KST
+
+CQT resolved peaks and note-level presence filtering reduce filter-shoulder/weak-octave artifacts.
+Median evidence remains primary; the bounded sequential-note fallback cannot extend an already
+supported chord or rescue low-signal regions. Selected seventh/ninth templates may omit only their
+perfect fifth; absent notes are not recorded as observed. FFT independent-peak extraction is exactly
+v0.1.05. The rejected low-bass residual-envelope experiment is deferred after weak-anchor false positives.
+
+- 387 guarded headless tests passed in 69.655s; 92 native GUI cases deferred.
+- 62 precision cases: correct recognized 55.743 → 76.117s, incorrect 29.090243 → 23.116243s.
+  Previously unknown intervals gained 14.4 correct seconds and zero incorrect seconds; every per-case gate passed.
+- 32 uncertainty cases passed, with zero newly correct/incorrect seconds. Eleven trace sequences retained
+  duration-weighted strict symbol agreement 0.9935761046556986 and the legacy decoder objective.
+- Independent review confirmed exact baseline FFT extraction and 98,400 scalar/vector score matches.
+- Local authorized 252.61s input and 30–90s excerpt passed progress, cancellation, input-preservation,
+  edit/reopen and HTML/PDF checks in both methods. Full coverage: CQT 43.22%, FFT 43.23%.
+  CQT coverage decreased from 49.51%; this is more abstention, not measured real-song accuracy.
+- Native build and frozen runtime passed: C++ ABI 2 float32/float64 parity, CQT/FFT, harmonic rejection,
+  omitted-fifth evidence reopening, uncertainty export, mixer and PDF font checks. Native DLL SHA-256
+  remains `f4d129c73ab015799780b2281909cbb0b793f640655d531e52d851a769854ee5`.
+- Seventeen optional packaging warnings were reviewed: 4 non-package collector notices, optional
+  TensorBoard, 4 optional hidden imports, Linux-only libgomp, Numba TBB and 6 torch deprecations.
+  Required frozen workflows pass; this does not constitute testing optional training backends.
+- Fresh archive and publication remain separate external gates bound to the final clean source commit.
+
+Receipts: QA_REPORT_v0.1.06.json and the six v106 diagnostics included only after packaging validation.
+No new dependencies, native ABI, UI or external model. Keep v0.1.05 and saved results for rollback.
 
 ## v0.1.05 publication record — 2026-10-18 KST
 

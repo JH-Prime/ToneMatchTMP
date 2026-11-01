@@ -8,17 +8,35 @@
 from __future__ import annotations
 
 
-APP_VERSION = "0.1.05"
+APP_VERSION = "0.1.06"
 TARGET_FIRMWARE = "1.8.58"
 MODEL_GUIDE_REVISION = "Rev. J (2026-07)"
-BUILD_DATE = "2026-10-17"
+BUILD_DATE = "2026-11-01"
 
 
 # 앱 내부의 변경 기록 화면과 배포 문서가 함께 사용하는 단일 원본이다.
 # 기능 버전 0.1.01 이후 수정 릴리스는 0.1.02부터 올리며 공개 산출물을 덮어쓰지 않는다.
 CHANGELOG: list[dict] = [
     {
-        "version": "0.1.05", "date": BUILD_DATE,
+        "version": "0.1.06", "date": BUILD_DATE,
+        "status": "개발자 프리릴리스", "status_en": "Developer prerelease",
+        "changes": [
+            "CQT의 인접 필터 잔향·약한 옥타브 누적을 걸러 코드 구성음 근거 보완",
+            "지속 화음을 우선하고 제한된 순차음 근거를 검토하며 낮은 신호 구간의 예외 수정",
+            "일부 7·9화음의 완전5도 생략 허용; 실제 관측음과 근음·3도·확장음 요구 유지",
+            "FFT 배음 억제는 이전 버전 유지; 합성 비교에 약한 다른 음이 섞인 배음 오인식 검사 추가",
+        ],
+        "changes_en": [
+            "Resolve CQT peaks before octave folding to reject filter shoulders and weak accumulated artifacts",
+            "Preserve sustained harmony, bound sequential-note evidence and fix low-signal abstention handling",
+            "Allow a missing perfect fifth in selected seventh/ninth chords while requiring root, third and extensions",
+            "Retain prior FFT harmonic suppression; add weak-anchor harmonic false-positive controls",
+        ],
+        "known_issues": ["실제 곡 정답률 미측정; 일부 저음 배음 중첩은 미확정 유지", "화면 조작·실청·실제 인쇄는 검증하지 않음"],
+        "known_issues_en": ["Real-song accuracy unmeasured; overlapping low-bass harmonics can remain unresolved", "Native interaction, listening and physical printing untested"],
+    },
+    {
+        "version": "0.1.05", "date": "2026-10-17",
         "status": "개발자 프리릴리스", "status_en": "Developer prerelease",
         "changes": [
             "미확정 코드의 관측음·최대 3개 후보·판정 보류 사유를 보존하고 화면·HTML·PDF에 표시",

@@ -1,6 +1,7 @@
 """Local annotated-signal comparison; never reports real-song accuracy."""
 import argparse
 from datetime import datetime, timezone, timedelta
+import hashlib
 import json
 from pathlib import Path
 import statistics
@@ -13,6 +14,14 @@ from unittest.mock import patch
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
+SOURCE_FILES = ('voicing.py', 'song_chords.py', 'guitar_shapes.py', 'tools/verify_chord_trace.py')
+
+
+def source_hashes():
+    return {name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest() for name in SOURCE_FILES}
+
+
+IMPORT_HASHES = source_hashes()
 sys.path.insert(0, str(ROOT))
 import song_chords
 import voicing
@@ -33,15 +42,15 @@ def baseline_modules(ref):
 
 
 def signal(parts, cents=0):
-    blocks, annotations, start = [], [], 0.0
+    blocks, annotations, start_frame = [], [], 0
     for notes, symbol, duration in parts:
         axis = np.arange(round(RATE * duration)) / RATE
         mono = sum(np.sin(2 * np.pi * 440 * 2 ** ((note + cents / 100 - 69) / 12) * axis)
                    for note in notes) * (.25 / max(1, len(notes))) if notes else np.zeros_like(axis)
         blocks.append(np.column_stack((mono, mono)).astype(np.float32))
-        end = start + len(mono) / RATE
-        annotations.append((start, end, symbol))
-        start = end
+        end_frame = start_frame + len(mono)
+        annotations.append((start_frame / RATE, end_frame / RATE, symbol))
+        start_frame = end_frame
     return np.concatenate(blocks), annotations
 
 
@@ -62,8 +71,31 @@ def metrics(rows, truth, bpm=None):
             'events': [[r['symbol'], r['start_seconds'], r['end_seconds']] for r in rows]}
 
 
+def regression_failures(cases):
+    """Reject per-sequence regressions; aggregate gains cannot conceal them."""
+    failures = []
+    for row in cases:
+        before, after = row['baseline'], row['current']
+        if after['correctly_labeled_seconds'] + .001 < before['correctly_labeled_seconds']:
+            failures.append(row['case'] + ': correctly labeled duration decreased')
+        if after['missing_expected_transitions'] > before['missing_expected_transitions']:
+            failures.append(row['case'] + ': expected transition lost')
+        old_errors, new_errors = before['boundary_errors_seconds'], after['boundary_errors_seconds']
+        if len(old_errors) != len(new_errors):
+            failures.append(row['case'] + ': boundary count changed')
+        elif any(old is not None and new is not None and new > old + .001
+                 for old, new in zip(old_errors, new_errors)):
+            failures.append(row['case'] + ': boundary error increased')
+    return failures
+
+
 def compare(baseline_ref):
-    old = baseline_modules(baseline_ref)
+    before_hashes = source_hashes()
+    if before_hashes != IMPORT_HASHES:
+        raise RuntimeError('Source changed after import; restart comparison')
+    baseline_commit = subprocess.check_output(
+        ['git', 'rev-parse', '--verify', baseline_ref + '^{commit}'], cwd=ROOT, text=True).strip()
+    old = baseline_modules(baseline_commit)
     c, am, fs = ([48, 52, 55], 'C'), ([45, 48, 52], 'Am'), ([42, 49, 57], 'F♯m')
     cases = [
         ('brief_secondary_dominant', [(*c, 2.13), ([52, 56, 59], 'E', .8), (*am, 2.2), (*fs, 2.1)], 0),
@@ -112,7 +144,13 @@ def compare(baseline_ref):
     total_seconds = sum(entry['duration_seconds'] for entry in results)
     aggregate = {key: sum(entry[key]['correctly_labeled_seconds'] for entry in results) / total_seconds
                  for key in ('baseline', 'current')}
+    failures = regression_failures(results)
+    after_hashes = source_hashes()
+    if before_hashes != after_hashes:
+        failures.append('Source changed during comparison; results are invalid')
     return {'schema': 'tonematch-chord-trace-comparison/v1', 'baseline_ref': baseline_ref,
+            'baseline_commit': baseline_commit, 'passed': not failures, 'failures': failures,
+            'source_sha256_before': before_hashes, 'source_sha256_after': after_hashes,
             'created': datetime.now(timezone.utc).astimezone(timezone(timedelta(hours=9))).isoformat(),
             'scope': f'{len(cases)} synthetic annotated sequences; not a real-song accuracy benchmark',
             'aggregate_duration_weighted_symbol_agreement': aggregate,
@@ -133,3 +171,4 @@ if __name__ == '__main__':
         args.output.write_text(text + '\n', encoding='utf-8')
     else:
         print(text)
+    raise SystemExit(0 if result['passed'] else 1)

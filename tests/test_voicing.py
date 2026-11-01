@@ -201,8 +201,8 @@ class VoicingAnalysisTests(unittest.TestCase):
                     analysis = analyze_voicings(_synth_chord(notes, 1.5), SAMPLE_RATE)
                     self.assertTrue(all((event.root_pc, event.chord_type) == (root, quality) for event in analysis.events))
 
-    def test_all_templates_require_every_explicit_chord_tone(self) -> None:
-        """모든 근음·유형에서 구성음 하나라도 없으면 해당 완전 화음 템플릿을 거부한다."""
+    def test_templates_require_all_tones_except_selected_extended_perfect_fifths(self) -> None:
+        """선택된 7·9화음의 완전5도만 생략 가능하며 근음·3도·확장음은 필수다."""
         self.assertEqual(set(CHORD_SUFFIX) - {"unknown"}, set(CHORD_INTERVALS))
         for quality, intervals in CHORD_INTERVALS.items():
             self.assertEqual(len(set(intervals)), len(intervals))
@@ -216,7 +216,11 @@ class VoicingAnalysisTests(unittest.TestCase):
                     chroma[missing] = 0.0
                     chroma /= np.sum(chroma)
                     with self.subTest(root=root, quality=quality, missing=missing):
-                        self.assertEqual(_score_chord(chroma, root, quality), -1.0)
+                        if quality in ('7', 'maj7', 'min7', '9', 'maj9', 'min9') and missing == (root + 7) % 12:
+                            self.assertGreater(_score_chord(chroma, root, quality), 0.0)
+                            self.assertLess(_score_chord(chroma, root, quality), _score_chord(complete, root, quality))
+                        else:
+                            self.assertEqual(_score_chord(chroma, root, quality), -1.0)
 
     def test_bass_suffix_removal_preserves_six_nine_chord_names(self) -> None:
         """역위 베이스를 숨길 때 6/9 코드의 본래 슬래시나 다른 본문은 지우지 않는다."""

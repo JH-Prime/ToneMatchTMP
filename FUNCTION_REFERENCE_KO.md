@@ -50,9 +50,10 @@
 | 94 | `_pitch_profile` | 국소 잡음 바닥을 낮추되 작은 구성음을 평균 문턱으로 삭제하지 않는다. |
 | 104 | `_harmonic_change_times` | Locate spectral changes, independently of their eventual chord names. A short STFT supplies timing only; CQT still supplies all chord pitches. Compare normalized spectra so a level change alone is not a new harmony. |
 | 133 | `_bounded_evidence` | Shift a window inside its harmonic region instead of mixing two chords. |
-| 142 | `_classify_cqt_region` | Classify one bounded interval using the already-computed CQT matrix. |
-| 166 | `_recover_cqt_window` | Retry only plausible abstentions, with two agreeing local evidence widths. Neither overlapping observations nor alternate windows are independent measurements. Agreement is a conservative gate, not a probability boost. |
-| 198 | `analyze_song_chords` | 최대 20분 원본 PCM을 겹치는 구간으로 처리하고 근거·대안을 남긴다. |
+| 142 | `_classify_cqt_profile` | Require resolved notes before octave folding an aggregate CQT profile. |
+| 171 | `_classify_cqt_region` | Classify a bounded interval without extending sustained notes with a passing tone. |
+| 195 | `_recover_cqt_window` | Retry only plausible abstentions, with two agreeing local evidence widths. Neither overlapping observations nor alternate windows are independent measurements. Agreement is a conservative gate, not a probability boost. |
+| 227 | `analyze_song_chords` | 최대 20분 원본 PCM을 겹치는 구간으로 처리하고 근거·대안을 남긴다. |
 
 ## `playback.py`
 
@@ -755,31 +756,31 @@
 
 | 줄 | 함수 | 설명 |
 |---:|---|---|
-| 147 | `_next_power_of_two` | FFT 효율을 위해 입력 이상인 가장 작은 2의 거듭제곱을 구한다. |
-| 153 | `_guitar_midi_frequencies` | 기타 기본음과 주요 배음을 포괄하는 MIDI 번호와 주파수를 만든다. |
-| 161 | `_analysis_window` | 같은 길이의 보이싱 창이 반복될 때 재사용할 Hann 창을 만든다. |
-| 166 | `_local_spectral_peak` | 목표 주파수 부근 세 FFT bin 중 가장 큰 크기를 반환한다. |
-| 174 | `_spectral_peaks` | 여러 목표 주파수 주변의 세 FFT bin 최댓값을 네이티브 NumPy 연산으로 함께 구한다. |
-| 188 | `_independent_pitch_peaks` | 국소 잡음보다 뚜렷한 기본음만 남기고 낮은 음의 정수배 배음 중복을 억제한다. |
-| 240 | `_window_pitch_profile` | 채널 위상을 섞지 않는 스펙트럼에서 독립 기본음 chroma와 실제 RMS를 계산한다. |
-| 260 | `_score_chord` | 구성음 보상과 비구성음 벌점을 조합해 한 코드 템플릿 점수를 만든다. |
-| 279 | `_template_groups` | Same-sized templates share array operations, not new scoring rules. |
-| 291 | `_template_scores` | Vectorized equivalent of _score_chord, including tone and power gates. |
-| 307 | `_infer_bass_pc` | 충분히 강한 가장 낮은 기타 음을 찾아 베이스 pitch class로 사용한다. |
-| 316 | `_voicing_profile` | 활성 음들의 pitch class, 평균 음역과 음 간격 폭을 보수적으로 분류한다. |
-| 337 | `_barre_shape` | 검출값과 별개로 연주해 볼 수 있는 E형 또는 A형 바레 후보를 만든다. |
-| 367 | `candidate_guitar_shapes` | 코드 이름을 실제로 시험할 수 있는 최대 두 개의 일반 운지 후보로 바꾼다. |
-| 385 | `_classify_window` | 한 분석창을 코드, 베이스/역위, 음역, 간격과 신뢰도로 분류한다. |
-| 472 | `_unknown_window` | Abstain from a chord claim while retaining bounded local observations. |
-| 496 | `_smooth_labels` | 각 창의 직접 근거와 인접 창의 반복 근거가 있는 후보만 시간 경로에 사용한다. |
-| 569 | `_merge_events` | 연속해서 같은 코드로 분류된 시간창을 하나의 타임라인 이벤트로 합친다. |
-| 576 | `_merge_events.<local>.identity` | 설명 누락 |
-| 653 | `_limit_timeline_events` | 표시 상한을 넘는 약한 후보는 미확정으로 합치되 전체 시간대와 무음 간격을 보존한다. |
-| 658 | `_limit_timeline_events.<local>.retained_timeline` | 선택하지 않은 후보와 기존 미확정 구간을 연속 미확정 구간으로 모은다. |
-| 690 | `analyze_voicings` | guitar stem 전체에서 시간대별 코드와 보이싱 프로필을 결정론적으로 추정한다. |
-| 797 | `voicing_analysis_dict` | 불변 보이싱 분석 객체와 이벤트를 JSON 직렬화 가능한 사전으로 바꾼다. |
-| 802 | `pitch_class_names` | pitch class 정수 모음을 사람이 읽는 음이름 문자열로 바꾼다. |
-| 807 | `without_bass_note` | 끝에 붙은 역위 베이스 음이름만 제거하고 6/9 같은 코드 유형 표기는 보존한다. |
+| 152 | `_next_power_of_two` | FFT 효율을 위해 입력 이상인 가장 작은 2의 거듭제곱을 구한다. |
+| 158 | `_guitar_midi_frequencies` | 기타 기본음과 주요 배음을 포괄하는 MIDI 번호와 주파수를 만든다. |
+| 166 | `_analysis_window` | 같은 길이의 보이싱 창이 반복될 때 재사용할 Hann 창을 만든다. |
+| 171 | `_local_spectral_peak` | 목표 주파수 부근 세 FFT bin 중 가장 큰 크기를 반환한다. |
+| 179 | `_spectral_peaks` | 여러 목표 주파수 주변의 세 FFT bin 최댓값을 네이티브 NumPy 연산으로 함께 구한다. |
+| 193 | `_independent_pitch_peaks` | 국소 잡음보다 뚜렷한 기본음만 남기고 낮은 음의 정수배 배음 중복을 억제한다. |
+| 245 | `_window_pitch_profile` | 채널 위상을 섞지 않는 스펙트럼에서 독립 기본음 chroma와 실제 RMS를 계산한다. |
+| 265 | `_score_chord` | 구성음 보상과 비구성음 벌점을 조합해 한 코드 템플릿 점수를 만든다. |
+| 287 | `_template_groups` | Same-sized templates share array operations, not new scoring rules. |
+| 301 | `_template_scores` | Vectorized equivalent of _score_chord, including tone and power gates. |
+| 319 | `_infer_bass_pc` | 충분히 강한 가장 낮은 기타 음을 찾아 베이스 pitch class로 사용한다. |
+| 328 | `_voicing_profile` | 활성 음들의 pitch class, 평균 음역과 음 간격 폭을 보수적으로 분류한다. |
+| 349 | `_barre_shape` | 검출값과 별개로 연주해 볼 수 있는 E형 또는 A형 바레 후보를 만든다. |
+| 379 | `candidate_guitar_shapes` | 코드 이름을 실제로 시험할 수 있는 최대 두 개의 일반 운지 후보로 바꾼다. |
+| 397 | `_classify_window` | 한 분석창을 코드, 베이스/역위, 음역, 간격과 신뢰도로 분류한다. |
+| 485 | `_unknown_window` | Abstain from a chord claim while retaining bounded local observations. |
+| 509 | `_smooth_labels` | 각 창의 직접 근거와 인접 창의 반복 근거가 있는 후보만 시간 경로에 사용한다. |
+| 582 | `_merge_events` | 연속해서 같은 코드로 분류된 시간창을 하나의 타임라인 이벤트로 합친다. |
+| 589 | `_merge_events.<local>.identity` | 설명 누락 |
+| 666 | `_limit_timeline_events` | 표시 상한을 넘는 약한 후보는 미확정으로 합치되 전체 시간대와 무음 간격을 보존한다. |
+| 671 | `_limit_timeline_events.<local>.retained_timeline` | 선택하지 않은 후보와 기존 미확정 구간을 연속 미확정 구간으로 모은다. |
+| 703 | `analyze_voicings` | guitar stem 전체에서 시간대별 코드와 보이싱 프로필을 결정론적으로 추정한다. |
+| 810 | `voicing_analysis_dict` | 불변 보이싱 분석 객체와 이벤트를 JSON 직렬화 가능한 사전으로 바꾼다. |
+| 815 | `pitch_class_names` | pitch class 정수 모음을 사람이 읽는 음이름 문자열로 바꾼다. |
+| 820 | `without_bass_note` | 끝에 붙은 역위 베이스 음이름만 제거하고 6/9 같은 코드 유형 표기는 보존한다. |
 
 ## `harmony_reference.py`
 
@@ -1304,34 +1305,34 @@
 | 168 | `VoicingAnalysisTests.test_clear_seventh_chords_preserve_quality` | 실제로 포함된 장7·단7·도미넌트7 음을 3화음으로 뭉개지 않아야 한다. |
 | 178 | `VoicingAnalysisTests.test_extended_chords_preserve_all_heard_tones` | 분명히 들리는 6·9·감7·반감7·서스펜디드 음을 더 작은 코드로 버리지 않는다. |
 | 194 | `VoicingAnalysisTests.test_all_templates_transpose_across_twelve_roots` | 41종 코드의 12개 근음 합성 입력 모두가 단순 전조에 같은 판정을 유지한다. |
-| 204 | `VoicingAnalysisTests.test_all_templates_require_every_explicit_chord_tone` | 모든 근음·유형에서 구성음 하나라도 없으면 해당 완전 화음 템플릿을 거부한다. |
-| 221 | `VoicingAnalysisTests.test_bass_suffix_removal_preserves_six_nine_chord_names` | 역위 베이스를 숨길 때 6/9 코드의 본래 슬래시나 다른 본문은 지우지 않는다. |
-| 230 | `VoicingAnalysisTests.test_dense_extensions_preserve_seven_required_pitch_classes` | 7음 13화음은 구성음 표시를 여섯 음으로 자르거나 임의의 기타 운지를 만들지 않는다. |
-| 241 | `VoicingAnalysisTests.test_new_extensions_work_above_the_root_octave` | 추가된 9·11·13 및 변화음이 근음보다 높은 옥타브에 있어도 같은 코드를 보존한다. |
-| 251 | `VoicingAnalysisTests.test_missing_tones_in_new_audio_do_not_create_complete_extensions` | 새 확장 화음의 근음이나 끝 구성음을 뺀 음원에서 빠진 음을 추측으로 채우지 않는다. |
-| 268 | `VoicingAnalysisTests.test_extended_picked_chords_keep_their_extensions` | 스트럼과 아르페지오에서도 반복해서 들리는 9음과 반감7을 보존한다. |
-| 278 | `VoicingAnalysisTests.test_identical_pitch_sets_expose_other_harmonic_interpretations` | C6·Am7과 감7·증화음의 동음 구성 해석을 하나의 확정 답처럼 숨기지 않는다. |
-| 297 | `VoicingAnalysisTests.test_absent_extension_and_missing_root_are_not_invented` | 7화음에 9음을 추가하거나 근음 없는 음집합에 들리지 않은 C를 만들어내지 않는다. |
-| 312 | `VoicingAnalysisTests.test_same_chord_with_new_bass_keeps_separate_inversion_events` | C에서 C/E로 바뀌는 실제 베이스 변화는 같은 코드 이름 때문에 합쳐지지 않는다. |
-| 321 | `VoicingAnalysisTests.test_event_evidence_is_serializable_and_has_local_window_support` | 표시 근거는 실제 관측음·템플릿 음·창 개수를 포함하고 확률 주장 없이 직렬화된다. |
-| 334 | `VoicingAnalysisTests.test_weak_clean_chords_keep_pitch_identity` | 작지만 잡음과 구분되는 같은 화음은 음량 정규화 없이 같은 이름을 유지해야 한다. |
-| 346 | `VoicingAnalysisTests.test_plucked_strums_and_arpeggios_keep_stable_harmony` | 현별 발음 시차와 작은 잡음이 있어도 지속되는 명확한 C·Am·G7의 정체를 유지한다. |
-| 358 | `VoicingAnalysisTests.test_missing_template_competitors_do_not_imply_perfect_confidence` | 대안이 없는 분명한 2음 코드에도 거부 점수 센티널에서 만들어진 100%를 주지 않는다. |
-| 364 | `VoicingAnalysisTests.test_temporal_smoothing_rejects_isolated_label_without_copying_neighbors` | 단발 B와 미확정 창을 이웃 C로 복사하지 않고 각각 미확정으로 유지한다. |
-| 378 | `VoicingAnalysisTests.test_antiphase_stereo_does_not_cancel_chords` | 완전히 반대 위상의 좌우 채널도 평균 소거되지 않고 코드를 검출해야 한다. |
-| 390 | `VoicingAnalysisTests.test_single_note_harmonics_do_not_invent_power_chord` | 한 음의 배음을 여러 실제 음으로 오인해 E5 또는 C5를 만들어서는 안 된다. |
-| 404 | `VoicingAnalysisTests.test_noise_and_nonchord_dyad_remain_unknown` | 광대역 잡음과 C-D 두 음은 필요한 코드 구성음이 없는 상태로 남아야 한다. |
-| 418 | `VoicingAnalysisTests.test_tuning_reference_is_actually_used` | A=432 Hz 음원을 해당 기준으로 분석하면 올바른 C 코드를 유지해야 한다. |
-| 424 | `VoicingAnalysisTests.test_common_sample_rates_keep_clear_chord_identity` | 8·44.1·48 kHz에서도 같은 명확한 Cmaj7이 샘플레이트에 따라 바뀌지 않아야 한다. |
-| 433 | `VoicingAnalysisTests.test_smoothing_does_not_fill_silent_gap_with_chord` | 같은 코드 사이 무음은 이웃 라벨 복사로 가짜 코드 구간이 되어서는 안 된다. |
-| 441 | `VoicingAnalysisTests.test_diagnostics_explain_silence_and_consistent_frame_counts` | 실패 이유와 실제 입력 레벨 및 창 개수는 JSON에서 확인할 수 있어야 한다. |
-| 454 | `VoicingAnalysisTests.test_timeline_preserves_three_chord_order` | C→G→Am 연결은 시간 순서가 유지된 세 대표 화음으로 나타나야 한다. |
-| 477 | `VoicingAnalysisTests.test_event_limit_keeps_unknown_time_gaps_and_complete_timeline` | 상한으로 후보가 생략되어도 전체 길이와 실제 미확정 시간대는 삭제되지 않는다. |
-| 501 | `VoicingAnalysisTests.test_candidate_shapes_are_explicitly_not_detected` | 연주 후보 운지는 실제 음원에서 검출한 것처럼 표시되면 안 된다. |
-| 508 | `VoicingAnalysisTests.test_default_timeline_keeps_more_than_96_events` | 페이지 표시를 위해 기본 분석 결과는 예전 96개 상한 이상을 보존해야 한다. |
-| 521 | `VoicingAnalysisTests.test_extended_shapes_are_integrated_without_omitted_tones` | 확장 코드에도 모든 구성음이 있는 이론 운지를 연결하며 7음 화음은 꾸미지 않는다. |
-| 529 | `VoicingAnalysisTests.test_silence_is_unknown_and_result_is_deterministic` | 무음은 unknown이며 같은 입력은 직렬화 결과까지 완전히 같아야 한다. |
-| 540 | `VoicingAnalysisTests.test_invalid_pcm_is_rejected` | 채널 차원이 없거나 지나치게 낮은 샘플레이트 입력은 거부해야 한다. |
+| 204 | `VoicingAnalysisTests.test_templates_require_all_tones_except_selected_extended_perfect_fifths` | 선택된 7·9화음의 완전5도만 생략 가능하며 근음·3도·확장음은 필수다. |
+| 225 | `VoicingAnalysisTests.test_bass_suffix_removal_preserves_six_nine_chord_names` | 역위 베이스를 숨길 때 6/9 코드의 본래 슬래시나 다른 본문은 지우지 않는다. |
+| 234 | `VoicingAnalysisTests.test_dense_extensions_preserve_seven_required_pitch_classes` | 7음 13화음은 구성음 표시를 여섯 음으로 자르거나 임의의 기타 운지를 만들지 않는다. |
+| 245 | `VoicingAnalysisTests.test_new_extensions_work_above_the_root_octave` | 추가된 9·11·13 및 변화음이 근음보다 높은 옥타브에 있어도 같은 코드를 보존한다. |
+| 255 | `VoicingAnalysisTests.test_missing_tones_in_new_audio_do_not_create_complete_extensions` | 새 확장 화음의 근음이나 끝 구성음을 뺀 음원에서 빠진 음을 추측으로 채우지 않는다. |
+| 272 | `VoicingAnalysisTests.test_extended_picked_chords_keep_their_extensions` | 스트럼과 아르페지오에서도 반복해서 들리는 9음과 반감7을 보존한다. |
+| 282 | `VoicingAnalysisTests.test_identical_pitch_sets_expose_other_harmonic_interpretations` | C6·Am7과 감7·증화음의 동음 구성 해석을 하나의 확정 답처럼 숨기지 않는다. |
+| 301 | `VoicingAnalysisTests.test_absent_extension_and_missing_root_are_not_invented` | 7화음에 9음을 추가하거나 근음 없는 음집합에 들리지 않은 C를 만들어내지 않는다. |
+| 316 | `VoicingAnalysisTests.test_same_chord_with_new_bass_keeps_separate_inversion_events` | C에서 C/E로 바뀌는 실제 베이스 변화는 같은 코드 이름 때문에 합쳐지지 않는다. |
+| 325 | `VoicingAnalysisTests.test_event_evidence_is_serializable_and_has_local_window_support` | 표시 근거는 실제 관측음·템플릿 음·창 개수를 포함하고 확률 주장 없이 직렬화된다. |
+| 338 | `VoicingAnalysisTests.test_weak_clean_chords_keep_pitch_identity` | 작지만 잡음과 구분되는 같은 화음은 음량 정규화 없이 같은 이름을 유지해야 한다. |
+| 350 | `VoicingAnalysisTests.test_plucked_strums_and_arpeggios_keep_stable_harmony` | 현별 발음 시차와 작은 잡음이 있어도 지속되는 명확한 C·Am·G7의 정체를 유지한다. |
+| 362 | `VoicingAnalysisTests.test_missing_template_competitors_do_not_imply_perfect_confidence` | 대안이 없는 분명한 2음 코드에도 거부 점수 센티널에서 만들어진 100%를 주지 않는다. |
+| 368 | `VoicingAnalysisTests.test_temporal_smoothing_rejects_isolated_label_without_copying_neighbors` | 단발 B와 미확정 창을 이웃 C로 복사하지 않고 각각 미확정으로 유지한다. |
+| 382 | `VoicingAnalysisTests.test_antiphase_stereo_does_not_cancel_chords` | 완전히 반대 위상의 좌우 채널도 평균 소거되지 않고 코드를 검출해야 한다. |
+| 394 | `VoicingAnalysisTests.test_single_note_harmonics_do_not_invent_power_chord` | 한 음의 배음을 여러 실제 음으로 오인해 E5 또는 C5를 만들어서는 안 된다. |
+| 408 | `VoicingAnalysisTests.test_noise_and_nonchord_dyad_remain_unknown` | 광대역 잡음과 C-D 두 음은 필요한 코드 구성음이 없는 상태로 남아야 한다. |
+| 422 | `VoicingAnalysisTests.test_tuning_reference_is_actually_used` | A=432 Hz 음원을 해당 기준으로 분석하면 올바른 C 코드를 유지해야 한다. |
+| 428 | `VoicingAnalysisTests.test_common_sample_rates_keep_clear_chord_identity` | 8·44.1·48 kHz에서도 같은 명확한 Cmaj7이 샘플레이트에 따라 바뀌지 않아야 한다. |
+| 437 | `VoicingAnalysisTests.test_smoothing_does_not_fill_silent_gap_with_chord` | 같은 코드 사이 무음은 이웃 라벨 복사로 가짜 코드 구간이 되어서는 안 된다. |
+| 445 | `VoicingAnalysisTests.test_diagnostics_explain_silence_and_consistent_frame_counts` | 실패 이유와 실제 입력 레벨 및 창 개수는 JSON에서 확인할 수 있어야 한다. |
+| 458 | `VoicingAnalysisTests.test_timeline_preserves_three_chord_order` | C→G→Am 연결은 시간 순서가 유지된 세 대표 화음으로 나타나야 한다. |
+| 481 | `VoicingAnalysisTests.test_event_limit_keeps_unknown_time_gaps_and_complete_timeline` | 상한으로 후보가 생략되어도 전체 길이와 실제 미확정 시간대는 삭제되지 않는다. |
+| 505 | `VoicingAnalysisTests.test_candidate_shapes_are_explicitly_not_detected` | 연주 후보 운지는 실제 음원에서 검출한 것처럼 표시되면 안 된다. |
+| 512 | `VoicingAnalysisTests.test_default_timeline_keeps_more_than_96_events` | 페이지 표시를 위해 기본 분석 결과는 예전 96개 상한 이상을 보존해야 한다. |
+| 525 | `VoicingAnalysisTests.test_extended_shapes_are_integrated_without_omitted_tones` | 확장 코드에도 모든 구성음이 있는 이론 운지를 연결하며 7음 화음은 꾸미지 않는다. |
+| 533 | `VoicingAnalysisTests.test_silence_is_unknown_and_result_is_deterministic` | 무음은 unknown이며 같은 입력은 직렬화 결과까지 완전히 같아야 한다. |
+| 544 | `VoicingAnalysisTests.test_invalid_pcm_is_rejected` | 채널 차원이 없거나 지나치게 낮은 샘플레이트 입력은 거부해야 한다. |
 
 ## `tools/collect_licenses.py`
 
@@ -1386,4 +1387,4 @@
 
 ---
 
-총 함수 수: **1040**
+총 함수 수: **1041**

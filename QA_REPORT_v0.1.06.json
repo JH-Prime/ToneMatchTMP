@@ -1,0 +1,135 @@
+{
+  "schema": "tonematch-qa/v1",
+  "app_version": "0.1.06",
+  "build_date": "2026-11-01",
+  "tested_at": "2026-11-01",
+  "status": "passed",
+  "scope": "Conservative CQT peak evidence, optional perfect fifth in selected seventh/ninth chords, low-signal repair; baseline FFT peak suppression retained.",
+  "checks": {
+    "headless_suite": {
+      "ok": true,
+      "tests": 387,
+      "seconds": 69.655,
+      "warnings_as_errors": true,
+      "tk_creation_guard": true,
+      "deferred_gui_tests": 92,
+      "receipt": "v106-headless-tests.json"
+    },
+    "precision_comparison": {
+      "ok": true,
+      "cases": 62,
+      "baseline_ref": "v0.1.05",
+      "baseline_commit": "83e88c10f62f6b174b2f95cf0e68b751a14f4db0",
+      "correct_newly_recognized_seconds": 14.4,
+      "incorrect_newly_recognized_seconds": 0,
+      "baseline_correct_seconds": 55.743,
+      "current_correct_seconds": 76.117,
+      "baseline_incorrect_seconds": 29.090243,
+      "current_incorrect_seconds": 23.116243,
+      "receipt": "v106-precision-comparison.json"
+    },
+    "uncertainty_comparison": {
+      "ok": true,
+      "cases": 32,
+      "baseline_ref": "v0.1.05",
+      "correct_newly_recognized_seconds": 0,
+      "incorrect_newly_recognized_seconds": 0,
+      "receipt": "v106-uncertainty-comparison.json"
+    },
+    "trace_comparison": {
+      "ok": true,
+      "cases": 11,
+      "baseline_ref": "v0.1.05",
+      "baseline_duration_weighted_symbol_agreement": 0.9935761046556986,
+      "current_duration_weighted_symbol_agreement": 0.9935761046556986,
+      "decoder_legacy_objective_preserved": true,
+      "receipt": "v106-chord-trace-comparison.json"
+    },
+    "independent_review": {
+      "ok": true,
+      "actionable_findings": 0,
+      "scalar_vector_evaluations": 98400,
+      "fft_peak_function_exact_baseline": true
+    },
+    "actual_chords": {
+      "ok": true,
+      "methods": [
+        "cqt",
+        "fft"
+      ],
+      "source_unchanged": true,
+      "progress_cancel": true,
+      "immediate_edit_reopen_html_pdf": true,
+      "duration_seconds": 252.60988662131518,
+      "cqt_full_coverage": 0.4322,
+      "cqt_excerpt_coverage": 0.4809,
+      "fft_full_coverage": 0.4323,
+      "fft_excerpt_coverage": 0.5051,
+      "cqt_full_elapsed_seconds": 25.055,
+      "fft_full_elapsed_seconds": 4.575,
+      "coverage_is_accuracy": false,
+      "receipts": [
+        "v106-actual-cqt.json",
+        "v106-actual-fft.json"
+      ]
+    },
+    "frozen_self_test": {
+      "status": "passed",
+      "ok": true,
+      "music_workflow": true,
+      "cqt": true,
+      "fft": true,
+      "manual_edit": true,
+      "method_reopen": true,
+      "uncertainty_reopen_exports": true,
+      "fft_harmonic_rejection": true,
+      "omitted_fifth_reopen": true,
+      "mixer_export": true,
+      "pdf_font": true,
+      "cpp_abi": 2,
+      "cpp_parity": true,
+      "float32_parity": true
+    },
+    "release_helper_regressions": {
+      "ok": true,
+      "tests": 3,
+      "no_network_or_gui": true
+    },
+    "fresh_archive_verification": {
+      "status": "external_release_gate",
+      "required_before_publication": true,
+      "report_asset": "ToneMatchTMP-v0.1.06-ARCHIVE-VERIFICATION.json"
+    },
+    "publication": {
+      "status": "external_release_gate",
+      "requires_verified_archive_and_remote_asset_digests": true
+    },
+    "packaging_warnings": {
+      "count": 17,
+      "scope": "Optional collector/import hooks, Linux-only libgomp, Numba TBB backend and torch deprecations; required frozen workflows pass",
+      "categories": {
+        "non_package_collectors": 4,
+        "optional_tensorboard": 1,
+        "optional_hidden_imports": 4,
+        "linux_libgomp": 1,
+        "numba_tbb": 1,
+        "torch_deprecations": 6
+      }
+    }
+  },
+  "limitations": {
+    "real_song_accuracy_measured": false,
+    "synthetic_false_positives_remain": true,
+    "new_fft_low_bass_gain_deferred": true,
+    "observation_hop_is_error_guarantee": false,
+    "native_click_and_visual_tested": false,
+    "audible_output_tested": false,
+    "physical_printing_tested": false,
+    "clean_machine_tested": false,
+    "cuda_tested": false,
+    "code_signed": false,
+    "new_fft_dependency": false,
+    "new_cpp_abi": false
+  },
+  "packaged_at": "2026-11-01"
+}

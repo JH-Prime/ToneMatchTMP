@@ -3,7 +3,7 @@
 Plan Type: Work plan
 Workstream: ToneMatchTMP v0.1.05 uncertain chord handling
 Version: 01
-Status: Complete; verified developer prerelease published and publicly read back
+Status: Complete and superseded as active work by plan/20261022-214321--work-plan--v0-1-06-chord-precision--v01.md; verified v0.1.05 release remains immutable
 Created: 2026-10-11 23:20:25 Asia/Seoul
 Last Updated: 2026-10-18 23:47:33 Asia/Seoul
 Related Plan: Completed v0.1.04 chord trace and device lifecycle plan

@@ -108,6 +108,11 @@ CHORD_SUFFIX = {
     "unknown": "?",
 }
 
+# A missing perfect fifth is allowed only when the root, third and every
+# named extension remain observed. Altered fifths and bare triads stay strict.
+_OPTIONAL_FIFTH_TYPES = frozenset(("7", "maj7", "min7", "9", "maj9", "min9"))
+_OMITTED_FIFTH_PENALTY = 0.06
+
 
 @dataclass(frozen=True)
 class VoicingEvent:
@@ -261,7 +266,9 @@ def _score_chord(chroma: np.ndarray, root: int, chord_type: str) -> float:
     """구성음 보상과 비구성음 벌점을 조합해 한 코드 템플릿 점수를 만든다."""
     intervals = CHORD_INTERVALS[chord_type]
     included = np.array([(root + interval) % 12 for interval in intervals], dtype=int)
-    if np.any(chroma[included] < max(float(np.max(chroma)) * 0.12, 1e-12)):
+    threshold = max(float(np.max(chroma)) * 0.12, 1e-12)
+    optional = (np.array(intervals) == 7) & (chord_type in _OPTIONAL_FIFTH_TYPES)
+    if np.any(chroma[included[~optional]] < threshold):
         return -1.0
     coverage = float(np.sum(chroma[included]))
     outside_mask = np.ones(12, dtype=bool)
@@ -272,7 +279,8 @@ def _score_chord(chroma: np.ndarray, root: int, chord_type: str) -> float:
     # 전체 설명력에서 음 개수 비용을 빼서 실재하는 확장음은 보존하되 매우 약한
     # 잔여 피크 하나만으로 더 복잡한 이름을 선택하지 않는다.
     outside = float(np.sum(chroma[outside_mask]))
-    return coverage - 0.35 * outside - 0.045 * max(0, len(intervals) - 2)
+    omitted = bool(np.any(chroma[included[optional]] < threshold))
+    return coverage - 0.35 * outside - 0.045 * max(0, len(intervals) - 2) - _OMITTED_FIFTH_PENALTY * omitted
 
 
 @lru_cache(maxsize=1)
@@ -284,7 +292,9 @@ def _template_groups():
                   if len(notes) == size]
         included = [[(root + interval) % 12 for interval in CHORD_INTERVALS[kind]] for root, kind in labels]
         outside = [[pc for pc in range(12) if pc not in notes] for notes in included]
-        groups.append((labels, np.array(included), np.array(outside), size))
+        optional = [[interval == 7 and kind in _OPTIONAL_FIFTH_TYPES for interval in CHORD_INTERVALS[kind]]
+                    for _root, kind in labels]
+        groups.append((labels, np.array(included), np.array(outside), np.array(optional), size))
     return groups
 
 
@@ -292,11 +302,13 @@ def _template_scores(chroma):
     """Vectorized equivalent of _score_chord, including tone and power gates."""
     threshold = max(float(np.max(chroma)) * .12, 1e-12)
     result = []
-    for labels, included, outside, size in _template_groups():
+    for labels, included, outside, optional, size in _template_groups():
         energies = chroma[included]
         outside_energy = np.sum(chroma[outside], axis=1)
         scores = np.sum(energies, axis=1) - .35 * outside_energy - .045 * max(0, size - 2)
-        valid = np.all(energies >= threshold, axis=1)
+        supported = energies >= threshold
+        valid = np.all(supported | optional, axis=1)
+        scores -= _OMITTED_FIFTH_PENALTY * np.any(~supported & optional, axis=1)
         if size == 2:  # The vocabulary's two-note template is power5 only.
             valid &= outside_energy <= .18
         scores[~valid] = -1.0
@@ -409,7 +421,7 @@ def _classify_window(chroma: np.ndarray, salience: np.ndarray, fundamentals: np.
     confidence = float(np.clip(0.18 + 1.7 * margin + 0.70 * max(0.0, coverage - 0.38), 0.0, 1.0))
     _pitch_classes, register, spacing = _voicing_profile(midi, salience)
     if confidence < 0.34 or coverage < 0.60:
-        # Display-only alternatives still require every template tone locally.
+        # Display-only alternatives still require all non-optional tones locally.
         # They never enter the accepted-chord or temporal candidate pool.
         alternatives = []
         for score, candidate_root, candidate_type in candidates:
@@ -432,6 +444,7 @@ def _classify_window(chroma: np.ndarray, salience: np.ndarray, fundamentals: np.
         if score < 0.0:
             break
         candidate_pcs = tuple((candidate_root + interval) % 12 for interval in CHORD_INTERVALS[candidate_type])
+        supported_pcs = tuple(pc for pc in candidate_pcs if pc in observed)
         candidate_coverage = float(np.sum(chroma[list(candidate_pcs)]))
         if candidate_coverage < 0.60:
             continue
@@ -444,14 +457,14 @@ def _classify_window(chroma: np.ndarray, salience: np.ndarray, fundamentals: np.
         if inversion == "inversion":
             symbol += f"/{NOTE_NAMES[bass_pc]}"
         evidenced.append({"root_pc": candidate_root, "chord_type": candidate_type, "symbol": symbol,
-                          "bass_pc": bass_pc, "inversion": inversion, "pitch_classes": candidate_pcs,
+                          "bass_pc": bass_pc, "inversion": inversion, "pitch_classes": supported_pcs,
                           "register": register, "spacing": spacing,
                           "confidence": candidate_confidence,
                           "_score": score,
                           "evidence": {"explained_energy": round(candidate_coverage, 4),
                                        "template_margin": round(max(0.0, score - runner_score), 4),
                                        "observed_pitch_classes": observed,
-                                       "required_pitch_classes": candidate_pcs}})
+                                       "required_pitch_classes": supported_pcs}})
     for candidate in evidenced:
         alternative_rows = tuple({"root_pc": other["root_pc"], "chord_type": other["chord_type"],
                                   "symbol": other["symbol"],
@@ -762,7 +775,7 @@ def analyze_voicings(
         "temporal_policy": "absolute_local_evidence_candidates_pruned_for_adjacent_support_before_path_selection",
         "timeline_limit_policy": "omitted_candidates_become_unknown_without_time_gaps",
         "chord_template_count": len(CHORD_INTERVALS),
-        "template_tone_policy": "all_listed_pitch_classes_required_no_omitted_tone_inference",
+        "template_tone_policy": "selected_seventh_ninth_perfect_fifth_optional_all_other_tones_required",
         "ambiguous_event_count": sum(bool(event.evidence.get("ambiguous")) for event in events),
         "score_semantics": "heuristic_evidence_not_accuracy_probability",
     }
@@ -775,7 +788,7 @@ def analyze_voicings(
         "harmonically_overlapping_notes_and_missing_fundamentals_can_remain_unknown",
         "isolated_short_chords_without_repeated_evidence_remain_unknown",
         "identical_pitch_class_sets_can_have_multiple_valid_chord_names",
-        "full_extension_templates_require_each_listed_pitch_class",
+        "selected_seventh_ninth_chords_may_omit_perfect_fifth",
     )
     if cancel_requested and cancel_requested():
         raise InterruptedError('Chord analysis cancelled')
