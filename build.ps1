@@ -133,7 +133,7 @@ try {
     Copy-Item -LiteralPath (Join-Path $ProjectDir "licenses") -Destination $DocsRoot -Recurse -Force
 
     foreach ($Name in @(
-        "app.py", "catalog.py", "debug_info.py", "devices.py", "engine.py",
+        "app.py", "auto_update.py", "update_startup.py", "catalog.py", "debug_info.py", "devices.py", "engine.py",
         "quad_cortex.py", "qc_catalog_ui.py",
         "song_chords.py", "playback.py", "playback_ui.py", "chord_edits.py", "chord_edit_ui.py",
         "stem_mixer.py", "stem_mixer_ui.py", "chart_pdf.py", "music_diagnostics.py",

@@ -62,6 +62,11 @@ The17 packaging warnings match the previous optional collector/import, Linux-onl
 Numba TBB and torch deprecation categories; required runtime workflows pass.
 Receipts: QA_REPORT_v0.1.07.json and seven v107 diagnostics; archive/publication are separate gates.
 
+The pre-ZIP source-input gate caught two missing updater modules in the developer source-copy
+list, while both frozen imports/devsource copies were present and tested. The build copy list
+and staged source were repaired before ZIP creation; runtime code and its433-test hashes stayed
+unchanged. No failed archive was published.
+
 ## v0.1.06 publication record — 2026-11-01 KST
 
 Published at **2026-11-01 16:59:32 Asia/Seoul**:
