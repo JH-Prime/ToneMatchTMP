@@ -8,17 +8,35 @@
 from __future__ import annotations
 
 
-APP_VERSION = "0.1.06"
+APP_VERSION = "0.1.07"
 TARGET_FIRMWARE = "1.8.58"
 MODEL_GUIDE_REVISION = "Rev. J (2026-07)"
-BUILD_DATE = "2026-11-01"
+BUILD_DATE = "2026-11-03"
 
 
 # 앱 내부의 변경 기록 화면과 배포 문서가 함께 사용하는 단일 원본이다.
 # 기능 버전 0.1.01 이후 수정 릴리스는 0.1.02부터 올리며 공개 산출물을 덮어쓰지 않는다.
 CHANGELOG: list[dict] = [
     {
-        "version": "0.1.06", "date": BUILD_DATE,
+        "version": "0.1.07", "date": BUILD_DATE,
+        "status": "개발자 프리릴리스", "status_en": "Developer prerelease",
+        "changes": [
+            "EXE 시작 시 GitHub의 더 높은 공개 버전을 자동 다운로드·검증 후 실행; 취소·실패 시 기존 버전 유지",
+            "별도 버전 폴더와 원래 데이터 경로로 업데이트하여 설정·분석 결과·이전 실행파일 보존",
+            "CQT에서 단음 배음을 파워코드로 오인하는 경우와 고립된 오인식 후보 보완",
+            "실제 파워코드·약한 근음/5도·튜닝 편차 보존 검사 및 모듈러 편향 점검",
+        ],
+        "changes_en": [
+            "Automatically download, verify and open newer public GitHub builds at EXE startup; retain installed app on cancellation/failure",
+            "Side-by-side updates preserve original settings/results and the previous executable",
+            "Withhold CQT power chords supported only by a coherent harmonic series and isolated rejected alternatives",
+            "Protect independent fifths, weak roots/fifths and detuning; audit modulo and score rotation consistency",
+        ],
+        "known_issues": ["정확한 배음 일치·잡음·비브라토의 모호성 및 실제 곡 정답률 미측정", "동점 후보의 정렬 한계 유지; 점수는 확률이 아님", "최초 v0.1.07 설치 필요; 화면 조작·실청·실제 인쇄 미검증"],
+        "known_issues_en": ["Exact harmonic coincidence, noise and vibrato remain ambiguous; real-song accuracy unmeasured", "Exact-tie ordering remains limited; scores are not probabilities", "First v0.1.07 install is manual; native interaction, listening and physical printing untested"],
+    },
+    {
+        "version": "0.1.06", "date": "2026-11-01",
         "status": "개발자 프리릴리스", "status_en": "Developer prerelease",
         "changes": [
             "CQT의 인접 필터 잔향·약한 옥타브 누적을 걸러 코드 구성음 근거 보완",

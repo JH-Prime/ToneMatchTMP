@@ -1,4 +1,4 @@
-"""Bounded, annotated v0.1.05 comparison; synthetic evidence is not song accuracy.
+"""Bounded, annotated release comparison; synthetic evidence is not song accuracy.
 
 Uses only generated PCM, with no GUI, playback, private files or network. Keep
 negative controls and failed cases in the report; coverage is never correctness.
@@ -18,6 +18,10 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE_COMMIT = '83e88c10f62f6b174b2f95cf0e68b751a14f4db0'
+BASELINE_COMMITS = {
+    'v0.1.05': BASELINE_COMMIT,
+    'v0.1.06': '7563242b054065f8893a6c6e344046e188e0b947',
+}
 SOURCE_FILES = ('voicing.py', 'song_chords.py', 'guitar_shapes.py',
                 'tools/verify_chord_trace.py', 'tools/verify_chord_uncertainty.py',
                 'tools/verify_chord_precision.py')
@@ -246,13 +250,15 @@ def fixtures():
 def compare(baseline_ref='v0.1.05', methods=('cqt', 'fft')):
     if not methods or len(set(methods)) != len(methods) or not set(methods) <= {'cqt', 'fft'}:
         raise ValueError('Select cqt and/or fft once each')
+    if baseline_ref not in BASELINE_COMMITS:
+        raise ValueError('Unsupported precision baseline')
     before_hashes = source_hashes()
     if before_hashes != IMPORT_HASHES:
         raise RuntimeError('Source changed after import; restart the comparison')
     commit = subprocess.check_output(['git', 'rev-parse', '--verify', baseline_ref + '^{commit}'],
                                      cwd=ROOT, text=True).strip()
-    if commit != BASELINE_COMMIT:
-        raise ValueError('Precision baseline must resolve to immutable v0.1.05 source')
+    if commit != BASELINE_COMMITS[baseline_ref]:
+        raise ValueError(f'Precision baseline must resolve to immutable {baseline_ref} source')
     baseline_hashes = {name: hashlib.sha256(subprocess.check_output(
         ['git', 'show', f'{commit}:{name}'], cwd=ROOT)).hexdigest()
         for name in ('voicing.py', 'song_chords.py', 'guitar_shapes.py')}

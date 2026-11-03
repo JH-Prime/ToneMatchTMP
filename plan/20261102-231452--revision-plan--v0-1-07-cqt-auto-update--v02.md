@@ -1,0 +1,102 @@
+# v0.1.07: CQT precision and automatic portable updates
+
+Plan Type: Revision plan
+Workstream: ToneMatchTMP v0.1.07
+Version: 02
+Status: Source and frozen runtime accepted; freeze commit for archive verification and publication
+Created: 2026-11-02 23:14:52 Asia/Seoul
+Last Updated: 2026-11-03 20:02:33 Asia/Seoul
+Supersedes: plan/20261101-224713--work-plan--v0-1-07-cqt-harmonics--v01.md
+Current Completion State: Source, comparisons, local-file and frozen self-test passed; archive gates next
+Completed So Far: Bounded CQT and updater repairs, modulo audit, source433 and62/31/32/11 comparisons, local CQT/FFT workflows
+Remaining Work: Clean source commit, archive/actual-updater verification and publication/readback
+Current Blockers: No authorization blocker; frozen/archive gates pending
+Next Step: Inspect frozen build and offline self-test, then verify the exact archive through the updater
+
+## Authority, objective and assumptions
+
+The user approved the v0.1.07 CQT single-tone and overtone false-chord investigation, with preservation of real power chords and low-bass harmony, testing, a developer ZIP and GitHub publication. The user subsequently asked to continue and explicitly requested automatic installation of the latest GitHub version when launching the executable. This revision incorporates that request into the current patch. The previously published v0.1.06 is complete and immutable. Do not rebuild, replace or retag it. Its source baseline is 7563242b054065f8893a6c6e344046e188e0b947; the current main started at 5b5ace1.
+
+The purpose of the update feature is to remove repeated manual ZIP downloads. Interpret a different version as a strictly newer supported numeric version, not an instruction to downgrade an installation or replace it with an unrelated artifact. Keep the public developer distribution channel consistent with this repository, where accepted portable builds have been published as prereleases. Accept published releases with the exact portable Windows asset convention, including that existing developer channel; never accept drafts, arbitrary branch archives, external repositories or arbitrary executable URLs. Communicate the channel clearly in documentation. No user account, GitHub token or private repository permission is needed in the shipped application.
+
+Use the existing Python standard library for network access, streaming hashes, ZIP handling, filesystem operations, process launch and concurrency. Existing NumPy, SciPy and librosa remain available for chord evidence. A C++ rewrite does not improve a bounded network and filesystem transaction and is not justified here. Preserve native DSP ABI 2, the accepted FFT extractor, source separation, tone recipes, device support and existing saved-result contracts. Do not add a service, scheduled task, administrator escalation, registry modification, startup persistence or machine-wide installation.
+
+The user's no-screen instruction remains in effect for development and validation. Do not open Tk windows, drive the browser, launch the app interactively, play audio, print or test hardware. Implementing a user-facing startup progress surface is authorized, but validate its controller using substitutes and inspect its code without opening it. Use hidden packaged diagnostics only through explicit no-GUI command paths. Final reporting must distinguish headless controller tests from visual validation.
+
+## CQT evidence work retained from the approved plan
+
+The existing negative corpus contains nine CQT false power-chord cases accounting for 21.6 seconds of residual incorrect recognition. Resonant singletons, comb-like harmonic envelopes and weak unrelated-note variants can produce the same C5 label, confidence and folded notes as genuine independently played root/fifth pairs. A higher confidence threshold cannot discriminate them. A blanket fifth veto is unacceptable. Keep the existing negative reports and all positive controls rather than weakening the evaluation to obtain a release.
+
+Finish the bounded pre-octave-folding investigation. The existing fine-frequency probe suggests exact harmonic singletons and equal-tempered fifths sometimes differ by tiny measurable frequency offsets, but real harmonic-rich fifths can overlap a root partial and reduce that difference dramatically. Establish the chosen discriminator, counterexamples and runtime cost in the checkpoint before changing production inference. Protect close and wide fifths, root/fifth/octave arrangements, weak fifths, weak roots, harmonic-rich tones, detuning, transposition, phase and gain variation. Never claim that physically indistinguishable PCM performances are distinguishable.
+
+Keep any supplemental calculation bounded to ambiguous CQT regions and avoid a second full-song analyzer. Preserve cancellation, progress, phase-safe stereo handling, unknown labels, evidence, alternatives, temporal decoding and event limits. Ensure a rejected candidate cannot be resurrected as a confident label by a retry or temporal decoder. Keep the accepted FFT independent-peak extractor byte-for-byte unchanged. Do not restore the rejected FFT residual-envelope experiment. The accepted missing-perfect-fifth policy for selected seventh and ninth chords remains intact.
+
+If the bounded experiment fails protected controls, do not ship an unsafe heuristic or silently loosen acceptance. Record that result and defer the unproven inference change. The independently requested automatic-update feature may still justify v0.1.07; describe exactly which CQT changes were and were not accepted. In that case preserve useful test/research evidence without leaving knowingly failing tests in the release suite, and explain any fixture expectation revision against observable baseline behavior. This is an evidence-backed decision, not permission to represent research as a successful accuracy improvement.
+
+## Update transaction and user behavior
+
+Check for an eligible published release at normal frozen Windows startup. Source runs and diagnostic command paths must never check the network, download updates or launch another application. A deliberate skip-update option provides a recovery route and lets diagnostics bypass the feature. Use a short network timeout and a bounded response size. A missing connection, rate limit, malformed response, unsupported release or server failure must leave the installed version usable. The app must not require internet merely to open a local file.
+
+Use a small startup progress view before the user has begun analysis. The view should communicate checking, downloading and verifying in plain Korean or English, show real byte progress when known, and allow continuing with the installed version. Keep all network and archive work away from Tk's event thread. Only the main thread may update widgets or choose the app transition. Cancellation must prevent handoff even if a worker completes concurrently. Do not interrupt ongoing analysis, discard unsaved edits, kill the current process forcibly or initiate playback as part of an update.
+
+Prefer separate version directories under an installation-specific cache to overwriting a running executable and its loaded libraries. Preserve the originally launched portable folder and its data location. The originally downloaded executable becomes a compatible entry point that can route to a validated newer installation on subsequent launches. A launched update receives the original portable context so settings, results, logs and model-cache conventions do not silently move into a new version directory. Do not copy or upload private audio during installation. Keep the old executable and runtime available for rollback.
+
+Download to a unique staging area, validate the complete archive and publish the version directory atomically only after all checks pass. Use an installation-specific concurrency lock so two launches do not mutate the same cache or activate a partially extracted tree. Lock contention should fall back to the current app rather than block indefinitely. A failed or cancelled attempt must not replace the current pointer or erase the previous usable version. Avoid broad cleanup commands; remove only a staging directory created by the current transaction and confirmed to be inside its cache root. Retain installed versions rather than inventing a destructive retention policy.
+
+Launch a validated installed executable using an argument list and no shell command construction. Use the Windows process creation behavior appropriate to a windowed application, with no console pop-up. Do not auto-run any script contained in the downloaded archive. A failed process start leaves the original app available. Avoid update loops by passing a one-launch bypass to the new process, while allowing a future normal launch to check again. The startup handoff happens before a working session is created; normal application state need not be serialized solely for restarting.
+
+## Trust and archive boundaries
+
+Treat release metadata, redirect targets, ZIP paths and persistent cache state as untrusted input. Fix the repository and asset naming convention in code. Validate numeric version syntax and comparison, boolean draft state, asset size, uploaded state, exact name and expected SHA-256 digest. Require a digest supplied by the GitHub asset metadata through HTTPS. Do not substitute an unchecked downloaded checksum or trust a filename alone. If integrity information is missing, remain on the installed version and provide a useful status rather than weakening validation.
+
+Restrict HTTPS requests and redirects to the expected GitHub API, repository download and release asset hosts. Bound redirect count, response sizes, download size, expanded archive bytes and entry count. Reject absolute paths, parent traversal, drive-qualified paths, alternate data streams, symlinks, duplicate case-insensitive names and Windows reserved or normalized aliases. Require the expected single archive root and expected executable. Validate the existing portable manifest schema, version, file inventory, sizes and digests before activation. Do not execute an artifact merely because its archive checksum matched if its layout is invalid.
+
+Use a fresh staging directory so preexisting files cannot satisfy missing entries. Keep enough free-space margin for download and extraction and report insufficient space without damaging the current installation. Recheck cached installation identity before launching it; a corrupt pointer or missing executable must be ignored safely. Do not accept a cache path outside the installation-specific managed root. Do not allow current-working-directory imports or arbitrary filesystem paths from metadata to control executable selection. Logs and status messages should describe the failure category without exposing credentials or unnecessarily exposing private paths.
+
+The security claim is integrity relative to the project-controlled GitHub release delivered over HTTPS, not independent publisher code signing. Do not call a hash a signature. A compromised publisher account is outside the protections of this unsigned portable distribution; introducing a signing authority would require separate credentials and distribution decisions. The release itself should include the normal checksums and verified archive receipt so users retain the existing manual recovery route.
+
+## Verification strategy
+
+The user additionally requested inspection and correction of modulo bias if present in probability calculations. Audit random sampling separately from musical pitch-class and circular tuning operations. Do not remove intentional modulo-12 octave equivalence or the native ring-buffer wrap. Verify transposition equivalence of candidate scores and inspect score semantics. If no biased random reduction exists, record that result without introducing unrelated randomization or changing the frozen FFT scoring contract. Exact ambiguous-candidate tie ordering is a separate limitation and must not be misrepresented as sampling bias.
+
+Use regression-first tests for version ordering, equal and older versions, prerelease channel handling, drafts, asset mismatch, missing digest, failed network access, redirects, truncated payloads and integrity mismatch. Exercise the real archive extraction and manifest validation against small generated fixtures. Include traversal, absolute and backslash paths, symlink entries, duplicate names, unexpected roots, oversized expansion, missing executable and manifest mismatches. Prove that invalid downloads do not activate or replace anything. Test cancellation before and during streaming and extraction, including the completion-versus-cancel race.
+
+Test the lifecycle with process launch mocked and real temporary directories: cache publication, pointer reuse, original data context, no downgrade, concurrent launch fallback, offline fallback, failed launch and bypass handling. Do not use a live update to another version as a test on the user's installed application. A bounded read-only GitHub metadata probe may verify compatibility with the real release format. Use controlled fixtures for download/install behavior, and add an offline frozen diagnostic covering the essential updater contracts without launching a second app.
+
+Run focused updater and CQT tests, then the guarded full headless suite with warnings treated as errors. Keep GUI-containing tests explicitly deferred. Run precision, uncertainty and trace comparisons against immutable v0.1.06, retaining the original fixtures and per-case regression gates. Verify the source hashes before and after comparisons. If CQT inference remains unchanged after the bounded experiment, report unchanged behavior rather than an invented gain. Measure changed inference cost only when the selected source actually changes.
+
+Use the authorized local Room 335 file for operational validation when inference or workflow changes justify it. Keep the file unchanged and never add it or derived audio to Git, diagnostic packages or releases. Its coverage, runtime, progress and cancellation are not chord correctness because no verified annotation exists. Preserve manual corrections, reopened results and PDF/HTML output contracts. Do not repeat expensive unaffected operational tests solely to inflate a checklist.
+
+Require an independent read-only review of updater trust boundaries, transaction failure cases, lifecycle and code size, plus any accepted CQT change. Give workers disjoint files in the actual shared filesystem and keep parent ownership of integration, plan records and publication. A bounded fix and re-verification pass may resolve concrete issues within the approved scope. Do not expand into a new installer architecture or learned transcription model without an evidence-based planning revision.
+
+## Packaging, publication and completion
+
+Advance release metadata to 0.1.07 only after the accepted source behavior is known. Update Korean and English release documentation, developer handoff, history and QA with measured results and limitations. Include the updater module and any startup controller in frozen imports and developer source copies. Ensure hidden self-tests skip network update behavior and validate the offline updater diagnostic. Retain native ABI and parity checks and the existing packaged music workflow checks.
+
+Build with the existing pinned Zig and Python environment after the guarded suite passes. Bind the developer ZIP, source inputs, QA and diagnostics to the clean reviewed source commit. Verify the fresh extraction, manifest inventory, source hashes and hidden executable diagnostics. Exclude private paths, audio, model weights and JIT caches. Never overwrite existing published archives or tags. Preserve v0.1.06 for rollback and clearly state that it cannot acquire an updater retroactively; the user must install the first updater-enabled release once.
+
+Publish the new release using the already authorized GitHub workflow only after gates pass, verify asset size and digest readback, and record delivery in a later documentation-only commit without changing the release tag. The definition of done is a verified downloadable build whose future launch performs a safe update when an eligible newer release exists, and whose existing analysis behavior meets the accepted per-case evidence gates. A source-only implementation or a mere release link is not the full intended outcome. If an external build or publication blocker remains, state the exact completed work and blocker without claiming release completion.
+
+## Scoreboard
+
+Current Score: 45/100
+Score Source: provisional
+Last Updated: 2026-11-02 23:14:52 Asia/Seoul
+Score Rationale: Source and local operational gates pass, but the actual delivered executable and archive remain unverified.
+What Improved: Paired CQT controls preserve true fifths while rejecting false chords; updater repairs pass29 focused tests; modulo concerns audited.
+What Remains Unsatisfactory: Real-song correctness and native UI are unmeasured; package delivery is pending.
+Next Score Action: Verify frozen execution and exact-archive update installation, then publish and read back assets.
+
+### Score history
+
+- 2026-11-01 22:47:13 Asia/Seoul — 35 provisional: CQT patch scope approved; implementation proof pending.
+- 2026-11-02 23:14:52 Asia/Seoul — 35 provisional: Explicit automatic-update request incorporated; source and transaction verification pending.
+- 2026-11-03 19:50:20 Asia/Seoul — 45 provisional: Source433, focused31, precision62, uncertainty32, trace11 and actual-file checks passed. Frozen/archive/publication remain.
+
+## Progress log
+
+- 2026-11-02 23:14:52 Asia/Seoul — Recovered persisted regressions and pinned-baseline guard changes. No previous worker remains active. Scoped CQT continuation delegated; updater plan recorded before implementation. GitHub Releases and release asset API documentation confirms published metadata, downloadable asset URLs, sizes and SHA-256 digest fields.
+- 2026-11-02 23:23:54 Asia/Seoul — CQT harmonic coherence decision recorded before source edit in the bounded work evidence. Focused CQT 11 tests and baseline guard/metric 20 tests pass. Added frozen music checks for rejected harmonic singleton and preserved wide harmonic-rich power chord; source diagnostic passes. Independent updater core/startup implementation continues; full comparisons and review remain.
+- 2026-11-03 19:38:10 Asia/Seoul — Resumed after worker interruption. Existing precision62/uncertainty32/trace11 comparisons passed. Dedicated harmonic31 comparison exposed a 0.05-second incorrect display candidate on a noisy singleton; narrow provenance repair assigned without relaxing gates. Updater review confirmed unreferenced-cache provenance and external JIT-cache issues; bounded fixes and archive/tamper frozen diagnostics assigned. User-requested modulo audit found no random modulo reduction; 242,064 transposed score comparisons agree within 1.11e-16. Exact ambiguity tie ordering remains a separate disclosed limitation.
+- 2026-11-03 19:50:20 Asia/Seoul — Bounded repairs pass: CQT smoothing removes only an already-abstained isolated power alternative with matching immediate harmonic rejections, without crossing gaps or changing known labels. Original gate preserved; harmonic31 now passes. Updater target provenance and JIT cache repaired;29 focused tests pass. All433 headless tests and existing62/32/11 comparisons pass, as do local CQT/FFT full/excerpt workflows. Version0.1.07 metadata and source docs prepared. Independent final review was interrupted by worker service limits after useful reviews; parent completed the final repair review, explicitly recorded instead of claiming independent completion. Proceeding to existing pinned toolchain build and additional actual-archive updater validation under user's release authorization.
+- 2026-11-03 20:02:33 Asia/Seoul — Windows build exited0 and frozen self-test passed: updater archive/tamper, CQT/FFT/edit/reopen/mixer/PDF and native ABI2 parity.17 known optional packaging warnings reviewed. Current Python/test/tool hashes still match the433-test receipt. Source will now be frozen to one clean commit; archive and publication receipts remain external until verified. Keep project records frozen during immutable archive verification; update delivery records after publication, preserving the tag's commit and original failed evidence.

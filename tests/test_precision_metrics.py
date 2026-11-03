@@ -164,6 +164,45 @@ class PrecisionMetricTests(unittest.TestCase):
                 precision.compare(methods=('fft',))
             load.assert_not_called()
 
+    def test_pinned_v106_reaches_shared_dependency_guard_before_loading(self):
+        current = {name: 'current-digest' for name in precision.SOURCE_FILES}
+        with patch.object(precision, 'IMPORT_HASHES', current), \
+                patch.object(precision, 'source_hashes', return_value=current), \
+                patch.object(precision.subprocess, 'check_output', side_effect=[
+                    '7563242b054065f8893a6c6e344046e188e0b947',
+                    b'old-voicing', b'old-song', b'old-shapes']), \
+                patch.object(precision, 'baseline_modules') as load:
+            with self.assertRaisesRegex(RuntimeError, 'Shared baseline dependency differs'):
+                precision.compare(baseline_ref='v0.1.06', methods=('fft',))
+            load.assert_not_called()
+
+    def test_moved_known_baseline_is_rejected_before_source_or_module_loading(self):
+        current = {name: 'current-digest' for name in precision.SOURCE_FILES}
+        for reference, wrong_commit in (
+                ('v0.1.05', '7563242b054065f8893a6c6e344046e188e0b947'),
+                ('v0.1.06', '83e88c10f62f6b174b2f95cf0e68b751a14f4db0')):
+            with self.subTest(reference=reference), \
+                    patch.object(precision, 'IMPORT_HASHES', current), \
+                    patch.object(precision, 'source_hashes', return_value=current), \
+                    patch.object(precision.subprocess, 'check_output', return_value=wrong_commit) as git, \
+                    patch.object(precision, 'baseline_modules') as load:
+                with self.assertRaisesRegex(ValueError, 'immutable'):
+                    precision.compare(baseline_ref=reference, methods=('fft',))
+                self.assertEqual(git.call_count, 1)
+                load.assert_not_called()
+
+    def test_unknown_reference_is_rejected_even_if_it_points_to_a_known_commit(self):
+        current = {name: 'current-digest' for name in precision.SOURCE_FILES}
+        with patch.object(precision, 'IMPORT_HASHES', current), \
+                patch.object(precision, 'source_hashes', return_value=current), \
+                patch.object(precision.subprocess, 'check_output', return_value=
+                    '83e88c10f62f6b174b2f95cf0e68b751a14f4db0') as git, \
+                patch.object(precision, 'baseline_modules') as load:
+            with self.assertRaisesRegex(ValueError, 'Unsupported precision baseline'):
+                precision.compare(baseline_ref='main', methods=('fft',))
+            git.assert_not_called()
+            load.assert_not_called()
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,4 +1,44 @@
-# ToneMatch TMP 0.1.06
+# ToneMatch TMP 0.1.07
+
+Source reference: 2026-11-03 KST. Unsigned Windows CPU developer prerelease.
+Source, local-file and frozen verification have passed; archive/publication are separate gates.
+See [한국어 안내](README_KO.md), [QA](QA_REPORT_v0.1.07.json) and [build history](BUILD_HISTORY.md).
+
+## Changed in 0.1.07
+
+- Normal EXE startup checks this repository's published numeric Windows portable releases,
+  including the existing developer prerelease channel. Newer versions download, verify and open
+  automatically. Offline, failed or cancelled updates fall back to the installed app.
+- Archive SHA-256, safe paths, full manifest inventory and per-file hashes are required.
+  Side-by-side installation keeps the old executable and original settings/results.
+- CQT withholds power chords explained only by a tightly coherent harmonic series and prevents
+  an isolated rejected harmonic from returning as a display alternative. Actual independent
+  fifths, weak roots/fifths and detuned controls are preserved. FFT and native ABI remain unchanged.
+- Modulo audit found no random-integer modulo sampling in production scoring. All 242,064
+  transposed-template comparisons agree within 1.11e-16. Evidence scores are not probabilities;
+  exact ambiguous tie ordering remains a separate limitation.
+
+433 headless tests pass; 92 GUI-containing tests are deferred. The original 62-case synthetic
+comparison preserves 76.117 correct seconds while incorrect seconds fall from 23.116243 to
+1.516243. Dedicated harmonic/power31, uncertainty32 and transition11 comparisons pass.
+These are development fixtures, not real-song accuracy. Exact harmonic coincidence, noise and
+vibrato can remain ambiguous or incorrect.
+
+## Automatic updates and recovery
+
+Install v0.1.07 manually once: v0.1.06 cannot acquire this feature retroactively. Extract the
+whole ZIP and launch `ToneMatchTMP-v0.1.07.exe`; retain this executable as the entry point.
+New versions live in installation-specific folders under
+`%LOCALAPPDATA%/ToneMatchTMP/updates`. The updated app reuses the original portable data
+location and its existing writable-directory fallback. No user audio is uploaded.
+
+Use **Use installed version** to skip a startup update, or launch the original executable with
+`--skip-update` for recovery. Older installed versions are not automatically deleted.
+Source runs and diagnostics bypass updates. Hashes establish integrity relative to GitHub
+release metadata, not independent publisher signing. Native interaction, listening and physical
+printing are untested in this no-screen verification run.
+
+## Archived v0.1.06 release record
 
 An unofficial Windows tool for whole-mixture chord charts and starting-point Fender Tone Master Pro
 or Quad Cortex recipes from authorized local audio/video and Windows capture.
@@ -142,7 +182,7 @@ Ambiguous names (e.g. C6/Am7), melody, percussion, harmonics and omitted notes r
 ## Start
 
 Extract the **entire** developer ZIP to a new directory, verify SHA-256, then run
-`ToneMatchTMP-v0.1.06.exe` once its package has been verified and published. Do not move only the EXE.
+`ToneMatchTMP-v0.1.07.exe` once its package has been verified and published. Do not move only the EXE.
 Choose authorized local media or PC capture, then a range of 3 seconds to 20 minutes;
 end `0` means through the end subject to that cap.
 Full-mix tone analysis isolates guitar; already-guitar audio can skip isolation.
@@ -216,7 +256,7 @@ PDF/font, PortAudio loading and native parity without audible output or actual m
 The separate `--stem-self-test-source` / `--stem-self-test-output` CLI checks an already
 cached CPU model, writes redacted JSON and cleans temporary audio.
 
-The current source version is 0.1.06. After publication, fixes advance to 0.1.07; published releases are immutable.
+The current source version is 0.1.07. After publication, fixes advance to 0.1.08; published releases are immutable.
 Read [handoff](DEVELOPER_HANDOFF_KO_EN.md) and [research](TRANSCRIPTION_RESEARCH_KO.md).
 Application source: MIT. See `THIRD_PARTY_NOTICES.txt`, inventory and `licenses/`.
 Fender, Tone Master, Neural DSP and Quad Cortex are their owners' trademarks;

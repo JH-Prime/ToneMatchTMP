@@ -45,6 +45,18 @@ def run_music_self_test():
         np.column_stack((harmonic_signal, -harmonic_signal)), rate, method='fft')
     harmonic_ok = bool(harmonic_analysis['events']) and all(
         row['chord_type'] == 'unknown' for row in harmonic_analysis['events'])
+    cqt_harmonic = analyze_song_chords(
+        np.column_stack((harmonic_signal, -harmonic_signal)), rate, method='cqt')
+    cqt_harmonic_ok = bool(cqt_harmonic['events']) and all(
+        row['chord_type'] == 'unknown' and not row['alternatives'] for row in cqt_harmonic['events'])
+    # The nearby equal-tempered fifth is independent evidence, including a
+    # harmonic-rich wide voicing. Withholding every C5 would fail this check.
+    power_signal = sum(.07 / partial ** 1.5 * np.sin(
+        2 * np.pi * 440 * 2 ** ((note - 69) / 12) * partial * axis)
+        for note in (36, 55) for partial in range(1, 9))
+    power_analysis = analyze_song_chords(np.column_stack((power_signal, -power_signal)), rate)
+    power_ok = bool(power_analysis['events']) and all(
+        row['symbol'] == 'C5' for row in power_analysis['events'])
     omitted = sum(.1 * np.sin(2 * np.pi * 440 * 2 ** ((note - 69) / 12) * axis)
                   for note in (48, 52, 58))
     omitted_analysis = analyze_song_chords(omitted[:, None], rate)
@@ -149,6 +161,7 @@ def run_music_self_test():
               "chords_only_reopen": bool(reopen_ok), "cqt_detuned": bool(detuned_ok),
               "fft": bool(fft_ok), "method_reopen": bool(method_ok),
               "uncertainty_reopen_exports": bool(uncertainty_ok),
-              "fft_harmonic_rejection": bool(harmonic_ok), "omitted_fifth_reopen": bool(omitted_ok)}
+              "fft_harmonic_rejection": bool(harmonic_ok), "omitted_fifth_reopen": bool(omitted_ok),
+              "cqt_harmonic_rejection": bool(cqt_harmonic_ok), "cqt_power_preservation": bool(power_ok)}
     return {"ok": all(checks.values()), **checks, "audible_output_tested": False,
             "real_song_accuracy_measured": False}

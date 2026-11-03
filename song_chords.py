@@ -6,7 +6,7 @@ from typing import Callable
 
 import numpy as np
 
-from voicing import (CHORD_INTERVALS, _classify_window, _merge_events, _smooth_labels, _limit_timeline_events,
+from voicing import (CHORD_INTERVALS, _classify_window, _unknown_window, _merge_events, _smooth_labels, _limit_timeline_events,
                      analyze_voicings, voicing_analysis_dict)
 
 
@@ -168,6 +168,49 @@ def _classify_cqt_profile(profile, midi, rms):
     return _classify_window(chroma, salience, salience, rms, midi=midi)
 
 
+def _harmonic_fifth_only(clip, sample_rate, root_pc):
+    """Withhold a fifth supported only by one precisely coherent partial series.
+
+    This is a conservative identity check, not general note transcription.
+    Unresolved/inharmonic evidence keeps its original CQT decision. Exact
+    harmonic coincidence cannot reveal how many instruments produced it.
+    """
+    from scipy.signal import find_peaks, resample_poly
+    if len(clip) < sample_rate * .45:
+        return False
+    stride = max(1, sample_rate // 22050)
+    if stride > 1:
+        clip = resample_poly(clip, 1, stride, axis=0)
+        sample_rate /= stride
+    clip = clip.astype(np.float64) - np.mean(clip, axis=0)
+    size = 2 ** math.ceil(math.log2(len(clip) * 4))
+    spectrum = np.fft.rfft(clip * np.hanning(len(clip))[:, None], n=size, axis=0)
+    amplitude = np.sqrt(np.mean(np.abs(spectrum) ** 2, axis=1))
+    peaks = find_peaks(amplitude)[0]
+    peaks = peaks[(peaks * sample_rate / size >= 30) & (peaks * sample_rate / size <= 4000)]
+    peaks = peaks[amplitude[peaks] > .04 * float(np.max(amplitude))]
+    if not len(peaks):
+        return False
+    logarithm = np.log(np.maximum(amplitude, 1e-20))
+    curvature = logarithm[peaks - 1] - 2 * logarithm[peaks] + logarithm[peaks + 1]
+    if np.any(curvature >= -1e-12):
+        return False
+    offset = .5 * (logarithm[peaks - 1] - logarithm[peaks + 1]) / curvature
+    frequencies = (peaks + offset) * sample_rate / size
+    pitch_classes = np.rint(69 + 12 * np.log2(frequencies / 440)).astype(int) % 12
+    roots = frequencies[pitch_classes == root_pc]
+    fifths = frequencies[pitch_classes == (root_pc + 7) % 12]
+    if not len(roots) or len(fifths) < 2:
+        return False
+    ratios = fifths / roots[0]
+    partials = np.rint(ratios)
+    if np.any(partials < 2):
+        return False
+    # Much tighter than tuning tolerance: a separately played equal-tempered
+    # fifth must not disappear merely because it is near a root's third partial.
+    return bool(np.all(np.abs(1200 * np.log2(ratios / partials)) < .02))
+
+
 def _classify_cqt_region(audio, magnitude, midi, sample_rate, region):
     """Classify a bounded interval without extending sustained notes with a passing tone."""
     region_start, region_end = region
@@ -186,10 +229,43 @@ def _classify_cqt_region(audio, magnitude, midi, sample_rate, region):
             # A minority-note union may rescue fully sequential evidence only
             # when the median retains no pitches at all. Never replace a
             # supported chord, complete a sustained dyad, or add an extension.
-            if primary['chord_type'] != 'unknown' or evidence.get('observed_pitch_classes'):
-                return primary
-            return _classify_cqt_profile(np.quantile(frames, .7, axis=1), midi, rms)
+            if primary['chord_type'] == 'unknown' and not evidence.get('observed_pitch_classes'):
+                primary = _classify_cqt_profile(np.quantile(frames, .7, axis=1), midi, rms)
+            if primary['chord_type'] == 'power5' and _harmonic_fifth_only(clip, sample_rate, primary['root_pc']):
+                rejected_root = primary['root_pc']
+                primary = _unknown_window(primary, 'insufficient_tonal_evidence')
+                # The rejected harmonic explanation is not a valid alternative
+                # for local recovery or temporal decoding to resurrect.
+                primary['alternatives'] = ()
+                primary['evidence']['ambiguous'] = False
+                primary['_harmonic_rejected_root'] = rejected_root
+            return primary
     return _classify_cqt_profile(np.zeros(3 * len(midi)), midi, rms)
+
+
+def _smooth_cqt_labels(windows, hop_seconds=.05):
+    """Keep repeated harmonic rejection when smoothing an isolated candidate.
+
+    Only an already-abstained, temporally unsupported power-chord alternative
+    is affected. Known labels, other alternatives and one-sided evidence stay.
+    """
+    smoothed = _smooth_labels(windows)
+    for index in range(1, len(windows) - 1):
+        row = smoothed[index]
+        if (row['chord_type'] != 'unknown'
+                or row.get('evidence', {}).get('uncertainty_reason') != 'temporal_instability'):
+            continue
+        left, center, right = windows[index - 1:index + 2]
+        root = left.get('_harmonic_rejected_root')
+        if root is None or right.get('_harmonic_rejected_root') != root:
+            continue
+        times = [item.get('_start_seconds', -1.) for item in (left, center, right)]
+        if not all(0 < gap <= hop_seconds * 1.1 for gap in np.diff(times)):
+            continue
+        row['alternatives'] = tuple(candidate for candidate in row.get('alternatives', ())
+                                    if (candidate['root_pc'], candidate['chord_type']) != (root, 'power5'))
+        row['evidence']['ambiguous'] = bool(row['alternatives'])
+    return smoothed
 
 
 def _recover_cqt_window(primary, center, audio, magnitude, midi, changes, sample_rate, cancel_requested=None):
@@ -306,7 +382,7 @@ def analyze_song_chords(
         if progress:
             progress(min(1.0, (offset + len(batch)) / len(starts)))
     _check_cancelled(cancel_requested)
-    windows = _smooth_labels(windows)
+    windows = _smooth_cqt_labels(windows, hop_seconds)
     events = _merge_events(windows, hop_seconds, window_seconds, duration, include_shapes=False)
     event_count_before_limit = len(events)
     events = _limit_timeline_events(events, 4096)

@@ -1,4 +1,4 @@
-"""ToneMatch TMP v0.1.02 데스크톱 애플리케이션.
+"""ToneMatch TMP v0.1.07 데스크톱 애플리케이션.
 
 로컬 오디오·영상 또는 Windows PC 재생음 녹음을 받아 AI로 guitar stem만
 분리하고, Tone Master Pro 또는 Quad Cortex에 수동 적용할 톤 체인을 추천한다.
@@ -154,13 +154,19 @@ def _center_window(window: tk.Tk, width: int, height: int) -> None:
 def _portable_root() -> Path:
     """소스 실행 또는 PyInstaller onedir 실행의 포터블 루트를 반환한다."""
     if getattr(sys, "frozen", False):
+        from update_startup import inherited_context
+        context = inherited_context()
+        if context is not None:
+            return context[0]
         return Path(sys.executable).resolve().parent
     return Path(__file__).resolve().parent
 
 
 def _runtime_data_root() -> Path:
     """우선 EXE 옆 data를 쓰고 권한이 없으면 LocalAppData로 안전하게 폴백한다."""
-    preferred = _portable_root() / "data"
+    from update_startup import inherited_context
+    context = inherited_context()
+    preferred = context[1] if context is not None else _portable_root() / "data"
     try:
         preferred.mkdir(parents=True, exist_ok=True)
         probe = preferred / ".write-test"
@@ -4177,8 +4183,11 @@ def run_self_test(output_path: str | Path) -> int:
         chord_chart_status = _self_test_chord_chart()
         from music_diagnostics import run_music_self_test
         music_workflow_status = run_music_self_test()
+        from auto_update import offline_self_test
+        auto_update_status = offline_self_test()
         payload = {
-            "ok": len(result.get("recipes", [])) == 3 and debug_sources_ok and stem_removal_source_ok and stem_diagnostics_source_ok and harmony_reference_source_ok and chord_chart_source_ok and guitar_shapes_source_ok and english.get("language") == "en" and bool(separator_status.get("available")) and reference_compare_ok and native_dsp_status["smoke_ok"] and chord_voicing_status["ok"] and harmony_reference_status["ok"] and chord_chart_status["ok"] and music_workflow_status["ok"],
+            "ok": len(result.get("recipes", [])) == 3 and debug_sources_ok and stem_removal_source_ok and stem_diagnostics_source_ok and harmony_reference_source_ok and chord_chart_source_ok and guitar_shapes_source_ok and english.get("language") == "en" and bool(separator_status.get("available")) and reference_compare_ok and native_dsp_status["smoke_ok"] and chord_voicing_status["ok"] and harmony_reference_status["ok"] and chord_chart_status["ok"] and music_workflow_status["ok"] and auto_update_status["ok"],
+            "auto_update": auto_update_status,
             "music_workflow": music_workflow_status,
             "chord_voicing": chord_voicing_status,
             "harmony_reference": harmony_reference_status,
@@ -4221,6 +4230,10 @@ def main() -> int:
         except (IndexError, ValueError):
             return 2
     root = tk.Tk()
+    from update_startup import run_startup_update, should_check_for_updates
+    if should_check_for_updates() and run_startup_update(root, APP_VERSION, _portable_root(), _runtime_data_root()):
+        root.destroy()
+        return 0
     ToneMatchApp(root)
     root.mainloop()
     return 0

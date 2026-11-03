@@ -1,4 +1,42 @@
-# ToneMatch TMP v0.1.06 — 개발 인수인계 / Developer Handoff
+# ToneMatch TMP v0.1.07 — 개발 인수인계 / Developer Handoff
+
+## Current v0.1.07 / 현행 — 2026-11-03 KST
+
+Source verification passed: guarded433 tests (GUI92 deferred), precision62, harmonics31,
+uncertainty32 and trace11. Frozen self-test also passed, including actual ZIP/tamper diagnostic
+and CQT harmonic/power controls. Archive/publication are separate gates recorded in
+[QA_REPORT_v0.1.07.json](QA_REPORT_v0.1.07.json) and BUILD_HISTORY. Do not infer delivery
+from the source version. Baseline v0.1.06 is immutable at
+`7563242b054065f8893a6c6e344046e188e0b947`.
+
+CQT only: a >=0.45-second power5 evidence region may abstain when an observed root and at
+least two fifth-class partials agree with one harmonic series within0.02cents. This is a
+conservative identity test, not a frequency-resolution guarantee. Uncertain fits preserve
+the original interpretation. Exact just-intonation coincidence can be indistinguishable.
+Post-smoothing removes only an already-abstained isolated power candidate when both immediate
+observations explicitly rejected that root; other candidates and known labels are retained.
+voicing.py and the native ABI are unchanged. Failed noisy-candidate evidence was retained
+before the narrow repair; no comparison gate was weakened.
+
+Updater ownership is split between auto_update.py (metadata, integrity, extraction, cache)
+and update_startup.py (worker/controller, progress, handoff). app.main invokes it only for
+normal frozen Windows startup, before creating a working session. Diagnostics bypass it.
+The core never launches a process. Cache directories are installation-specific; original
+portable data context and an external Numba cache are passed to the child. Use an argument
+list, PyInstaller environment reset and DLL-directory reset for the new runtime.
+
+Release assets must match the fixed repository/name, published numeric version and SHA-256.
+Offline cached updates are revalidated. A directory lacking a cache pointer must match a newly
+verified archive before activation; its self-declared manifest alone is insufficient.
+Recovery uses the original EXE with --skip-update. This unsigned developer channel includes
+prereleases and performs no administrator, service or registry changes.
+
+Modulo audit found no random modulo reduction; template scores rotate consistently.
+Exact-tie primary ordering is a separate known ambiguity, not calibrated probability.
+No new dependencies, model downloads or user audio uploads were introduced.
+After publication, subsequent patches advance to v0.1.08; never replace released assets.
+
+## Archived v0.1.06 handoff
 
 ## Current v0.1.06 / 현행 — 2026-11-01 KST
 

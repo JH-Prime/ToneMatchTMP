@@ -8,6 +8,7 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 | 버전 | 상태 | 범위 |
 |---|---|---|
+| `0.1.07` | 소스·실행파일 검증 완료, 독립 ZIP 검증 중 | CQT 배음 오인식 억제, 자동 GitHub 업데이트, 모듈러 편향 점검 |
 | `0.1.06` | 독립 ZIP 검증 완료·개발자 프리릴리스 게시 | CQT 구성음 근거 보완, 일부 7·9화음 완전5도 생략, 저신호 예외 수정, FFT 기존 배음 억제 유지 |
 | `0.1.05` | 독립 ZIP 검증 완료·개발자 프리릴리스 게시 | 미확정 근거·후보·사유 보존, CQT 제한 재검토, 4096 이벤트 예산, 표시·저장 일치 |
 | `0.1.04` | 독립 ZIP 검증 완료·개발자 프리릴리스 게시 | 분석 종료 장비 잠금 복구, 코드 모드 장비 선택, 50ms CQT 관측·경계·시간 가중 경로 |
@@ -27,6 +28,39 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 | `0.0.03` | 포터블 개발 프리뷰 빌드 완료 | 포터블 개발 ZIP, 한·영 handoff, 로그·빌드 이력, NumPy 코드/보이싱 분석(실험) |
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
+
+## v0.1.07 source acceptance — 2026-11-03 KST
+
+433 guarded headless tests passed (99.114s); 92 GUI-containing tests deferred.
+Against immutable v0.1.06, precision62 retains76.117 correct seconds and reduces incorrect
+seconds23.116243→1.516243. Harmonic/power31 retains38.4 correct seconds while incorrect
+seconds31.2→3.725 and wrong unknown candidates remain0. Uncertainty32 and trace11 pass;
+trace duration-weighted agreement stays0.9935761046556986. These are synthetic controls,
+not real-song accuracy. FFT's entire voicing.py remains unchanged.
+
+Automatic-update core/controller tests cover authenticated archive integrity, manifest/path
+validation, cancellation, offline/launch fallback, cache provenance, concurrent installation,
+original data context and source/diagnostic bypass. Final29 focused tests pass. Frozen checks
+must validate actual archive/tamper behavior. Final archive verification also installs this
+exact ZIP using the production updater and revalidates it after a hidden CQT diagnostic.
+
+Local252.61s and30–90s Room335 workflows pass CQT/FFT progress, cancellation, original-media
+preservation, edits/reopen and HTML/PDF. Full coverage is CQT0.4322 and FFT0.4323, unchanged
+from v0.1.06; full runtimes35.266s/6.128s are operational timings, not speedup benchmarks.
+No actual-song chord annotation is available. No media is packaged or uploaded.
+
+Modulo audit: no random modulo sampling in production scoring;242,064 transposed scores
+agree within1.11e-16. Exact ambiguous-tie ordering remains a separate limitation.
+Independent numerical/updater review findings informed bounded repairs. Parent reviewed
+the final isolated-candidate reconciliation and updater fixes; final independent reviewer
+completion was interrupted, so it is not claimed. Full regression gates passed after repair.
+Native interaction, listening, physical printing, clean-machine and CUDA testing remain deferred.
+
+Frozen EXE self-test passed, including CQT harmonic rejection, actual independent fifth,
+manual edits/reopen, mixer/PDF, native ABI2 parity and offline updater ZIP/tamper validation.
+The17 packaging warnings match the previous optional collector/import, Linux-only libgomp,
+Numba TBB and torch deprecation categories; required runtime workflows pass.
+Receipts: QA_REPORT_v0.1.07.json and seven v107 diagnostics; archive/publication are separate gates.
 
 ## v0.1.06 publication record — 2026-11-01 KST
 

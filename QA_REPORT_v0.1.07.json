@@ -1,0 +1,185 @@
+{
+  "schema": "tonematch-qa/v1",
+  "app_version": "0.1.07",
+  "build_date": "2026-11-03",
+  "tested_at": "2026-11-03",
+  "status": "passed",
+  "scope": "CQT coherent harmonic false-chord rejection; isolated rejected alternative handling; automatic verified side-by-side GitHub updates; modulo audit.",
+  "checks": {
+    "headless_suite": {
+      "ok": true,
+      "tests": 433,
+      "seconds": 99.114,
+      "warnings_as_errors": true,
+      "tk_creation_guard": true,
+      "deferred_gui_tests": 92,
+      "receipt": "v107-headless-tests.json"
+    },
+    "precision_comparison": {
+      "ok": true,
+      "cases": 62,
+      "baseline_ref": "v0.1.06",
+      "baseline_commit": "7563242b054065f8893a6c6e344046e188e0b947",
+      "baseline_correct_seconds": 76.117,
+      "current_correct_seconds": 76.117,
+      "baseline_incorrect_seconds": 23.116243,
+      "current_incorrect_seconds": 1.516243,
+      "incorrect_newly_recognized_seconds": 0,
+      "receipt": "v107-precision-comparison.json"
+    },
+    "harmonic_comparison": {
+      "ok": true,
+      "cases": 31,
+      "baseline_ref": "v0.1.06",
+      "baseline_commit": "7563242b054065f8893a6c6e344046e188e0b947",
+      "baseline_correct_seconds": 38.4,
+      "current_correct_seconds": 38.4,
+      "baseline_incorrect_seconds": 31.2,
+      "current_incorrect_seconds": 3.725,
+      "unknown_candidate_negative_seconds": 0,
+      "receipt": "v107-cqt-comparison.json"
+    },
+    "uncertainty_comparison": {
+      "ok": true,
+      "cases": 32,
+      "baseline_ref": "v0.1.06",
+      "incorrect_newly_recognized_seconds": 0,
+      "receipt": "v107-uncertainty-comparison.json"
+    },
+    "trace_comparison": {
+      "ok": true,
+      "cases": 11,
+      "baseline_ref": "v0.1.06",
+      "baseline": 0.9935761046556986,
+      "current": 0.9935761046556986,
+      "decoder_legacy_objective_preserved": true,
+      "receipt": "v107-chord-trace-comparison.json"
+    },
+    "automatic_update": {
+      "headless_tests": 29,
+      "channel": "public_numeric_portable_developer_releases_including_prereleases",
+      "sha256_required": true,
+      "safe_archive_and_manifest": true,
+      "side_by_side": true,
+      "original_data_preserved": true,
+      "cancel_failure_fallback": true,
+      "diagnostics_skip_network": true,
+      "actual_gui_handoff_tested": false
+    },
+    "modulo_audit": {
+      "random_modulo_bias_found": false,
+      "score_rotation_comparisons": 242064,
+      "max_absolute_score_difference": 1.1102230246251565e-16,
+      "probability_calibrated": false,
+      "exact_tie_ordering_limitation_retained": true
+    },
+    "review": {
+      "independent_numerical_review": true,
+      "independent_updater_findings_repaired": 2,
+      "parent_final_repair_review": true,
+      "fft_entire_module_exact_baseline": true,
+      "notes": "Independent bounded reviews preceded final fixes; parent reviewed final candidate reconciliation and updater repairs; no GUI checks."
+    },
+    "actual_chords": {
+      "ok": true,
+      "methods": [
+        "cqt",
+        "fft"
+      ],
+      "source_unchanged": true,
+      "progress_cancel": true,
+      "immediate_edit_reopen_html_pdf": true,
+      "duration_seconds": 252.60988662131518,
+      "cqt_full_coverage": 0.4322,
+      "cqt_excerpt_coverage": 0.4809,
+      "fft_full_coverage": 0.4323,
+      "fft_excerpt_coverage": 0.5051,
+      "cqt_full_elapsed_seconds": 35.266,
+      "fft_full_elapsed_seconds": 6.128,
+      "coverage_is_accuracy": false,
+      "receipts": [
+        "v107-actual-cqt.json",
+        "v107-actual-fft.json"
+      ]
+    },
+    "frozen_self_test": {
+      "status": "passed",
+      "ok": true,
+      "music_workflow": true,
+      "auto_update": {
+        "ok": true,
+        "version_order": true,
+        "address_rejection": true,
+        "path_rejection": true,
+        "archive_verified": true,
+        "tamper_rejected": true,
+        "network_used": false,
+        "process_launched": false
+      },
+      "cpp_abi": 2,
+      "cpp_parity": true,
+      "float32_parity": true,
+      "cqt": true,
+      "manual_edit": true,
+      "pcm_reader": true,
+      "mixer_export": true,
+      "pdf_font": true,
+      "portaudio_runtime": true,
+      "qc_catalog": true,
+      "qc_recipes": true,
+      "chords_only_reopen": true,
+      "cqt_detuned": true,
+      "fft": true,
+      "method_reopen": true,
+      "uncertainty_reopen_exports": true,
+      "fft_harmonic_rejection": true,
+      "omitted_fifth_reopen": true,
+      "cqt_harmonic_rejection": true,
+      "cqt_power_preservation": true,
+      "audible_output_tested": false,
+      "real_song_accuracy_measured": false
+    },
+    "release_helper_regressions": {
+      "ok": true,
+      "tests": 3,
+      "no_network_or_gui": true
+    },
+    "fresh_archive_verification": {
+      "status": "external_release_gate",
+      "required_before_publication": true,
+      "report_asset": "ToneMatchTMP-v0.1.07-ARCHIVE-VERIFICATION.json"
+    },
+    "publication": {
+      "status": "external_release_gate",
+      "requires_verified_archive_and_remote_asset_digests": true
+    },
+    "packaging_warnings": {
+      "count": 17,
+      "scope": "Same optional collector/import hooks, Linux-only libgomp, Numba TBB and torch deprecations; required frozen workflows pass",
+      "categories": {
+        "non_package_collectors": 4,
+        "optional_tensorboard": 1,
+        "optional_hidden_imports": 4,
+        "linux_libgomp": 1,
+        "numba_tbb": 1,
+        "torch_deprecations": 6
+      }
+    }
+  },
+  "limitations": {
+    "real_song_accuracy_measured": false,
+    "synthetic_false_positives_remain": true,
+    "exact_harmonic_coincidence_ambiguous": true,
+    "no_general_noise_vibrato_rejection": true,
+    "first_updater_release_requires_manual_install": true,
+    "code_signed": false,
+    "native_click_and_visual_tested": false,
+    "audible_output_tested": false,
+    "physical_printing_tested": false,
+    "clean_machine_tested": false,
+    "cuda_tested": false,
+    "new_dependency": false,
+    "new_cpp_abi": false
+  },
+  "packaged_at": "2026-11-03"
+}
