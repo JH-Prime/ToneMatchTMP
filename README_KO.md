@@ -1,7 +1,10 @@
 # ToneMatch TMP 0.1.07
 
 소스 기준일: 2026-11-03 KST. 서명되지 않은 Windows CPU 개발자 프리릴리스입니다.
-소스·로컬 실제 파일·실행파일 검증을 통과했습니다. 독립 ZIP·공개 게이트는 별도로 확인합니다.
+소스·로컬 실제 파일·실행파일·독립 ZIP 검증 후 게시했습니다:
+[v0.1.07 다운로드](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.07).
+2026-11-05 로그인 없는 공개 조회에서도 배포 파일 3개의 크기·해시 일치를 확인했습니다.
+실제 ZIP을 이용한 자동 설치, 설치된 EXE의 무창 진단, 오프라인 캐시 재사용도 통과했습니다.
 최종 상태는 [QA 보고서](QA_REPORT_v0.1.07.json)와 [빌드 이력](BUILD_HISTORY.md)을 확인하세요.
 
 ## 0.1.07 변경 사항
@@ -280,7 +283,7 @@ CUDA 소스 개발은 `enable_cuda.ps1`와 별도 호환 GPU 환경을 사용하
 실제로 스피커를 울리거나 AI 모델을 실행하지 않습니다.
 실제 캐시 모델 검사는 `--stem-self-test-source`와 `--stem-self-test-output` CLI를 사용합니다.
 
-현재 개발 버전은 0.1.07이며 게시 후 다음 버그 수정은 0.1.08로 진행합니다. 기존 릴리스를 교체하지 않습니다.
+현재 배포 버전은 0.1.07이며 다음 버그 수정은 0.1.08로 진행합니다. 기존 릴리스를 교체하지 않습니다.
 인수인계는 [DEVELOPER_HANDOFF_KO_EN.md](DEVELOPER_HANDOFF_KO_EN.md),
 알고리즘 근거는 [TRANSCRIPTION_RESEARCH_KO.md](TRANSCRIPTION_RESEARCH_KO.md)를 확인하세요.
 

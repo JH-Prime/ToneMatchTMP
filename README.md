@@ -1,7 +1,10 @@
 # ToneMatch TMP 0.1.07
 
 Source reference: 2026-11-03 KST. Unsigned Windows CPU developer prerelease.
-Source, local-file and frozen verification have passed; archive/publication are separate gates.
+Source, local-file, frozen and independent archive verification passed:
+[download v0.1.07](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.07).
+Unauthenticated public readback on 2026-11-05 matched the sizes and hashes of all three assets.
+The exact ZIP passed production-updater installation, hidden installed-EXE diagnostics and offline cache reuse.
 See [한국어 안내](README_KO.md), [QA](QA_REPORT_v0.1.07.json) and [build history](BUILD_HISTORY.md).
 
 ## Changed in 0.1.07
@@ -182,7 +185,7 @@ Ambiguous names (e.g. C6/Am7), melody, percussion, harmonics and omitted notes r
 ## Start
 
 Extract the **entire** developer ZIP to a new directory, verify SHA-256, then run
-`ToneMatchTMP-v0.1.07.exe` once its package has been verified and published. Do not move only the EXE.
+`ToneMatchTMP-v0.1.07.exe` from the verified release package. Do not move only the EXE.
 Choose authorized local media or PC capture, then a range of 3 seconds to 20 minutes;
 end `0` means through the end subject to that cap.
 Full-mix tone analysis isolates guitar; already-guitar audio can skip isolation.
@@ -256,7 +259,7 @@ PDF/font, PortAudio loading and native parity without audible output or actual m
 The separate `--stem-self-test-source` / `--stem-self-test-output` CLI checks an already
 cached CPU model, writes redacted JSON and cleans temporary audio.
 
-The current source version is 0.1.07. After publication, fixes advance to 0.1.08; published releases are immutable.
+The current published version is 0.1.07. Subsequent fixes advance to 0.1.08; published releases are immutable.
 Read [handoff](DEVELOPER_HANDOFF_KO_EN.md) and [research](TRANSCRIPTION_RESEARCH_KO.md).
 Application source: MIT. See `THIRD_PARTY_NOTICES.txt`, inventory and `licenses/`.
 Fender, Tone Master, Neural DSP and Quad Cortex are their owners' trademarks;

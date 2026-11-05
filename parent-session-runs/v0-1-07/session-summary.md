@@ -1,7 +1,7 @@
 # v0.1.07 session checkpoint
 
-- Status: Source and frozen runtime accepted; freeze commit then archive/updater verification and publication.
-- Updated: 2026-11-03 20:02:33 Asia/Seoul.
+- Status: Complete — v0.1.07 developer prerelease published, archive/updater installation and public readback verified.
+- Updated: 2026-11-05 19:53:32 Asia/Seoul.
 - Active plan: plan/20261102-231452--revision-plan--v0-1-07-cqt-auto-update--v02.md.
 - Approval: User selected “예, 이 범위로 진행” for CQT singleton/harmonic false-chord suppression, preserving actual power/low-bass controls, testing, developer ZIP and GitHub release.
 - Baseline: v0.1.06 source 7563242b054065f8893a6c6e344046e188e0b947; initial main 5b5ace1. Published release immutable.
@@ -21,3 +21,12 @@
 - Frozen build completed exit0; all diagnostic checks pass including actual inert ZIP/tamper validation, CQT/power guard, FFT, edits/reopen/mixer/PDF and native ABI2 parity.17 known optional warnings reviewed. QA/docs finalized; all Python/test/tool hashes still match source433receipt.
 - Next: cleancommit, exclusive ZIP creation and freshverification including production-updater fullarchive install/hiddenruntime/offlinecachedreuse, then authorized tag/push/publication/readback. Keep this source commit immutable while verifying; do not claim release until complete.
 - Packaging correction before ZIP creation: source-input gate rejected missing auto_update.py/update_startup.py in developer source list (both already present and tested in frozen runtime/devsource). Added both to build.ps1 and repaired staged source/build materials. Runtime/test/tool hashes remain unchanged; failed finalize produced no ZIP. Freeze the corrected commit for archive verification.
+
+## Delivery completion
+
+- Final independent source and release-consistency reviews completed on 2026-11-04 with no blocker, supplementing the interrupted earlier review above. Notes: work/v107-final-independent-review.md.
+- Frozen source/tag: e8142f80151d5d92b05bc6c3e5c091934e63a093. ZIP: 349,720,420 bytes, SHA-256 c66397312135437b0073448e21771318c1dc40fc1edd262b25b924d5b3b2a69e. All 5,479 manifest files and 112 source inputs verified; media, weights, private paths and development JIT caches excluded.
+- Exact production-updater archive installation passed, as did the installed hidden EXE diagnostic and offline verified-cache reuse after CQT execution. First deeply nested test fixture exceeded Windows path length and safely declined activation; identical gates passed with a short isolated system-temp fixture. Production logic was unchanged. The actual default staging path maximum was 222 characters.
+- Published at 2026-11-04 21:49:33 Asia/Seoul: https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.07 . Unauthenticated readback at 2026-11-05 19:53:32 Asia/Seoul matched all three public assets and the immutable tag. Evidence: work/v107-publication.json, work/v107-public-readback.json and release/ToneMatchTMP-v0.1.07-ARCHIVE-VERIFICATION.json.
+- Postpublication changes are documentation only; do not rebuild or retag this version. The first updater-enabled ZIP requires a one-time manual installation. Preserve v0.1.06 and the original EXE for recovery; any subsequent repair uses v0.1.08.
+- Limits remain: normal GUI handoff, clean-machine execution, listening/printing, CUDA and annotated actual-song correctness were not tested. Successful process creation does not certify child health; recover using --skip-update after a runtime failure.

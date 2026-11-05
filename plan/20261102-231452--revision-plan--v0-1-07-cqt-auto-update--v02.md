@@ -3,15 +3,15 @@
 Plan Type: Revision plan
 Workstream: ToneMatchTMP v0.1.07
 Version: 02
-Status: Source and frozen runtime accepted; freeze commit for archive verification and publication
+Status: Complete — verified v0.1.07 developer prerelease published
 Created: 2026-11-02 23:14:52 Asia/Seoul
-Last Updated: 2026-11-03 20:02:33 Asia/Seoul
+Last Updated: 2026-11-05 19:53:32 Asia/Seoul
 Supersedes: plan/20261101-224713--work-plan--v0-1-07-cqt-harmonics--v01.md
-Current Completion State: Source, comparisons, local-file and frozen self-test passed; archive gates next
-Completed So Far: Bounded CQT and updater repairs, modulo audit, source433 and62/31/32/11 comparisons, local CQT/FFT workflows
-Remaining Work: Clean source commit, archive/actual-updater verification and publication/readback
-Current Blockers: No authorization blocker; frozen/archive gates pending
-Next Step: Inspect frozen build and offline self-test, then verify the exact archive through the updater
+Current Completion State: Source, comparisons, local-file, frozen, fresh archive, updater installation and public delivery verified
+Completed So Far: CQT and updater repairs, modulo audit, 433 headless tests, 62/31/32/11 comparisons, local workflows, independent review, ZIP/tag/release and unauthenticated readback
+Remaining Work: No release implementation work remains; normal GUI/clean-machine verification and annotated real-song accuracy remain disclosed limits
+Current Blockers: None
+Next Step: Preserve immutable v0.1.07; any subsequent repair uses v0.1.08
 
 ## Authority, objective and assumptions
 
@@ -79,19 +79,20 @@ Publish the new release using the already authorized GitHub workflow only after 
 
 ## Scoreboard
 
-Current Score: 45/100
+Current Score: 50/100
 Score Source: provisional
-Last Updated: 2026-11-02 23:14:52 Asia/Seoul
-Score Rationale: Source and local operational gates pass, but the actual delivered executable and archive remain unverified.
-What Improved: Paired CQT controls preserve true fifths while rejecting false chords; updater repairs pass29 focused tests; modulo concerns audited.
-What Remains Unsatisfactory: Real-song correctness and native UI are unmeasured; package delivery is pending.
-Next Score Action: Verify frozen execution and exact-archive update installation, then publish and read back assets.
+Last Updated: 2026-11-05 19:53:32 Asia/Seoul
+Score Rationale: All approved release gates passed; capped provisional workflow score, not a user rating or accuracy percentage.
+What Improved: Verified frozen execution, exact-archive update installation, offline cache reuse, independent review and public asset integrity.
+What Remains Unsatisfactory: Real-song correctness, normal GUI handoff and clean-machine execution remain unmeasured; exact harmonic ambiguity persists.
+Next Score Action: Use concrete user feedback and separately authorized validation for future patches; preserve published evidence.
 
 ### Score history
 
 - 2026-11-01 22:47:13 Asia/Seoul — 35 provisional: CQT patch scope approved; implementation proof pending.
 - 2026-11-02 23:14:52 Asia/Seoul — 35 provisional: Explicit automatic-update request incorporated; source and transaction verification pending.
 - 2026-11-03 19:50:20 Asia/Seoul — 45 provisional: Source433, focused31, precision62, uncertainty32, trace11 and actual-file checks passed. Frozen/archive/publication remain.
+- 2026-11-05 19:53:32 Asia/Seoul — 50 provisional: Fresh archive and production updater gates passed; release published and all three assets verified publicly. This is the provisional cap, not an accuracy claim.
 
 ## Progress log
 
@@ -101,3 +102,5 @@ Next Score Action: Verify frozen execution and exact-archive update installation
 - 2026-11-03 19:50:20 Asia/Seoul — Bounded repairs pass: CQT smoothing removes only an already-abstained isolated power alternative with matching immediate harmonic rejections, without crossing gaps or changing known labels. Original gate preserved; harmonic31 now passes. Updater target provenance and JIT cache repaired;29 focused tests pass. All433 headless tests and existing62/32/11 comparisons pass, as do local CQT/FFT full/excerpt workflows. Version0.1.07 metadata and source docs prepared. Independent final review was interrupted by worker service limits after useful reviews; parent completed the final repair review, explicitly recorded instead of claiming independent completion. Proceeding to existing pinned toolchain build and additional actual-archive updater validation under user's release authorization.
 - 2026-11-03 20:02:33 Asia/Seoul — Windows build exited0 and frozen self-test passed: updater archive/tamper, CQT/FFT/edit/reopen/mixer/PDF and native ABI2 parity.17 known optional packaging warnings reviewed. Current Python/test/tool hashes still match the433-test receipt. Source will now be frozen to one clean commit; archive and publication receipts remain external until verified. Keep project records frozen during immutable archive verification; update delivery records after publication, preserving the tag's commit and original failed evidence.
 - 2026-11-03 20:02:33 Asia/Seoul — Pre-ZIP source inventory rejected missing updater modules in the explicit developer-source copy list. Frozen runtime/devsource already contain both and passed diagnostics. Repaired build.ps1 copy list and staged source/build-materials, retaining the failure log. No ZIP existed or was published; runtime Python/test/tool hashes remain unchanged. Freeze a corrected source commit before retrying the unchanged inventory gate.
+- 2026-11-04 21:49:33 Asia/Seoul — Published v0.1.07 from immutable e8142f80151d5d92b05bc6c3e5c091934e63a093 after independent source/release review and exact ZIP verification. Archive contains 5,479 manifest files and 112 source inputs. Production updater installation, installed hidden EXE self-test and offline cache reuse passed. First deeply nested fixture hit Windows path length and failed safely; the identical gates passed in isolated short system temp. ZIP 349,720,420 bytes, SHA-256 c66397312135437b0073448e21771318c1dc40fc1edd262b25b924d5b3b2a69e. Preserve the failed fixture evidence and immutable source QA.
+- 2026-11-05 19:53:32 Asia/Seoul — Unauthenticated GitHub readback matched the published tag and all three assets' local sizes/digests. Completed delivery records in a separate documentation commit; no tag, archive or source behavior changed. GUI, listening, printing, clean-machine and real-song annotated accuracy remain unclaimed.

@@ -8,7 +8,7 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 | 버전 | 상태 | 범위 |
 |---|---|---|
-| `0.1.07` | 소스·실행파일 검증 완료, 독립 ZIP 검증 중 | CQT 배음 오인식 억제, 자동 GitHub 업데이트, 모듈러 편향 점검 |
+| `0.1.07` | 독립 ZIP·자동 설치 검증 완료·개발자 프리릴리스 게시 | CQT 배음 오인식 억제, 자동 GitHub 업데이트, 모듈러 편향 점검 |
 | `0.1.06` | 독립 ZIP 검증 완료·개발자 프리릴리스 게시 | CQT 구성음 근거 보완, 일부 7·9화음 완전5도 생략, 저신호 예외 수정, FFT 기존 배음 억제 유지 |
 | `0.1.05` | 독립 ZIP 검증 완료·개발자 프리릴리스 게시 | 미확정 근거·후보·사유 보존, CQT 제한 재검토, 4096 이벤트 예산, 표시·저장 일치 |
 | `0.1.04` | 독립 ZIP 검증 완료·개발자 프리릴리스 게시 | 분석 종료 장비 잠금 복구, 코드 모드 장비 선택, 50ms CQT 관측·경계·시간 가중 경로 |
@@ -28,6 +28,38 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 | `0.0.03` | 포터블 개발 프리뷰 빌드 완료 | 포터블 개발 ZIP, 한·영 handoff, 로그·빌드 이력, NumPy 코드/보이싱 분석(실험) |
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
+
+## v0.1.07 publication record — 2026-11-05 KST
+
+Published at **2026-11-04 21:49:33 Asia/Seoul**:
+[v0.1.07 developer prerelease](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.07).
+
+- Immutable source/tag commit: `e8142f80151d5d92b05bc6c3e5c091934e63a093`.
+- Fresh archive: 5,479 manifest files and 112 source inputs; exact clean-commit binding, source/receipt
+  hashes, private-path/media/model/JIT-cache exclusions, fonts/licenses, native ABI2 and cold CQT/FFT
+  hidden EXE self-test all passed.
+- ZIP: `ToneMatchTMP-v0.1.07-Windows-x64-Portable-Dev.zip`, **349,720,420 bytes**.
+- ZIP SHA-256: `c66397312135437b0073448e21771318c1dc40fc1edd262b25b924d5b3b2a69e`.
+- The production updater installed this exact ZIP using controlled release transport; the installed
+  EXE passed hidden diagnostics and the verified cache reopened with networking forced offline.
+  Original data remained intact and external Numba caching preserved the installed file inventory.
+- All three public assets (ZIP, SHA256SUMS, ARCHIVE-VERIFICATION) matched local sizes/digests during
+  authenticated publication and independent unauthenticated readback at 2026-11-05 19:53:32 Asia/Seoul.
+- Final independent source review and release-consistency review completed on 2026-11-04 without
+  a publication blocker. This supplements the interrupted pre-build review recorded below.
+
+The first full-install fixture exceeded Windows path length because it nested the test cache inside
+the workspace. The updater correctly declined activation; the failure log was retained. Repeating
+the same archive and unchanged gates in a short isolated system-temp directory passed. The actual
+default update cache's longest staging path for this package was 222 characters. No production
+validation rule was relaxed. The external publisher's stale version assertion was corrected before
+publication; three release receipt/checksum regression tests passed.
+
+Normal-window startup/handoff, listening, physical printing and clean-machine/CUDA checks remain
+untested. No child-health acknowledgement or automatic post-launch-crash rollback is claimed.
+The source QA and packaged documents retain their original build-stage dates; this later documentation
+commit records completed delivery without changing the tag or published assets. Preserve v0.1.06.
+Subsequent fixes use v0.1.08. Install this first updater-enabled version manually once.
 
 ## v0.1.07 source acceptance — 2026-11-03 KST
 

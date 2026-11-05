@@ -1,12 +1,23 @@
 # ToneMatch TMP v0.1.07 — 개발 인수인계 / Developer Handoff
 
-## Current v0.1.07 / 현행 — 2026-11-03 KST
+## Current v0.1.07 / 현행 — 2026-11-05 KST
+
+Published at 2026-11-04 21:49:33 Asia/Seoul:
+[v0.1.07 developer prerelease](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.07).
+The immutable tag points to `e8142f80151d5d92b05bc6c3e5c091934e63a093`.
+Fresh extraction verified 5,479 manifest files and 112 source inputs. Production updater installation
+of the exact ZIP, installed hidden EXE diagnostic and offline cache reuse all passed. Unauthenticated
+public readback on 2026-11-05 matched all three asset sizes and hashes. Final independent source and
+release-consistency reviews completed without a blocker. See BUILD_HISTORY for delivery evidence.
+Normal GUI handoff and clean-machine execution remain untested; successful process creation is not
+a child-health acknowledgement. Recover from a later runtime failure using the original EXE with
+--skip-update. Keep v0.1.06 for rollback; do not replace either published tag or archive.
 
 Source verification passed: guarded433 tests (GUI92 deferred), precision62, harmonics31,
 uncertainty32 and trace11. Frozen self-test also passed, including actual ZIP/tamper diagnostic
-and CQT harmonic/power controls. Archive/publication are separate gates recorded in
-[QA_REPORT_v0.1.07.json](QA_REPORT_v0.1.07.json) and BUILD_HISTORY. Do not infer delivery
-from the source version. Baseline v0.1.06 is immutable at
+and CQT harmonic/power controls. [QA_REPORT_v0.1.07.json](QA_REPORT_v0.1.07.json) preserves the
+source/frozen acceptance state included in the immutable ZIP; the release receipt and later
+BUILD_HISTORY publication record complete those gates. Baseline v0.1.06 is immutable at
 `7563242b054065f8893a6c6e344046e188e0b947`.
 
 CQT only: a >=0.45-second power5 evidence region may abstain when an observed root and at
@@ -34,7 +45,7 @@ prereleases and performs no administrator, service or registry changes.
 Modulo audit found no random modulo reduction; template scores rotate consistently.
 Exact-tie primary ordering is a separate known ambiguity, not calibrated probability.
 No new dependencies, model downloads or user audio uploads were introduced.
-After publication, subsequent patches advance to v0.1.08; never replace released assets.
+Subsequent patches advance to v0.1.08; never replace released assets.
 
 ## Archived v0.1.06 handoff
 
