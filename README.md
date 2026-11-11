@@ -1,4 +1,44 @@
-# ToneMatch TMP 0.1.07
+# ToneMatch TMP 0.1.08
+
+Source reference: 2026-11-09 KST; verification record reviewed on 2026-11-11 KST.
+Unsigned Windows CPU developer prerelease candidate.
+Source and frozen-executable checks pass. Fresh ZIP, updater installation and publication gates remain pending;
+this is not yet a published v0.1.08 release. See [한국어 안내](README_KO.md),
+[v0.1.08 QA](QA_REPORT_v0.1.08.json) and [build history](BUILD_HISTORY.md).
+
+The frozen build completed on 2026-11-10 at 23:05 KST and was verified on 2026-11-11 at 21:31 KST.
+Hidden self-tests pass, including both new music checks and native ABI 2. The build retains 17
+optional/import/platform and deprecation warnings in the same categories as v0.1.07.
+
+## Changed in 0.1.08
+
+- CQT and FFT keep changing observed notes in separate unresolved intervals. Two seconds of C
+  followed by D remains `?`, with each interval's own evidence; neither note becomes a chord.
+  Equivalent note sets still merge, and the existing output limit remains explicit.
+- Left/right chart navigation follows visible bar order after first-bar offset changes, including
+  pickup bars and page boundaries. Source-relative seek and loop behavior are preserved.
+- Recording completion/failure restores controls even while its thread is returning. A queued
+  terminal event must finish before another recording starts, so it cannot retire a newer job.
+- Reopening rejects missing or blank chord symbols before replacing the current result or media
+  link, including invalid original events hidden by manual corrections.
+
+456 guarded headless tests passed in 77.003 seconds; 92 GUI tests remain deferred. Against v0.1.07,
+precision62 retains 76.117 correct / 1.516243 incorrect seconds; harmonic31 retains 38.4 / 3.725.
+Uncertainty32 and trace11 also pass unchanged. These are synthetic checks, not real-song accuracy.
+The local Room 335 full file and 30–90-second excerpt pass CQT/FFT operational checks; full-file
+recognized coverage remains 43.22% / 43.23%, which is not accuracy or a ranking of the methods.
+Whole-mixture analysis, both methods, slash/sus/extensions, manual edits, mixer/WAV and sixteen-bar
+PDF remain. No classification threshold, dependency, native ABI or font choice changed. Actual
+UI/font appearance, audible output, physical printing and real-song ground truth remain untested.
+
+Damaged installed-update caches are safely rejected, but automatic repair by redownloading the same
+version remains deferred and may repeat the download. Use the original EXE with `--skip-update`,
+or extract a complete verified release ZIP into a separate folder. Keep original settings/results and
+older releases. Saved analyses are not rewritten; reanalyze to obtain the new evidence intervals.
+
+## Archived v0.1.07 release record
+
+The following v0.1.07 publication and update instructions describe that preserved release.
 
 Source reference: 2026-11-03 KST. Unsigned Windows CPU developer prerelease.
 Source, local-file, frozen and independent archive verification passed:
@@ -185,7 +225,7 @@ Ambiguous names (e.g. C6/Am7), melody, percussion, harmonics and omitted notes r
 ## Start
 
 Extract the **entire** developer ZIP to a new directory, verify SHA-256, then run
-`ToneMatchTMP-v0.1.07.exe` from the verified release package. Do not move only the EXE.
+`ToneMatchTMP-v0.1.08.exe` once its release package has passed the pending gates above. Do not move only the EXE.
 Choose authorized local media or PC capture, then a range of 3 seconds to 20 minutes;
 end `0` means through the end subject to that cap.
 Full-mix tone analysis isolates guitar; already-guitar audio can skip isolation.
@@ -241,15 +281,17 @@ and rebuild the native DLL with pinned Zig 0.15.2.
 py -3.12 -m venv ..\.venv
 & ..\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 & ..\.venv\Scripts\python.exe tools\build_native.py --zig C:\Tools\zig-0.15.2\zig.exe
-& ..\.venv\Scripts\python.exe -W error tools\verify_headless.py --output .\headless-v0.1.06.json
-& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.1.06.json
-& .\build.ps1 -SkipTests -ZigPath C:\Tools\zig-0.15.2\zig.exe
+& ..\.venv\Scripts\python.exe -W error tools\verify_headless.py --output .\headless-v0.1.08.json
+& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.1.08.json
+& .\build.ps1 -SkipTests -SkipZip -ZigPath C:\Tools\zig-0.15.2\zig.exe
 ```
 
 This no-screen sequence skips a repeated build-time test run only after the guarded headless
 receipt passes. The runner forbids Tk construction and records deferred GUI cases. Full unittest
 discovery and builds without `-SkipTests` include window-creating tests; use them only in a separately
 authorized interactive verification session. Deferred native UI tests are not considered passed.
+`-SkipZip` leaves packaging to the exclusive-creation and fresh-extraction release checks; a build
+alone is not a verified developer ZIP or a published release.
 
 Official Zig 0.15.2 Windows x64 ZIP SHA-256:
 `3a0ed1e8799a2f8ce2a6e6290a9ff22e6906f8227865911fb7ddedc3cc14cb0c`.
@@ -259,7 +301,8 @@ PDF/font, PortAudio loading and native parity without audible output or actual m
 The separate `--stem-self-test-source` / `--stem-self-test-output` CLI checks an already
 cached CPU model, writes redacted JSON and cleans temporary audio.
 
-The current published version is 0.1.07. Subsequent fixes advance to 0.1.08; published releases are immutable.
+The working version is 0.1.08; source and frozen checks pass, while ZIP/updater/publication gates remain
+pending. v0.1.07 remains published. Subsequent fixes use 0.1.09; preserve existing tags and assets.
 Read [handoff](DEVELOPER_HANDOFF_KO_EN.md) and [research](TRANSCRIPTION_RESEARCH_KO.md).
 Application source: MIT. See `THIRD_PARTY_NOTICES.txt`, inventory and `licenses/`.
 Fender, Tone Master, Neural DSP and Quad Cortex are their owners' trademarks;

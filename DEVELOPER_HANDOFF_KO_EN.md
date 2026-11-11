@@ -1,4 +1,63 @@
-# ToneMatch TMP v0.1.07 — 개발 인수인계 / Developer Handoff
+# ToneMatch TMP v0.1.08 — 개발 인수인계 / Developer Handoff
+
+## Current v0.1.08 / 현행 — 2026-11-11 KST
+
+Source reference: 2026-11-09 KST. Source acceptance records were reviewed on 2026-11-10 KST.
+The frozen build completed on 2026-11-10 at 23:05 KST and passed hidden self-tests, including native
+ABI 2. Verification on 2026-11-11 at 21:31 KST confirmed Python source/test/tool hashes still match
+the 456-test receipt. Fresh archive, updater installation and public publication/readback remain
+pending. Do not claim this version is published. Use [v0.1.08 QA](QA_REPORT_v0.1.08.json) and the
+latest BUILD_HISTORY entry; historical release outcomes below are not current acceptance evidence.
+
+1. The shared merger includes the sorted unique observed pitch-class set in unknown-event identity.
+   C followed by D remains unresolved but retains separate local evidence. Equal sets still merge;
+   known-chord identity, classification thresholds, CQT harmonic rejection and FFT extraction are
+   unchanged. More evidence intervals can reach the existing 4096-event budget sooner; omitted
+   detail remains explicit as `output_limit`, never fabricated simultaneous notes or confirmed chords.
+2. Chart navigation uses actual ordered bars, preserving pickup/negative downbeat numbering,
+   relative seeking, loops, page crossings and endpoint clamping. Missing/stale selection starts
+   at the first visible bar. No Tk window was used for these controller regressions.
+3. Recording terminal events retire the job before availability updates. A non-None recording
+   worker still owns its queued terminal event even after the thread stops; do not replace it until
+   consumption. This prevents an old completion from clearing a new recording. Active stop behavior
+   and locks for other operations remain. Keep retirement out of general result rendering.
+4. JSON import requires a nonblank event symbol before result replacement, including original
+   events hidden by manual corrections. Valid legacy, unknown and edited results still reopen;
+   failed import preserves the current result/media link and does not infer a missing chord.
+
+Final guarded source suite: 456 tests pass in 77.003 seconds, zero failures/errors/skips; 92 GUI cases
+are deferred. Comparisons against immutable v0.1.07 (`e8142f80151d5d92b05bc6c3e5c091934e63a093`)
+pass: precision62 correct/incorrect seconds 76.117 / 1.516243, harmonic31 38.4 / 3.725, unchanged.
+Uncertainty32 adds zero newly correct/incorrect recognized seconds; trace11 retains symbol agreement
+`0.9935761046556986`. The new C-to-D synthetic checks cover both methods and evidence persistence
+through edits, restoration, JSON, HTML and PDF. Frozen music diagnostics independently pass
+`uncertain_note_changes_preserved` and `invalid_symbol_rejected`. The build has 17 warnings in the
+same optional collection/import, platform and deprecation categories as v0.1.07; required checks pass.
+
+Local Room 335 full-file (252.6098866 seconds) and 30–90-second workflows pass progress/cancellation,
+unchanged source and edit/reopen/export checks for both methods. Full CQT/FFT coverage is 0.4322 /
+0.4323, with 550 / 358 events and no output truncation. Excerpt coverage is 0.4809 / 0.5051.
+These operational measures are not annotated song accuracy or a method ranking. Never upload or
+package the sample, exports or private paths. No real UI, audible output, physical printing,
+clean-machine or CUDA validation is claimed. GUI font requests remain Malgun Gothic / Arial Narrow;
+the bundled PDF font and native ABI 2 remain unchanged. No dependency or inference model was added.
+
+Deferred updater issue: a damaged installed version is rejected safely, but downloading that same
+version does not repair its existing cache directory and can repeat. Keep the safe fallback intact.
+Recovery is the original EXE with `--skip-update`, or a complete verified newer ZIP extracted into a
+separate folder; preserve settings, results and old releases. Do not claim automated cache repair or
+post-launch health rollback. This patch does not change the updater trust boundary.
+
+Continue by independently binding and verifying the exact ZIP,
+production-updater installation/offline reuse, and public asset hashes. Use exclusive artifact creation
+and preserve existing tags/assets. After v0.1.08 delivery, subsequent patches advance to v0.1.09.
+
+이번 패치는 미확정 관측음 보존, 마디 이동, 녹음 종료·재시작 상태, 잘못된 JSON의 사전 거부를
+보완합니다. 소스·실행파일 검증은 통과했고 ZIP·업데이트 설치·게시는 대기 단계입니다. 전체 음원 분석과
+CQT/FFT·분수/sus/확장화음·수동 수정·믹서·16마디 PDF를 유지하며 실제 곡 정답률 향상을
+주장하지 않습니다. 아래 과거 계약·날짜·해시는 역사로 보존합니다.
+
+## Archived v0.1.07 handoff
 
 ## Current v0.1.07 / 현행 — 2026-11-05 KST
 

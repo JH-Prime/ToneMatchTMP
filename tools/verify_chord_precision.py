@@ -21,6 +21,7 @@ BASELINE_COMMIT = '83e88c10f62f6b174b2f95cf0e68b751a14f4db0'
 BASELINE_COMMITS = {
     'v0.1.05': BASELINE_COMMIT,
     'v0.1.06': '7563242b054065f8893a6c6e344046e188e0b947',
+    'v0.1.07': 'e8142f80151d5d92b05bc6c3e5c091934e63a093',
 }
 SOURCE_FILES = ('voicing.py', 'song_chords.py', 'guitar_shapes.py',
                 'tools/verify_chord_trace.py', 'tools/verify_chord_uncertainty.py',

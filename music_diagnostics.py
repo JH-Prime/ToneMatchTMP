@@ -33,6 +33,19 @@ def run_music_self_test():
               and all(not event['candidate_shapes'] for event in fft_analysis['events']))
     fft_edited = set_correction({'chord_voicing': fft_analysis}, 0, 'Dm9')
     fft_ok = fft_ok and effective_voicing(fft_edited)['events'][0]['symbol'] == 'Dm9'
+    # Distinct single notes must stay unknown while retaining their own evidence.
+    note_axis = np.arange(rate * 2, dtype=np.float64) / rate
+    note_changes = np.concatenate([
+        .2 * np.sin(2 * np.pi * 440 * 2 ** ((note - 69) / 12) * note_axis)
+        for note in (48, 50)])
+    evidence_ok = True
+    for method in ('cqt', 'fft'):
+        changed = analyze_song_chords(np.column_stack((note_changes, -note_changes)), rate, method=method)
+        evidence_ok = evidence_ok and all(row['symbol'] == '?' for row in changed['events'])
+        for seconds, expected in ((1., {0}), (3., {2})):
+            rows = [row for row in changed['events'] if row['start_seconds'] <= seconds < row['end_seconds']]
+            evidence_ok = evidence_ok and len(rows) == 1 and set(
+                rows[0]['evidence']['observed_pitch_classes']) == expected
     # A resonant third partial plus a weak unrelated tone must not be promoted
     # to an independently played fifth. The FFT low-bass gain is deferred.
     frequency = 440 * 2 ** ((36 - 69) / 12)
@@ -90,6 +103,18 @@ def run_music_self_test():
         restored = load_result(root / 'chords.json', 'en')
         reopen_ok = (restored['analysis_kind'] == 'chords' and not restored['recipes']
                      and not restored['features'] and restored['chord_voicing']['analysis_source'] == 'original_mix')
+        invalid_symbol_ok = True
+        for automatic in (analysis, restored['chord_voicing']):
+            invalid = deepcopy(chord_result)
+            invalid['chord_voicing'] = deepcopy(automatic)
+            del invalid['chord_voicing']['events'][0]['symbol']
+            save_json(invalid, root / 'invalid-symbol.json')
+            try:
+                load_result(root / 'invalid-symbol.json')
+            except ValueError:
+                pass
+            else:
+                invalid_symbol_ok = False
         method_ok = restored['chord_voicing']['method_id'] == 'cqt'
         chord_result['chord_voicing'] = fft_analysis
         save_json(chord_result, root / 'fft.json')
@@ -162,6 +187,8 @@ def run_music_self_test():
               "fft": bool(fft_ok), "method_reopen": bool(method_ok),
               "uncertainty_reopen_exports": bool(uncertainty_ok),
               "fft_harmonic_rejection": bool(harmonic_ok), "omitted_fifth_reopen": bool(omitted_ok),
-              "cqt_harmonic_rejection": bool(cqt_harmonic_ok), "cqt_power_preservation": bool(power_ok)}
+              "cqt_harmonic_rejection": bool(cqt_harmonic_ok), "cqt_power_preservation": bool(power_ok),
+              "uncertain_note_changes_preserved": bool(evidence_ok),
+              "invalid_symbol_rejected": bool(invalid_symbol_ok)}
     return {"ok": all(checks.values()), **checks, "audible_output_tested": False,
             "real_song_accuracy_measured": False}

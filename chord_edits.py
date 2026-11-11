@@ -178,7 +178,8 @@ def load_result(path, language='ko'):
                 if key in metadata and type(metadata[key]) not in (int, float):
                     raise ValueError('Invalid chord level')
         for event in analysis.get('events', []):
-            if not isinstance(event.get('symbol', '?'), str) or len(event.get('symbol', '?')) > 32 or event.get('chord_type') not in (*CHORD_INTERVALS, 'unknown'):
+            symbol = event.get('symbol')
+            if not isinstance(symbol, str) or not symbol.strip() or len(symbol) > 32 or event.get('chord_type') not in (*CHORD_INTERVALS, 'unknown'):
                 raise ValueError('Invalid chord event')
             if not 0 <= float(event['start_seconds']) < float(event['end_seconds']) <= duration + .01:
                 raise ValueError('Chord time outside source range')

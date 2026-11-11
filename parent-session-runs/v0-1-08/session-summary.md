@@ -1,0 +1,25 @@
+# v0.1.08 session checkpoint
+
+- Status: Source/frozen accepted; freeze clean source commit and create/verify immutable archive next.
+- Updated: 2026-11-11 21:33:32 Asia/Seoul.
+- Active plan: plan/20261108-223717--work-plan--v0-1-08-evidence-workflow--v01.md.
+- Approval: User said "이어서 해줘" after the explicit four-item scope and ZIP/GitHub publication question.
+- Scope: Unknown observed-note preservation, offset chart navigation, recording terminal-state unlock, missing-symbol JSON rejection; tests/docs/version/build/release.
+- Baseline: clean local/remote main4ae3115; immutable v0.1.07 e8142f8; public3asset sizes/digests match local; no v0.1.08 at discovery.
+- Baseline verification:433headless passed83.017s,92GUI deferred, Tk guard active, no RecursionError. Python3.12.14 recursion1000 unchanged; JSON nesting capped24.
+- Constraints: no UI/screen/window/audio playback, no Room335 upload/package; no inference threshold/dependency/C++ changes; preserve published artifacts.
+- Reproductions: C2s→D2s unknown evidence collapses to C in CQT/FFT; pickup0 Right stays0/negative-offset2 Right jumps4; recording terminal event while thread alive leaves controls disabled; missing known symbol accepted then render KeyError.
+- Deferred finding: corrupted managed update cache redownloads but cannot recover same version; safe original-app fallback retained. Separate future scope.
+- Focused green: evidence6+existing24, controller16, JSON9, expanded music diagnostic1. Red logs retained in work/v108-*.log. No GUI/audio.
+- Version:0.1.08; build/source date2026-11-09. work/ ignored. Frozen checks include uncertain_note_changes_preserved and invalid_symbol_rejected.
+- Interruption: release-helper worker stopped at service limit; partial work/*.py retained and resumed. No Git commit, build or publication yet.
+- Next: pinned-v107 comparison tooling and integrated tests, independent review, docs/QA, build, exclusive ZIP and public delivery.
+- First bounded review repair: stale recording terminal event can clear a newly started recording when the old thread stopped before its queued event drained. Scope app.py recording start/terminal lifecycle and tests/test_device_lifecycle.py only; preserve stop/new-start semantics, prevent replacing a pending terminal job, no UI/audio. Red/green stale-done/error test and all controller tests required, followed by read-only re-review. Evidence/JSON/music source review approved without findings.
+- Repair accepted: pending-worker start guard fixes stale done/error race;17controller tests and independent re-review pass. Source/controller review reports saved work/v108-*-review.md/rereview.md.
+- Final source suite456passed77.003s,92GUIdeferred, all current Python/test/tool hashes match receipt. Synthetic precision62/harmonic31/uncertainty32/trace11 pass against immutablev107. Precision correct76.117/wrong1.516243 and harmonic correct38.4/wrong3.725 unchanged; no new erroneous recognition.
+- Local Room335 silent workflows pass CQT/FFT full252.6099s and60s excerpt; coverage0.4322/0.4323, events550/358. Operational checks only, not annotated accuracy. No media packaged/uploaded.
+- Release-helper8tests pass. Build will use -SkipTests -SkipZip -OutputDir build/v108-prezip to keep build-only checksums separate from exclusive release outputs. Zig path is existing parent work/toolchains/zig-x86_64-windows-0.15.2/zig.exe.
+- QA_REPORT_v0.1.08.json created with source_passed_frozen_pending; no archive or publication claim. Need docs completion, hidden frozen build, final QA/docs, cleancommit, exclusiveZIP, fresharchive/updater/cache verification, tag/push/publication/public-byte readback.
+- 2026-11-10 22:59:29 Asia/Seoul: Six docs and function reference updated; native ABI2 parity passes, frozen build running session95177/log work/v108-build-console.log. Release-helper exact draft asset inventory guard repaired and re-reviewed;10inert tests now pass. No production code changed after456receipt; no tag/publication yet.
+- Build completed2026-11-10 23:05KST; frozen self-test allpass including2newchecks, CQT/FFT/mixer/PDF/update/nativeABI2.17known warnings reviewed. QA now passed for source/frozen, external archive/publication gates pending. Today staged115source inputs/native/PEversion/privacy pass and456receipt hashes remain exact.
+- Next commands after final docs commit: python work/package_v108.py finalize, then verify; do not change source during those gates. Then annotatednewtagv0.1.08, nonforcepush, work/publish_v108.py and work/readback_v108.py. Never overwrite existing release outputs. Postpublication documentation-only commit records delivery while tag stays immutable.

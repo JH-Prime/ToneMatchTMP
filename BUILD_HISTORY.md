@@ -8,6 +8,7 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 | 버전 | 상태 | 범위 |
 |---|---|---|
+| `0.1.08` | 소스·실행파일 검증 완료; 새 ZIP·업데이트 설치·공개 게시 대기 | 시간별 미확정 관측음 보존, 첫 마디 보정 후 이동, 녹음 종료·재시작 상태, JSON 기호 검증 |
 | `0.1.07` | 독립 ZIP·자동 설치 검증 완료·개발자 프리릴리스 게시 | CQT 배음 오인식 억제, 자동 GitHub 업데이트, 모듈러 편향 점검 |
 | `0.1.06` | 독립 ZIP 검증 완료·개발자 프리릴리스 게시 | CQT 구성음 근거 보완, 일부 7·9화음 완전5도 생략, 저신호 예외 수정, FFT 기존 배음 억제 유지 |
 | `0.1.05` | 독립 ZIP 검증 완료·개발자 프리릴리스 게시 | 미확정 근거·후보·사유 보존, CQT 제한 재검토, 4096 이벤트 예산, 표시·저장 일치 |
@@ -28,6 +29,59 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 | `0.0.03` | 포터블 개발 프리뷰 빌드 완료 | 포터블 개발 ZIP, 한·영 handoff, 로그·빌드 이력, NumPy 코드/보이싱 분석(실험) |
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
+
+## v0.1.08 frozen acceptance — 2026-11-11 KST
+
+The frozen build completed on **2026-11-10 at 23:05 KST**; verification was confirmed on
+**2026-11-11 at 21:31 KST**. All required hidden self-tests pass, including native ABI 2 and
+`uncertain_note_changes_preserved` / `invalid_symbol_rejected`. Python source, test and tool hashes
+remain identical to the 456-test receipt; the source reference remains 2026-11-09 KST.
+
+The build retains **17 warning/deprecation entries**, excluding the informational warnings-file line,
+in the same optional collection/import, platform and deprecation categories as v0.1.07.
+Fresh ZIP creation/verification, exact-ZIP updater installation/offline reuse, publication and public
+digest readback remain pending. No v0.1.08 publication or archive hash is claimed here.
+
+The following source snapshot predates frozen acceptance; its then-pending frozen gate is superseded
+by this record. Historical source metrics and prior release records are retained below.
+
+## v0.1.08 source acceptance — 2026-11-10 KST
+
+Source reference: 2026-11-09 KST. Acceptance receipts were reviewed on 2026-11-10 KST.
+The frozen executable, independent archive, exact-ZIP updater installation/offline reuse, publication
+and public digest readback remain pending. No v0.1.08 publication or artifact hash is claimed here.
+
+- Both frontends retain changing unknown-note evidence in separate intervals while keeping `?`.
+  Equivalent sets still merge; known labels and classification thresholds remain unchanged. The
+  existing 4096-event limit still marks discarded detail as `output_limit`.
+- Chart keyboard movement follows actual bars after positive/negative first-downbeat offsets.
+- Recording success/error retires the completed job before control refresh. Review reproduced a
+  pending-terminal restart race; the bounded repair blocks replacement until that event is consumed,
+  preserving the new worker's stop/lock state. Re-review accepted the repair.
+- Invalid missing/blank JSON symbols are rejected before replacing current results/media links,
+  even when manual corrections hide the original event.
+- Final guarded headless suite: **456 tests, 77.003 seconds, zero failures/errors/skips**;
+  **92 GUI-containing tests deferred**. Recursion limit remains unchanged.
+- Immutable comparison baseline: v0.1.07, `e8142f80151d5d92b05bc6c3e5c091934e63a093`.
+  Precision62 retains **76.117 correct / 1.516243 incorrect seconds**; harmonic31 retains
+  **38.4 / 3.725 seconds**, with zero wrong unknown-candidate seconds. Uncertainty32 passes with
+  zero newly correct/incorrect recognized seconds. Trace11 retains `0.9935761046556986` agreement.
+  These are synthetic controls, not measured actual-song accuracy.
+- Local Room 335 full252.6098866s and30–90s CQT/FFT checks pass progress/cancellation, original
+  preservation, edit/reopen and HTML/PDF export. Full coverage remains **0.4322 / 0.4323**;
+  event counts are **550 / 358**, with no truncation. Excerpt coverage is **0.4809 / 0.5051**.
+  No ground-truth annotation, method superiority or speedup claim follows from these results.
+- Source music diagnostics include `uncertain_note_changes_preserved` and `invalid_symbol_rejected`.
+  Frozen execution must independently pass those checks. No new dependency, model or native ABI.
+
+Deferred updater finding: a damaged installed-version directory fails integrity checking safely,
+but redownloading the same version does not repair that directory and may repeat. The updater is
+unchanged in this patch. Use the original EXE with `--skip-update`, or extract a complete verified
+newer ZIP separately; retain settings/results and old releases. Automatic repair is not claimed.
+
+Native UI/font appearance, listening, physical printing, clean-machine and CUDA checks remain
+unperformed. The private sample and generated audio are excluded from publication. See
+QA_REPORT_v0.1.08.json for gate receipts; subsequent fixes use v0.1.09. Preserve all prior hashes/assets.
 
 ## v0.1.07 publication record — 2026-11-05 KST
 

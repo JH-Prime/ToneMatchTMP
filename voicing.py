@@ -589,7 +589,11 @@ def _merge_events(windows: list[dict], hop_seconds: float, window_seconds: float
     def identity(item):
         label = (item['root_pc'], item['chord_type'], item['symbol'])
         if item['chord_type'] == 'unknown':
-            return label + (item.get('evidence', {}).get('uncertainty_reason'),
+            evidence = item.get('evidence', {})
+            # A question mark does not make changing note evidence equivalent.
+            # Keep its time-local sets separate instead of losing later notes.
+            return label + (evidence.get('uncertainty_reason'),
+                            tuple(sorted(set(evidence.get('observed_pitch_classes', ())))),
                             tuple(sorted(row['symbol'] for row in item.get('alternatives', ()))))
         return label
     for index in range(1, len(windows) + 1):

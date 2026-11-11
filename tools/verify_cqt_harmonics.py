@@ -12,6 +12,10 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE_COMMIT = '7563242b054065f8893a6c6e344046e188e0b947'
+BASELINE_COMMITS = {
+    'v0.1.06': BASELINE_COMMIT,
+    'v0.1.07': 'e8142f80151d5d92b05bc6c3e5c091934e63a093',
+}
 SOURCE_FILES = ('voicing.py', 'song_chords.py', 'guitar_shapes.py',
                 'tests/test_cqt_harmonics.py', 'tools/verify_cqt_harmonics.py',
                 'tools/verify_chord_precision.py', 'tools/verify_chord_uncertainty.py',
@@ -76,14 +80,16 @@ def fixtures():
     return cases
 
 
-def compare():
+def compare(baseline_ref='v0.1.06'):
+    if baseline_ref not in BASELINE_COMMITS:
+        raise ValueError('Unsupported harmonic baseline')
     before = source_hashes()
     if before != IMPORT_HASHES:
         raise RuntimeError('Source changed after import; restart comparison')
-    commit = subprocess.check_output(['git', 'rev-parse', '--verify', 'v0.1.06^{commit}'],
+    commit = subprocess.check_output(['git', 'rev-parse', '--verify', baseline_ref + '^{commit}'],
                                      cwd=ROOT, text=True).strip()
-    if commit != BASELINE_COMMIT:
-        raise ValueError('Harmonic baseline must be immutable v0.1.06')
+    if commit != BASELINE_COMMITS[baseline_ref]:
+        raise ValueError(f'Harmonic baseline must resolve to immutable {baseline_ref} source')
     baseline_hashes = {name: hashlib.sha256(subprocess.check_output(
         ['git', 'show', f'{commit}:{name}'], cwd=ROOT)).hexdigest()
         for name in ('voicing.py', 'song_chords.py', 'guitar_shapes.py')}
@@ -129,11 +135,17 @@ def compare():
             'unknown_candidate_negative_seconds', 'elapsed_seconds')
     aggregate = {name: {key: round(sum(row[name][key] for row in rows), 6) for key in keys}
                  for name in ('baseline', 'current')}
-    if aggregate['current']['incorrect_recognized_seconds'] >= aggregate['baseline']['incorrect_recognized_seconds']:
+    wrong_before = aggregate['baseline']['incorrect_recognized_seconds']
+    wrong_after = aggregate['current']['incorrect_recognized_seconds']
+    # The original harmonic patch must improve v0.1.06. Later maintenance
+    # comparisons protect that accepted improvement without demanding a new one.
+    if baseline_ref == 'v0.1.06' and wrong_after >= wrong_before:
         failures.append('No false-recognition improvement')
+    elif wrong_after > wrong_before + .001:
+        failures.append('False-recognition regressed')
     return {'schema': 'tonematch-cqt-harmonics-comparison/v1',
             'created': datetime.now(timezone.utc).astimezone(timezone(timedelta(hours=9))).isoformat(),
-            'baseline_ref': 'v0.1.06', 'baseline_commit': commit,
+            'baseline_ref': baseline_ref, 'baseline_commit': commit,
             'baseline_source_sha256': baseline_hashes, 'source_sha256_before': before,
             'source_sha256_after': after, 'method': 'cqt', 'case_count': len(rows),
             'scope': 'Deterministic paired development and transposed controls; not real-song accuracy',
@@ -145,9 +157,10 @@ def compare():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--baseline-ref', default='v0.1.06')
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
-    report = compare()
+    report = compare(args.baseline_ref)
     text = json.dumps(report, ensure_ascii=False, indent=2, allow_nan=False)
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)

@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import Mock, patch
 
 from test_chord_chart_ui import chart_result
 from chord_chart import build_chord_chart
@@ -15,6 +16,47 @@ from report import save_html
 
 class ChordEditTests(unittest.TestCase):
     """확장화음·역위·미확정·복원·파일 입력을 실제 모델로 검사한다."""
+
+    def test_missing_or_empty_symbols_are_rejected_even_when_corrected(self):
+        """필수 표시 기호가 없는 원본은 수동 수정으로 가려져도 수락하지 않는다."""
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'invalid.json'
+            for index in (0, 2):  # Known and unknown automatic observations.
+                for corrected in (False, True):
+                    for symbol in (None, '', '   '):
+                        result = chart_result('original_mix')
+                        if corrected:
+                            result = set_correction(result, index, 'Dm9')
+                        event = result['chord_voicing']['events'][index]
+                        if symbol is None:
+                            del event['symbol']
+                        else:
+                            event['symbol'] = symbol
+                        path.write_text(json.dumps(result), encoding='utf-8')
+                        with self.subTest(index=index, corrected=corrected, symbol=symbol):
+                            with self.assertRaisesRegex(ValueError, 'Invalid chord event'):
+                                load_result(path)
+
+    def test_open_missing_symbol_keeps_current_result_and_media_link(self):
+        """검증 실패는 기존 결과·원본 연결을 바꾸거나 잘못된 결과를 렌더링하지 않는다."""
+        from app import ToneMatchApp
+        result = chart_result('original_mix')
+        invalid = deepcopy(result)
+        del invalid['chord_voicing']['events'][0]['symbol']
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'invalid.json'
+            path.write_text(json.dumps(invalid), encoding='utf-8')
+            view = Mock(result=result, language='ko', _analysis_source_path='original.wav')
+            view._can_play_audio.return_value = True
+            view._suspend_playback.return_value = True
+            with patch('app.filedialog.askopenfilename', return_value=str(path)), \
+                    patch('app.messagebox.showerror') as error:
+                ToneMatchApp._open_result(view)
+            self.assertIs(view.result, result)
+            self.assertEqual(view._analysis_source_path, 'original.wav')
+            view.playback.clear.assert_not_called()
+            view._show_result.assert_not_called()
+            error.assert_called_once()
 
     def test_malformed_evidence_is_rejected_before_rendering(self):
         """다시 연 파일의 잘못된 근거·후보는 화면을 바꾸기 전에 거절한다."""

@@ -1184,7 +1184,8 @@ class ToneMatchApp:
         """키보드 좌우로 마디를 선택해 마우스 없이 탐색·반복할 수 있게 한다."""
         bars = [bar for page in self.chart_data.get('pages', []) for bar in page['bars']]
         if bars:
-            current = self.selected_chart_bar['number'] - 1 if self.selected_chart_bar else -1
+            current = next((index for index, bar in enumerate(bars)
+                            if bar == self.selected_chart_bar), -1)
             index = max(0, min(len(bars) - 1, current + step))
             self.chart_page_index = index // 16
             self._select_chart_bar(bars[index])
@@ -2827,10 +2828,13 @@ class ToneMatchApp:
         """현재 상태에 따라 PC 재생음 녹음을 시작하거나 중지 요청을 보낸다."""
         if not self._suspend_playback():
             return
-        if self.record_worker and self.record_worker.is_alive():
-            self.record_stop_event.set()
-            self.status_var.set(tr("status.recording_stopped", self.language))
-            self.record_button.configure(state="disabled")
+        if self.record_worker is not None:
+            # A stopped thread still owns its queued terminal event. Do not
+            # replace it with a new recording before that event is consumed.
+            if self.record_worker.is_alive():
+                self.record_stop_event.set()
+                self.status_var.set(tr("status.recording_stopped", self.language))
+                self.record_button.configure(state="disabled")
             return
         if (
             (self.worker and self.worker.is_alive())
@@ -3434,8 +3438,10 @@ class ToneMatchApp:
                     self.status_var.set(event[3])
                     self.progress_var.set(min(100.0, event[1] / max(event[2], 1.0) * 100.0))
                 elif event[0] == "record_done":
+                    self.record_worker = None
                     self._recording_completed(event[1], event[2])
                 elif event[0] == "record_error":
+                    self.record_worker = None
                     self._recording_failed(event[1], event[2])
                 elif event[0] == "stem_progress":
                     value = float(event[1])

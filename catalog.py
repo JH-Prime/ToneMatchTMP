@@ -8,17 +8,35 @@
 from __future__ import annotations
 
 
-APP_VERSION = "0.1.07"
+APP_VERSION = "0.1.08"
 TARGET_FIRMWARE = "1.8.58"
 MODEL_GUIDE_REVISION = "Rev. J (2026-07)"
-BUILD_DATE = "2026-11-03"
+BUILD_DATE = "2026-11-09"
 
 
 # 앱 내부의 변경 기록 화면과 배포 문서가 함께 사용하는 단일 원본이다.
 # 기능 버전 0.1.01 이후 수정 릴리스는 0.1.02부터 올리며 공개 산출물을 덮어쓰지 않는다.
 CHANGELOG: list[dict] = [
     {
-        "version": "0.1.07", "date": BUILD_DATE,
+        "version": "0.1.08", "date": BUILD_DATE,
+        "status": "개발자 프리릴리스", "status_en": "Developer prerelease",
+        "changes": [
+            "CQT·FFT 미확정 구간에서 서로 다른 관측음의 근거를 시간별로 보존",
+            "첫 마디 위치를 조정한 코드표의 좌우 탐색과 페이지 이동 수정",
+            "녹음 완료·오류 직후 장비·분석·언어 선택 잠금 해제",
+            "필수 코드명이 빠진 JSON은 기존 결과를 교체하기 전에 거부",
+        ],
+        "changes_en": [
+            "Preserve changing observed notes within unknown CQT and FFT regions",
+            "Correct chart arrow navigation and page changes with adjusted first downbeats",
+            "Release device, analysis and language controls at recording completion or failure",
+            "Reject JSON missing required chord symbols before replacing the current result",
+        ],
+        "known_issues": ["합성 회귀 검사이며 실제 곡 정답률은 미측정", "화면 조작·실청·실제 인쇄 미검증", "손상된 업데이트 캐시는 수동 복구가 필요할 수 있음"],
+        "known_issues_en": ["Synthetic regressions are not measured real-song accuracy", "Native interaction, listening and physical printing untested", "Damaged update caches may require manual recovery"],
+    },
+    {
+        "version": "0.1.07", "date": "2026-11-03",
         "status": "개발자 프리릴리스", "status_en": "Developer prerelease",
         "changes": [
             "EXE 시작 시 GitHub의 더 높은 공개 버전을 자동 다운로드·검증 후 실행; 취소·실패 시 기존 버전 유지",

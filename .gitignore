@@ -33,6 +33,7 @@ build/
 dist/
 release/
 data/
+work/
 captures/
 *.log
 *.zip

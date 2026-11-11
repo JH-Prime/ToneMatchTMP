@@ -12,6 +12,8 @@ class MusicDiagnosticsTests(unittest.TestCase):
         self.assertTrue(result['cqt_harmonic_rejection'])
         self.assertTrue(result['cqt_power_preservation'])
         self.assertTrue(result['omitted_fifth_reopen'])
+        self.assertTrue(result['uncertain_note_changes_preserved'])
+        self.assertTrue(result['invalid_symbol_rejected'])
         self.assertTrue(result["ok"], result)
         for name in ("cqt", "manual_edit", "pcm_reader", "mixer_export", "pdf_font", "portaudio_runtime",
                      "qc_catalog", "qc_recipes", "chords_only_reopen", "cqt_detuned", "fft", "method_reopen"):

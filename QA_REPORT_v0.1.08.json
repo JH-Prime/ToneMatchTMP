@@ -1,0 +1,383 @@
+{
+  "schema": "tonematch-qa/v1",
+  "app_version": "0.1.08",
+  "source_reference_date": "2026-11-09",
+  "build_date": "2026-11-10",
+  "tested_at": "2026-11-11T21:32:42.334576+09:00",
+  "status": "passed",
+  "scope": "Unknown note evidence preservation; offset chart navigation; recording terminal lifecycle; required JSON symbol validation.",
+  "checks": {
+    "headless_suite": {
+      "ok": true,
+      "tests": 456,
+      "seconds": 77.003,
+      "warnings_as_errors": true,
+      "tk_creation_guard": true,
+      "deferred_gui_tests": 92,
+      "receipt": "v108-headless-tests.json"
+    },
+    "precision_comparison": {
+      "ok": true,
+      "cases": 62,
+      "baseline_ref": "v0.1.07",
+      "baseline_commit": "e8142f80151d5d92b05bc6c3e5c091934e63a093",
+      "aggregate": {
+        "baseline": {
+          "correct_recognized_seconds": 76.117,
+          "incorrect_recognized_seconds": 1.516243,
+          "scored_unknown_seconds": 94.2,
+          "root_correct_seconds": 76.450333,
+          "triad_correct_seconds": 76.450333,
+          "bass_correct_seconds": 76.720311,
+          "scored_seconds": 171.833242,
+          "chord_truth_seconds": 85.433242,
+          "elapsed_seconds": 13.05
+        },
+        "current": {
+          "correct_recognized_seconds": 76.117,
+          "incorrect_recognized_seconds": 1.516243,
+          "scored_unknown_seconds": 94.2,
+          "root_correct_seconds": 76.450333,
+          "triad_correct_seconds": 76.450333,
+          "bass_correct_seconds": 76.720311,
+          "scored_seconds": 171.833242,
+          "chord_truth_seconds": 85.433242,
+          "elapsed_seconds": 12.8343
+        }
+      },
+      "incorrect_newly_recognized_seconds": 0.0,
+      "receipt": "v108-precision-comparison.json"
+    },
+    "harmonic_comparison": {
+      "ok": true,
+      "cases": 31,
+      "baseline_ref": "v0.1.07",
+      "aggregate": {
+        "baseline": {
+          "correct_recognized_seconds": 38.4,
+          "incorrect_recognized_seconds": 3.725,
+          "scored_unknown_seconds": 32.275,
+          "unknown_candidate_negative_seconds": 0.0,
+          "elapsed_seconds": 15.897171
+        },
+        "current": {
+          "correct_recognized_seconds": 38.4,
+          "incorrect_recognized_seconds": 3.725,
+          "scored_unknown_seconds": 32.275,
+          "unknown_candidate_negative_seconds": 0.0,
+          "elapsed_seconds": 15.622165
+        }
+      },
+      "receipt": "v108-cqt-comparison.json"
+    },
+    "uncertainty_comparison": {
+      "ok": true,
+      "cases": 32,
+      "baseline_ref": "v0.1.07",
+      "incorrect_newly_recognized_seconds": 0.0,
+      "receipt": "v108-uncertainty-comparison.json"
+    },
+    "trace_comparison": {
+      "ok": true,
+      "cases": 11,
+      "baseline_ref": "v0.1.07",
+      "agreement": {
+        "baseline": 0.9935761046556986,
+        "current": 0.9935761046556986
+      },
+      "decoder_legacy_objective_preserved": true,
+      "receipt": "v108-chord-trace-comparison.json"
+    },
+    "new_regressions": {
+      "uncertain_evidence_tests": 6,
+      "chart_navigation_tests": 5,
+      "recording_lifecycle_tests": 4,
+      "json_symbol_tests": 2,
+      "comparison_baseline_tests": 6,
+      "known_classifier_unchanged": true,
+      "fft_peak_extraction_unchanged": true,
+      "event_limit_preserved": 4096,
+      "failing_tests_recorded_before_repairs": true
+    },
+    "actual_chords": {
+      "ok": true,
+      "methods": [
+        "cqt",
+        "fft"
+      ],
+      "source_unchanged": true,
+      "progress_cancel": true,
+      "immediate_edit_reopen_html_pdf": true,
+      "coverage_is_accuracy": false,
+      "checks": {
+        "cqt": [
+          {
+            "start_seconds": 0,
+            "duration_seconds": 252.60988662131518,
+            "elapsed_seconds": 27.997,
+            "event_count": 550,
+            "tonal_coverage": 0.4322,
+            "diagnostics": {
+              "status": "detected",
+              "reason": "detected",
+              "input_rms_dbfs": -12.517,
+              "analyzed_frame_count": 5056,
+              "active_frame_count": 5051,
+              "reliable_frame_count": 2185,
+              "unknown_frame_count": 2871,
+              "event_count_before_limit": 550,
+              "events_truncated": false,
+              "max_events": 4096,
+              "timeline_limit_policy": "omitted_candidates_become_unknown_without_time_gaps",
+              "score_semantics": "heuristic_evidence_not_accuracy_probability",
+              "chord_template_count": 41,
+              "cqt_bins_per_octave": 36,
+              "pitch_range_midi": [
+                24,
+                107
+              ],
+              "tuning_cents": 0.0,
+              "tuning_status": "estimated",
+              "tuning_policy": "bounded_12s_pitch_peak_consensus_55pct_with_zero_fallback",
+              "channel_policy": "channel_magnitude_rms_no_phase_cancellation",
+              "temporal_policy": "duration_weighted_locally_supported_candidates_with_transition_cost",
+              "observation_window_seconds": 0.6,
+              "observation_hop_seconds": 0.05,
+              "cqt_batch_observations": 120,
+              "boundary_policy": "normalized_stft_changes_bound_cqt_evidence_no_audio_upsampling",
+              "cqt_frame_hop_seconds": 0.023219954648526078,
+              "reanalysis_policy": "two_bounded_widths_agree_with_original_candidate_and_temporal_support",
+              "reanalysis_window_seconds": [
+                0.3,
+                1.0
+              ],
+              "reanalysis_attempted_frame_count": 7,
+              "reanalysis_recovered_frame_count": 0,
+              "uncertain_candidate_frame_count": 23
+            },
+            "progress_updates": 45,
+            "progress_monotonic": true,
+            "uncertain_candidate_seconds": 1.15,
+            "unknown_without_candidates_seconds": 142.259,
+            "unknown_details_roundtrip": true,
+            "json_edit_reopen_html_pdf": true
+          },
+          {
+            "start_seconds": 30,
+            "duration_seconds": 60.0,
+            "elapsed_seconds": 5.142,
+            "event_count": 155,
+            "tonal_coverage": 0.4809,
+            "diagnostics": {
+              "status": "detected",
+              "reason": "detected",
+              "input_rms_dbfs": -12.533,
+              "analyzed_frame_count": 1202,
+              "active_frame_count": 1202,
+              "reliable_frame_count": 578,
+              "unknown_frame_count": 624,
+              "event_count_before_limit": 155,
+              "events_truncated": false,
+              "max_events": 4096,
+              "timeline_limit_policy": "omitted_candidates_become_unknown_without_time_gaps",
+              "score_semantics": "heuristic_evidence_not_accuracy_probability",
+              "chord_template_count": 41,
+              "cqt_bins_per_octave": 36,
+              "pitch_range_midi": [
+                24,
+                107
+              ],
+              "tuning_cents": 0.0,
+              "tuning_status": "diffuse_pitch_peaks",
+              "tuning_policy": "bounded_12s_pitch_peak_consensus_55pct_with_zero_fallback",
+              "channel_policy": "channel_magnitude_rms_no_phase_cancellation",
+              "temporal_policy": "duration_weighted_locally_supported_candidates_with_transition_cost",
+              "observation_window_seconds": 0.6,
+              "observation_hop_seconds": 0.05,
+              "cqt_batch_observations": 120,
+              "boundary_policy": "normalized_stft_changes_bound_cqt_evidence_no_audio_upsampling",
+              "cqt_frame_hop_seconds": 0.023219954648526078,
+              "reanalysis_policy": "two_bounded_widths_agree_with_original_candidate_and_temporal_support",
+              "reanalysis_window_seconds": [
+                0.3,
+                1.0
+              ],
+              "reanalysis_attempted_frame_count": 0,
+              "reanalysis_recovered_frame_count": 0,
+              "uncertain_candidate_frame_count": 8
+            },
+            "progress_updates": 13,
+            "progress_monotonic": true,
+            "uncertain_candidate_seconds": 0.4,
+            "unknown_without_candidates_seconds": 30.761,
+            "unknown_details_roundtrip": true,
+            "json_edit_reopen_html_pdf": true
+          }
+        ],
+        "fft": [
+          {
+            "start_seconds": 0,
+            "duration_seconds": 252.60988662131518,
+            "elapsed_seconds": 4.728,
+            "event_count": 358,
+            "tonal_coverage": 0.4323,
+            "diagnostics": {
+              "status": "detected",
+              "reason": "detected",
+              "input_rms_dbfs": -12.517,
+              "input_peak_dbfs": 0.0,
+              "input_level": "normal",
+              "analyzed_frame_count": 421,
+              "active_frame_count": 421,
+              "polyphonic_frame_count": 418,
+              "raw_candidate_frame_count": 383,
+              "reliable_frame_count": 182,
+              "unknown_frame_count": 239,
+              "channel_policy": "first_two_channels_rms_spectrum_no_phase_cancellation",
+              "tuning_reference_hz": 440.0,
+              "event_count_before_limit": 358,
+              "events_truncated": false,
+              "max_events": 4096,
+              "temporal_policy": "absolute_local_evidence_candidates_pruned_for_adjacent_support_before_path_selection",
+              "timeline_limit_policy": "omitted_candidates_become_unknown_without_time_gaps",
+              "chord_template_count": 41,
+              "template_tone_policy": "selected_seventh_ninth_perfect_fifth_optional_all_other_tones_required",
+              "ambiguous_event_count": 270,
+              "score_semantics": "heuristic_evidence_not_accuracy_probability"
+            },
+            "progress_updates": 424,
+            "progress_monotonic": true,
+            "uncertain_candidate_seconds": 122.1,
+            "unknown_without_candidates_seconds": 21.6,
+            "unknown_details_roundtrip": true,
+            "json_edit_reopen_html_pdf": true
+          },
+          {
+            "start_seconds": 30,
+            "duration_seconds": 60.0,
+            "elapsed_seconds": 1.102,
+            "event_count": 80,
+            "tonal_coverage": 0.5051,
+            "diagnostics": {
+              "status": "detected",
+              "reason": "detected",
+              "input_rms_dbfs": -12.533,
+              "input_peak_dbfs": 0.0,
+              "input_level": "normal",
+              "analyzed_frame_count": 99,
+              "active_frame_count": 99,
+              "polyphonic_frame_count": 99,
+              "raw_candidate_frame_count": 93,
+              "reliable_frame_count": 50,
+              "unknown_frame_count": 49,
+              "channel_policy": "first_two_channels_rms_spectrum_no_phase_cancellation",
+              "tuning_reference_hz": 440.0,
+              "event_count_before_limit": 80,
+              "events_truncated": false,
+              "max_events": 4096,
+              "temporal_policy": "absolute_local_evidence_candidates_pruned_for_adjacent_support_before_path_selection",
+              "timeline_limit_policy": "omitted_candidates_become_unknown_without_time_gaps",
+              "chord_template_count": 41,
+              "template_tone_policy": "selected_seventh_ninth_perfect_fifth_optional_all_other_tones_required",
+              "ambiguous_event_count": 60,
+              "score_semantics": "heuristic_evidence_not_accuracy_probability"
+            },
+            "progress_updates": 102,
+            "progress_monotonic": true,
+            "uncertain_candidate_seconds": 26.1,
+            "unknown_without_candidates_seconds": 3.6,
+            "unknown_details_roundtrip": true,
+            "json_edit_reopen_html_pdf": true
+          }
+        ]
+      },
+      "receipts": [
+        "v108-actual-cqt.json",
+        "v108-actual-fft.json"
+      ]
+    },
+    "review": {
+      "independent_source_review": true,
+      "recording_race_found_and_repaired": true,
+      "independent_controller_rereview": true,
+      "notes": "Headless source/controller review; visual interaction remains untested."
+    },
+    "release_helper_regressions": {
+      "ok": true,
+      "tests": 10,
+      "no_network_or_gui": true
+    },
+    "fresh_archive_verification": {
+      "status": "external_release_gate",
+      "required_before_publication": true,
+      "report_asset": "ToneMatchTMP-v0.1.08-ARCHIVE-VERIFICATION.json"
+    },
+    "publication": {
+      "status": "external_release_gate",
+      "requires_verified_archive_and_remote_asset_digests": true
+    },
+    "frozen_self_test": {
+      "status": "passed",
+      "ok": true,
+      "cqt": true,
+      "manual_edit": true,
+      "pcm_reader": true,
+      "mixer_export": true,
+      "pdf_font": true,
+      "portaudio_runtime": true,
+      "qc_catalog": true,
+      "qc_recipes": true,
+      "chords_only_reopen": true,
+      "cqt_detuned": true,
+      "fft": true,
+      "method_reopen": true,
+      "uncertainty_reopen_exports": true,
+      "fft_harmonic_rejection": true,
+      "omitted_fifth_reopen": true,
+      "cqt_harmonic_rejection": true,
+      "cqt_power_preservation": true,
+      "uncertain_note_changes_preserved": true,
+      "invalid_symbol_rejected": true,
+      "audible_output_tested": false,
+      "real_song_accuracy_measured": false,
+      "auto_update": {
+        "ok": true,
+        "version_order": true,
+        "address_rejection": true,
+        "path_rejection": true,
+        "archive_verified": true,
+        "tamper_rejected": true,
+        "network_used": false,
+        "process_launched": false
+      },
+      "cpp_abi": 2,
+      "cpp_parity": true,
+      "float32_parity": true
+    },
+    "packaging_warnings": {
+      "count": 17,
+      "scope": "Same optional collector/import, Linux-only libgomp, Numba TBB and torch deprecation categories as v0.1.07; required frozen workflows pass",
+      "categories": {
+        "non_package_collectors": 4,
+        "optional_tensorboard": 1,
+        "optional_hidden_imports": 4,
+        "linux_libgomp": 1,
+        "numba_tbb": 1,
+        "torch_deprecations": 6
+      }
+    }
+  },
+  "limitations": {
+    "real_song_accuracy_measured": false,
+    "synthetic_false_positives_remain": true,
+    "code_signed": false,
+    "native_click_and_visual_tested": false,
+    "audible_output_tested": false,
+    "physical_printing_tested": false,
+    "clean_machine_tested": false,
+    "cuda_tested": false,
+    "new_dependency": false,
+    "new_cpp_abi": false,
+    "damaged_updater_cache_recovery_deferred": true
+  }
+}
