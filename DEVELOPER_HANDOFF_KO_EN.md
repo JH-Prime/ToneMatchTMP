@@ -2,12 +2,14 @@
 
 ## Current v0.1.08 / 현행 — 2026-11-11 KST
 
-Source reference: 2026-11-09 KST. Source acceptance records were reviewed on 2026-11-10 KST.
-The frozen build completed on 2026-11-10 at 23:05 KST and passed hidden self-tests, including native
-ABI 2. Verification on 2026-11-11 at 21:31 KST confirmed Python source/test/tool hashes still match
-the 456-test receipt. Fresh archive, updater installation and public publication/readback remain
-pending. Do not claim this version is published. Use [v0.1.08 QA](QA_REPORT_v0.1.08.json) and the
-latest BUILD_HISTORY entry; historical release outcomes below are not current acceptance evidence.
+Source reference: 2026-11-09 KST. [Developer prerelease](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.08) published at **2026-11-11 21:44:09 KST**.
+Source/frozen, fresh archive, exact-ZIP updater installation and offline reuse gates pass.
+All three public assets passed unauthenticated actual-byte verification at **2026-11-11 21:45:22 KST**.
+ZIP: 349753311 bytes; 5482 manifest files; 115 verified source inputs.
+Immutable source/tag commit: `b829b446f1aef52a552927e7a022bce9639e9941`; ZIP SHA-256: `d0de3a7d09db5b51eb379d1387439fa57373da54da428bf5481c6371e94002da`.
+[QA](QA_REPORT_v0.1.08.json) remains the immutable source/frozen snapshot in the release.
+External archive/public receipts and this later documentation-only commit record completed delivery;
+do not rewrite the source, tag, ZIP, QA or historical release records.
 
 1. The shared merger includes the sorted unique observed pitch-class set in unknown-event identity.
    C followed by D remains unresolved but retains separate local evidence. Equal sets still merge;
@@ -48,12 +50,11 @@ Recovery is the original EXE with `--skip-update`, or a complete verified newer 
 separate folder; preserve settings, results and old releases. Do not claim automated cache repair or
 post-launch health rollback. This patch does not change the updater trust boundary.
 
-Continue by independently binding and verifying the exact ZIP,
-production-updater installation/offline reuse, and public asset hashes. Use exclusive artifact creation
-and preserve existing tags/assets. After v0.1.08 delivery, subsequent patches advance to v0.1.09.
+Exact-ZIP verification, production-updater installation/offline reuse and public asset byte hashes
+are accepted. Preserve all existing tags/assets and the QA snapshot. Subsequent patches use v0.1.09.
 
 이번 패치는 미확정 관측음 보존, 마디 이동, 녹음 종료·재시작 상태, 잘못된 JSON의 사전 거부를
-보완합니다. 소스·실행파일 검증은 통과했고 ZIP·업데이트 설치·게시는 대기 단계입니다. 전체 음원 분석과
+보완합니다. 소스·실행파일·ZIP·업데이트 설치·게시·공개 파일 검증을 완료했습니다. 전체 음원 분석과
 CQT/FFT·분수/sus/확장화음·수동 수정·믹서·16마디 PDF를 유지하며 실제 곡 정답률 향상을
 주장하지 않습니다. 아래 과거 계약·날짜·해시는 역사로 보존합니다.
 

@@ -1,7 +1,7 @@
 # v0.1.08 session checkpoint
 
-- Status: Source/frozen accepted; freeze clean source commit and create/verify immutable archive next.
-- Updated: 2026-11-11 21:33:32 Asia/Seoul.
+- Status: Complete: v0.1.08 published; exact archive/updater/offline and public byte verification passed.
+- Updated: 2026-11-14 08:06:28 Asia/Seoul.
 - Active plan: plan/20261108-223717--work-plan--v0-1-08-evidence-workflow--v01.md.
 - Approval: User said "이어서 해줘" after the explicit four-item scope and ZIP/GitHub publication question.
 - Scope: Unknown observed-note preservation, offset chart navigation, recording terminal-state unlock, missing-symbol JSON rejection; tests/docs/version/build/release.
@@ -13,7 +13,7 @@
 - Focused green: evidence6+existing24, controller16, JSON9, expanded music diagnostic1. Red logs retained in work/v108-*.log. No GUI/audio.
 - Version:0.1.08; build/source date2026-11-09. work/ ignored. Frozen checks include uncertain_note_changes_preserved and invalid_symbol_rejected.
 - Interruption: release-helper worker stopped at service limit; partial work/*.py retained and resumed. No Git commit, build or publication yet.
-- Next: pinned-v107 comparison tooling and integrated tests, independent review, docs/QA, build, exclusive ZIP and public delivery.
+- Next: Scope subsequent fixes as v0.1.09. Preserve released source/tag/ZIP/QA.
 - First bounded review repair: stale recording terminal event can clear a newly started recording when the old thread stopped before its queued event drained. Scope app.py recording start/terminal lifecycle and tests/test_device_lifecycle.py only; preserve stop/new-start semantics, prevent replacing a pending terminal job, no UI/audio. Red/green stale-done/error test and all controller tests required, followed by read-only re-review. Evidence/JSON/music source review approved without findings.
 - Repair accepted: pending-worker start guard fixes stale done/error race;17controller tests and independent re-review pass. Source/controller review reports saved work/v108-*-review.md/rereview.md.
 - Final source suite456passed77.003s,92GUIdeferred, all current Python/test/tool hashes match receipt. Synthetic precision62/harmonic31/uncertainty32/trace11 pass against immutablev107. Precision correct76.117/wrong1.516243 and harmonic correct38.4/wrong3.725 unchanged; no new erroneous recognition.
@@ -22,4 +22,16 @@
 - QA_REPORT_v0.1.08.json created with source_passed_frozen_pending; no archive or publication claim. Need docs completion, hidden frozen build, final QA/docs, cleancommit, exclusiveZIP, fresharchive/updater/cache verification, tag/push/publication/public-byte readback.
 - 2026-11-10 22:59:29 Asia/Seoul: Six docs and function reference updated; native ABI2 parity passes, frozen build running session95177/log work/v108-build-console.log. Release-helper exact draft asset inventory guard repaired and re-reviewed;10inert tests now pass. No production code changed after456receipt; no tag/publication yet.
 - Build completed2026-11-10 23:05KST; frozen self-test allpass including2newchecks, CQT/FFT/mixer/PDF/update/nativeABI2.17known warnings reviewed. QA now passed for source/frozen, external archive/publication gates pending. Today staged115source inputs/native/PEversion/privacy pass and456receipt hashes remain exact.
-- Next commands after final docs commit: python work/package_v108.py finalize, then verify; do not change source during those gates. Then annotatednewtagv0.1.08, nonforcepush, work/publish_v108.py and work/readback_v108.py. Never overwrite existing release outputs. Postpublication documentation-only commit records delivery while tag stays immutable.
+- Historical pre-publication commands: python work/package_v108.py finalize, then verify; do not change source during those gates. Then annotatednewtagv0.1.08, nonforcepush, work/publish_v108.py and work/readback_v108.py. Never overwrite existing release outputs. Postpublication documentation-only commit records delivery while tag stays immutable.
+
+## Completed public delivery
+
+- Published: 2026-11-11 21:44:09 KST; [v0.1.08 developer prerelease](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.08).
+- Public readback: 2026-11-11 21:45:22 KST; unauthenticated metadata and actual downloads of all three assets verified.
+- Immutable source/tag: `b829b446f1aef52a552927e7a022bce9639e9941`; ZIP 349753311 bytes, 5482 manifest files, 115 source inputs.
+- ZIP SHA-256: `d0de3a7d09db5b51eb379d1387439fa57373da54da428bf5481c6371e94002da`.
+- Exact archive extraction, hidden diagnostics, native ABI 2, source/privacy/font checks, updater installation and offline cached reuse passed.
+- External receipts: release/ToneMatchTMP-v0.1.08-ARCHIVE-VERIFICATION.json, work/v108-publication.json and work/v108-public-readback.json.
+- QA remains the immutable source/frozen artifact snapshot. Final follow-up commit changes documentation only; no source/tag/ZIP/QA replacement.
+- Score: 50/100 provisional. No real UI, playback, physical printing or annotated-song accuracy claim. Corrupted installed-cache repair remains deferred; next patch v0.1.09.
+- Final review 2026-11-14 08:06:28 Asia/Seoul: current public prerelease metadata matches all three verified assets; remote v0.1.07/v0.1.08 tag commits remain unchanged. The final follow-up commit contains only eight Markdown records.

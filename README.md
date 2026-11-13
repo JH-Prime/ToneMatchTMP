@@ -1,14 +1,17 @@
 # ToneMatch TMP 0.1.08
 
-Source reference: 2026-11-09 KST; verification record reviewed on 2026-11-11 KST.
-Unsigned Windows CPU developer prerelease candidate.
-Source and frozen-executable checks pass. Fresh ZIP, updater installation and publication gates remain pending;
-this is not yet a published v0.1.08 release. See [한국어 안내](README_KO.md),
-[v0.1.08 QA](QA_REPORT_v0.1.08.json) and [build history](BUILD_HISTORY.md).
+Source reference: 2026-11-09 KST. Unsigned Windows CPU developer prerelease.
+Published at **2026-11-11 21:44:09 KST**: [v0.1.08 release](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.08).
+Source, frozen executable, fresh ZIP, exact-ZIP updater installation and offline cached reuse pass.
+Unauthenticated download and SHA-256 verification of all three public assets passed at **2026-11-11 21:45:22 KST**.
+See [한국어 안내](README_KO.md), [QA snapshot](QA_REPORT_v0.1.08.json) and
+[publication record](BUILD_HISTORY.md). The immutable ZIP's QA is the source/frozen snapshot;
+archive and publication receipts are separate. This later documentation commit does not replace it.
 
-The frozen build completed on 2026-11-10 at 23:05 KST and was verified on 2026-11-11 at 21:31 KST.
-Hidden self-tests pass, including both new music checks and native ABI 2. The build retains 17
-optional/import/platform and deprecation warnings in the same categories as v0.1.07.
+ZIP: **349753311 bytes**, **5482 manifest files**; source commit `b829b446f1aef52a552927e7a022bce9639e9941`.
+SHA-256: `d0de3a7d09db5b51eb379d1387439fa57373da54da428bf5481c6371e94002da`.
+The frozen build retains 17 optional/import/platform and deprecation warnings in the same categories
+as v0.1.07; required self-tests, both new music checks and native ABI 2 pass.
 
 ## Changed in 0.1.08
 
@@ -301,8 +304,8 @@ PDF/font, PortAudio loading and native parity without audible output or actual m
 The separate `--stem-self-test-source` / `--stem-self-test-output` CLI checks an already
 cached CPU model, writes redacted JSON and cleans temporary audio.
 
-The working version is 0.1.08; source and frozen checks pass, while ZIP/updater/publication gates remain
-pending. v0.1.07 remains published. Subsequent fixes use 0.1.09; preserve existing tags and assets.
+v0.1.08 is published and its public asset bytes are verified. Subsequent fixes use 0.1.09.
+Preserve the v0.1.08 source/tag/ZIP and all older tags/assets, including v0.1.07.
 Read [handoff](DEVELOPER_HANDOFF_KO_EN.md) and [research](TRANSCRIPTION_RESEARCH_KO.md).
 Application source: MIT. See `THIRD_PARTY_NOTICES.txt`, inventory and `licenses/`.
 Fender, Tone Master, Neural DSP and Quad Cortex are their owners' trademarks;

@@ -8,7 +8,7 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 | 버전 | 상태 | 범위 |
 |---|---|---|
-| `0.1.08` | 소스·실행파일 검증 완료; 새 ZIP·업데이트 설치·공개 게시 대기 | 시간별 미확정 관측음 보존, 첫 마디 보정 후 이동, 녹음 종료·재시작 상태, JSON 기호 검증 |
+| `0.1.08` | 독립 ZIP·업데이트 설치·공개 파일 검증 완료·개발자 프리릴리스 게시 | 시간별 미확정 관측음 보존, 첫 마디 보정 후 이동, 녹음 종료·재시작 상태, JSON 기호 검증 |
 | `0.1.07` | 독립 ZIP·자동 설치 검증 완료·개발자 프리릴리스 게시 | CQT 배음 오인식 억제, 자동 GitHub 업데이트, 모듈러 편향 점검 |
 | `0.1.06` | 독립 ZIP 검증 완료·개발자 프리릴리스 게시 | CQT 구성음 근거 보완, 일부 7·9화음 완전5도 생략, 저신호 예외 수정, FFT 기존 배음 억제 유지 |
 | `0.1.05` | 독립 ZIP 검증 완료·개발자 프리릴리스 게시 | 미확정 근거·후보·사유 보존, CQT 제한 재검토, 4096 이벤트 예산, 표시·저장 일치 |
@@ -29,6 +29,27 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 | `0.0.03` | 포터블 개발 프리뷰 빌드 완료 | 포터블 개발 ZIP, 한·영 handoff, 로그·빌드 이력, NumPy 코드/보이싱 분석(실험) |
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
+
+## v0.1.08 publication record — 2026-11-11 KST
+
+Published at **2026-11-11 21:44:09 KST**: [v0.1.08 developer prerelease](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.08).
+Unauthenticated public metadata and actual downloads of all three assets matched at **2026-11-11 21:45:22 KST**.
+Immutable source/tag commit: `b829b446f1aef52a552927e7a022bce9639e9941`. Exact ZIP: **349753311 bytes**,
+**5482 manifest files**, **115 verified source inputs**. ZIP SHA-256: `d0de3a7d09db5b51eb379d1387439fa57373da54da428bf5481c6371e94002da`.
+Fresh extraction, hidden executable diagnostics, native ABI 2, source/privacy/font checks,
+production-updater installation and offline cached reuse all passed for this exact archive.
+
+| Asset | Bytes | SHA-256 |
+|---|---:|---|
+| `ToneMatchTMP-v0.1.08-ARCHIVE-VERIFICATION.json` | 1098 | `20317d73b3a703e2506f3c9cc584942a73d8e5f50b4aa683e3e7e8e4e7dbc9c7` |
+| `ToneMatchTMP-v0.1.08-SHA256SUMS.txt` | 468 | `7f73a39ce068d6b27a015308cd962c106a8dea9fecd275f4f533dcfc303c2d4d` |
+| `ToneMatchTMP-v0.1.08-Windows-x64-Portable-Dev.zip` | 349753311 | `d0de3a7d09db5b51eb379d1387439fa57373da54da428bf5481c6371e94002da` |
+
+QA_REPORT_v0.1.08.json remains the source/frozen acceptance snapshot included in the immutable ZIP.
+The separate archive-verification asset and public receipts establish subsequent delivery gates.
+This post-publication documentation-only commit leaves source, tag, ZIP, QA and earlier assets unchanged.
+Synthetic regression results remain distinct from actual-song accuracy; real UI/listening/ground-truth
+checks remain unperformed. The damaged update-cache repair remains deferred; next patch is v0.1.09.
 
 ## v0.1.08 frozen acceptance — 2026-11-11 KST
 

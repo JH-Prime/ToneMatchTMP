@@ -3,15 +3,15 @@
 Plan Type: Work plan
 Workstream: ToneMatchTMP v0.1.08
 Version: 01
-Status: Source and frozen build accepted; preparing immutable archive
+Status: Complete — v0.1.08 published and actual public asset bytes verified
 Created: 2026-11-08 22:37:17 Asia/Seoul
-Last Updated: 2026-11-11 21:33:32 Asia/Seoul
+Last Updated: 2026-11-14 08:06:28 Asia/Seoul
 Related Plan: plan/20261102-231452--revision-plan--v0-1-07-cqt-auto-update--v02.md (completed historical release; preserved)
-Current Completion State: Source, frozen diagnostics, source/native/version/privacy checks and release review accepted
-Completed So Far: Four corrections and recorder race repair;456headless;62/31/32/11 comparisons; localCQT/FFT; helper10tests; independent reviews; frozen build and115source inputs verified
-Remaining Work: Freeze clean commit, exclusive developer ZIP, fresh archive/updater verification, publication and readback
+Current Completion State: All approved implementation, verification, archive and public delivery gates complete
+Completed So Far: Four fixes plus recorder race repair; 456 headless; synthetic/local checks; frozen/exact ZIP/updater/offline checks; public three-asset download verification
+Remaining Work: None within approved v0.1.08 scope; actual UI/song ground truth and damaged-cache repair remain explicit follow-up limits
 Current Blockers: None
-Next Step: Commit final accepted source/docs/QA, create archive exclusively and verify it without further source changes
+Next Step: Preserve released source/tag/ZIP/QA; scope subsequent fixes as v0.1.09
 
 ## Authority and objective
 
@@ -73,18 +73,20 @@ Read the published release back through the public API and validate each asset s
 
 ## Scoreboard
 
-Current score: 48/100
+Current score: 50/100
 Score source: provisional
-Last updated: 2026-11-10 22:53:08 Asia/Seoul
-Rationale: Integrated checks and independent review now pass; frozen build and public delivery remain unfinished.
-What improved: The broad request is now four bounded maintenance corrections with observable acceptance checks.
-What remains unsatisfactory: Public delivery remains incomplete; actual UI and actual-song ground truth remain unverified.
-Next score-maintenance action: Complete immutable archive verification and public delivery without changing accepted runtime source.
+Last updated: 2026-11-11 21:45:22 Asia/Seoul
+Rationale: Approved maintenance scope and public delivery complete; score remains provisional without a user rating
+What improved: Time-local evidence and workflow regressions fixed, exact immutable archive and actual public downloads verified
+What remains unsatisfactory: Actual UI, audible output and real-song ground truth unverified; damaged installed-cache repair deferred
+Next score-maintenance action: Record user feedback and scope the next patch separately; do not alter v0.1.08 artifacts
 
 Score history:
 - 2026-11-08 22:37:17 Asia/Seoul — 40 provisional: approved bounded scope, baseline and publication audit complete; implementation pending.
 - 2026-11-09 21:35:31 Asia/Seoul — 46 provisional: four corrections and focused verification complete; resuming after worker service interruption, no publish yet.
 - 2026-11-10 22:53:08 Asia/Seoul — 48 provisional:456headless, four synthetic corpora and local workflows passed; stale recorder race independently re-reviewed and accepted; delivery pending.
+
+- 2026-11-11 21:45:22 Asia/Seoul — 50 provisional: approved v0.1.08 fixes, exact archive/updater gates and actual public asset downloads verified; no real-song accuracy claim.
 
 ## Progress log
 
@@ -95,3 +97,5 @@ Score history:
 - 2026-11-10 22:53:08 Asia/Seoul — User resumed. Final456tests pass77.003s, GUI92deferred, hashes current. Precision62/harmonic31 retain prior correct/incorrect durations; uncertainty32/trace11 pass v107. Room335 CQT/FFT operational checks pass without playback; no real-song accuracy. Bounded recorder repair and independent re-review accepted. Release-helper8tests pass; separate build/v108-prezip output avoids build checksum colliding with exclusive finalizer. QA source accepted; frozen/archive/publication still pending. All previous tags remain untouched.
 - 2026-11-10 22:59:29 Asia/Seoul — Six user/developer documents and generated function reference updated. C++ ABI2 parity passed; PyInstaller build running with hidden diagnostic path only. Release review found that unexpected extra draft assets could publish before later readback rejected them; helper now enforces exact names/count/uploaded state/digests before publication. Ten inert helper tests and final read-only review pass. This gate correction changes no runtime source or existing artifact.
 - 2026-11-11 21:33:32 Asia/Seoul — Build finished2026-11-10 23:05KST with all hidden diagnostics passed, including uncertain-note changes and invalid-symbol rejection. Reviewed17known optional/deprecation warnings. Final456source hashes still match. Staged115source inputs, PE version, native ABI and privacy checks pass. QA source/frozen status passed; archive/publication remain external gates. Preparing clean immutable source commit and exclusive archive.
+- 2026-11-11 21:45:22 Asia/Seoul — Completed v0.1.08 delivery. Published 2026-11-11 21:44:09 KST; public three-asset bytes verified 2026-11-11 21:45:22 KST. Source/tag b829b446f1aef52a552927e7a022bce9639e9941; ZIP 349753311 bytes, 5482 manifest files, SHA-256 d0de3a7d09db5b51eb379d1387439fa57373da54da428bf5481c6371e94002da. Fresh archive/updater/offline checks pass. QA/tag/ZIP unchanged; subsequent documentation-only commit records delivery.
+- 2026-11-14 08:06:28 Asia/Seoul — Final publication documentation prepared and reviewed. Current GitHub prerelease metadata still matches the verified three assets; remote v0.1.07/v0.1.08 tag commits are unchanged. Only eight Markdown records change; QA, runtime source and release artifacts remain unchanged.
