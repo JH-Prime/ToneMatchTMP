@@ -27,6 +27,8 @@ venv/
 *.crt
 credentials.json
 secrets.json
+distribution/store-identity.local.json
+distribution/signpath.local.json
 
 # Build, release, and runtime state
 build/

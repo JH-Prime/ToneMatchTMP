@@ -1,0 +1,98 @@
+# Free signing and Store distribution plan
+
+Plan Type: Work plan
+Workstream: ToneMatchTMP v0.1.09 distribution preparation and future release policy
+Version: 01
+Status: Technical implementation complete; integrated build and packaging verification in progress
+Created: 2026-11-14 20:40:42 Asia/Seoul
+Last Updated: 2026-11-15 18:53:48 Asia/Seoul
+Related Plan: plan/20261108-223717--work-plan--v0-1-08-evidence-workflow--v01.md (completed release; retain unchanged)
+Current Completion State: Future-build policy, guarded build/signing/MSIX tools and runtime channel distinction implemented; 502 headless regressions passed
+Completed So Far: Durable AGENTS and policy/privacy guides; explicit unsigned build modes and output protection; native Store identity/storage/update guards; source-bound Authenticode finalizer; official SignPath XSD acceptance; 502 tests passed with 92 GUI cases deferred
+Remaining Work: Final source binding, frozen build, full MSIX structural validation, preparation commit/push and external enrollment handoff
+Current Blockers: Public signing enrollment and Store identity are not configured; signing and Store certification cannot be represented as completed
+Next Step: Finish integrated verification and make the preparation reviewable; preserve all published assets and report pending service approvals
+
+## Objective and approved understanding
+
+Prepare two complementary distribution routes without purchasing a certificate or paid signing subscription. Retain the existing GitHub portable executable route and prepare it for free sponsored signing through SignPath Foundation. Prepare a separate Microsoft Store MSIX route, where Microsoft signs accepted packages. Treat this as a continuing release requirement for subsequent versions, not as a one-time repair of the current executable. The user explicitly accepted both approaches and emphasized their application to future builds. This approval covers the necessary repository, build, testing, packaging, and documentation work and the existing authorization for ordinary GitHub source publication. It does not provide missing legal identities, signing account details, or Store-assigned application identities.
+
+Keep the user-visible distinction precise. A correctly signed file identifies a publisher and binds the signed bytes; it does not promise that SmartScreen reputation warnings disappear immediately. Store signing applies to the Store package and does not sign an unrelated GitHub ZIP. An unsigned development artifact is useful for controlled verification but must remain visibly marked as unsigned and must not pass the signed-release gate. Do not create a self-signed certificate as a substitute for public trust, install trust roots, disable Windows protection, or change the user's security settings. Do not purchase, subscribe to, or enable paid services.
+
+The current released baseline is v0.1.08, whose source tag resolves to b829b446f1aef52a552927e7a022bce9639e9941. Main contains its later documentation completion commit b7a9331. Preserve these commits, tags, release assets, and their published hashes. The next application patch version is v0.1.09 if runtime or build behavior changes. Do not relabel v0.1.08 as signed or replace it with a differently signed binary. The startup animation requested immediately before this work remains a recorded follow-up; the user has prioritized trusted distribution first. Chord thresholds, models, C++ ABI, audio behavior, and damaged-cache recovery remain outside this narrow distribution task.
+
+## Operating boundaries and assumptions
+
+Continue to follow the global AGENTS instructions and the minimal-change overlay. This approved record satisfies the local planning gate, so routine implementation, repair, and independent review within this scope do not need repeated approval. Use the project root for planning and session records. Keep the previous completed plan intact as history and link the new work from the current handoff. Record all progress times in Asia/Seoul. Use read-only parallel audits and narrowly owned implementation assignments when useful; the parent remains responsible for integration and acceptance.
+
+Do not manipulate the screen, launch visible application windows, play audio, install a Store package, or start the normal application. Existing hidden diagnostic switches and headless tests may run only when they demonstrably bypass the graphical application and playback paths. Strengthen the build's default test selection so it cannot inadvertently run native GUI tests during this work. Keep actual UI verification and real-song correctness distinct from synthetic or structural checks. The Room 335 file and all other private audio remain local and must never enter Git, a build workflow artifact, a release archive, a signing request, or a Store submission.
+
+Assume no configured signing or Store identity until evidence shows otherwise. Read public documentation and connected repository state before requesting information. Make local and CI preparation concrete before asking the user to enroll or supply nonsecret identifiers. Never ask the user to paste a private key, certificate password, signing API token, government ID, or selfie into chat. Account owners must complete identity checks directly with the service. Store names, identity strings, publisher identifiers, and SignPath project/policy identifiers can be provided later through documented configuration. A placeholder may support an explicitly nonpublishable validation sample, but must never be accepted for a production package or claimed as an assigned identity.
+
+## Phase one: durable release contract
+
+Add a concise project instruction that applies this policy to later builds and links a maintained distribution guide. Define the difference between development preparation, a signed GitHub release, and a Store submission candidate. Default a normal public release to requiring valid signing evidence. Permit an unsigned development preparation only through an explicit, conspicuous mode; record that status in machine-readable output and artifact naming or accompanying documentation. An unconfigured service must fail closed at its publication gate with a precise explanation rather than silently claiming a successful signature.
+
+Keep future version handling coherent. Derive packaging identity versions from the application's declared version and verify all other embedded version surfaces match. For Store versions, use a legal four-part numeric form with the final part reserved as required by Store rules; reject malformed versions and inconsistent executable metadata. Build logs and receipts should record version, source commit, distribution channel, signing status, artifact hashes, and checks actually performed. Never invent acceptance evidence or update the old QA snapshot to imply that external signing or certification has already happened.
+
+Fix artifact overwrite hazards that would undermine this policy. Refuse to replace an existing release ZIP, checksum file, signed candidate, or MSIX output. Allow normal disposable build staging to be rebuilt only within a validated project-owned path. Do not delete or move existing published artifacts. Keep temporary service files and local identity configuration outside Git unless they are intentionally public policy. Do not log credentials, tokens, full user profile paths, private media names, or secret environment contents.
+
+## Phase two: verifiable SignPath preparation
+
+Prepare a manual, least-privilege GitHub Actions route using standard GitHub-hosted Windows runners suitable for the public repository. Do not introduce paid or larger runners. Pin security-sensitive actions to verified immutable commits when possible and record their upstream versions. Separate ordinary build checks from signing credentials and approvals. Do not run secret-bearing jobs for untrusted pull requests, fork input, or arbitrary caller-supplied scripts. Do not publish a release automatically merely because a workflow build succeeded.
+
+Build the project-owned executable and native DSP library from the checked-out source. Reuse the pinned Python dependency set and Zig compiler version without adding a new audio runtime. Resolve the untracked FFmpeg input with a fixed, independently verified source and digest; do not download an unspecified latest binary. If the immutable existing release is used to recover the already documented upstream FFmpeg binary, verify both the outer archive and the exact inner file and explain that only the third-party runtime is reused. Do not import a previously built application EXE as the application's claimed source build.
+
+Honor SignPath's distinction between project-owned and upstream binaries. Sign only the project's executable and its own DSP binaries under a configuration that constrains expected filenames and metadata. Do not apply the project's certificate to FFmpeg, Python, or other third-party libraries. Include license information and track the origin of bundled dependencies. Configure the signing service through documented public identifiers and secret storage, never by embedding a token in source. Require the service's repository/build provenance checks and manual release approval. Enrollment approval by the Foundation remains an external gate.
+
+Arrange the artifact sequence correctly. Finish compilation and byte-changing build steps before signing. Verify the returned Authenticode signatures, expected publisher identity, product version, and correspondence to the intended unsigned build. Generate the final integrity manifest, archive, and checksums from the signed bytes after signing. A signature-changing step invalidates earlier hashes, so never copy an old manifest onto signed files. Preserve the existing updater's exact archive integrity contract. Validate all signed outputs before making a release public and keep the original accepted source tag associated with the resulting artifact.
+
+## Phase three: Store preparation
+
+Prepare a repeatable MSIX packaging path for the existing Windows x64 desktop application. Use the Windows packaging tools or an official redistributable tooling package when available; do not download random packaging executables. Detect missing SDK tools and explain the exact prerequisite. Generate the required manifest and package assets from explicit inputs, with minimal desktop capabilities and no unrelated device access. Validate identity, publisher, application entry point, architecture, numeric version, file layout, and required assets. Keep package outputs exclusive and separate from the portable ZIP channel.
+
+Treat application package identity as a runtime fact rather than a user-set environment flag that can turn off unrelated security checks. Ensure a Store-packaged application does not attempt to replace itself by downloading and launching the portable GitHub executable. Let Store manage Store-channel updates while preserving the existing verified portable updater for normal EXE installations. Avoid regressing diagnostic startup, cancellation, offline fallback, or the portable data context passed during an update. Keep profile data, captures, logs, caches, and generated model data writable outside the protected installed package. Preserve access to the bundled FFmpeg and native DLL and keep Numba cache creation outside immutable installed files.
+
+Use a clearly separated validation identity only if needed for unsigned structural packaging checks before the Store supplies real identity values. A test package must be named and documented as nonpublishable. Do not install it or claim that installation, microphone access, process spawning, model inference, or Store certification passed without actual evidence. Production packaging must require the exact Partner Center identity and publisher information. Store onboarding and identity verification will require the user; prepare a short checklist naming the specific values needed and the place where the user should obtain them.
+
+## Phase four: policy and submission material
+
+Write a factual code signing policy and privacy notice appropriate to the actual program. Describe optional GitHub update checks, model downloads and their providers, local audio processing, local log storage, and the absence or presence of network transfers based on source inspection. Do not copy a generic statement claiming no network communication when startup update checks exist. Do not claim that SignPath already sponsors the project before acceptance. Provide the required attribution as a pending enrollment item until it is true. Describe maintainer, reviewer, and signing approver responsibilities without inventing other human team members.
+
+Prepare the SignPath application facts and Store submission facts from the repository and release history. Supply public repository and release URLs, project purpose, licensing summary, distribution approach, and current validation limits. Explain how users remove the portable application and where optional user data and updater caches live, without adding automatic destructive cleanup. Keep product descriptions focused on audio and chord analysis and avoid claiming endorsement by Fender, Neural DSP, Microsoft, or SignPath. Review all text before any external submission. The current task should reach a reviewable package and enrollment handoff even if service accounts are unavailable.
+
+## Verification and bounded repair
+
+Start with targeted tests for observable failures in release policy and packaging boundaries. Cover missing signing configuration, invalid or unexpected publisher, unsigned files rejected for public release, explicit development mode recorded accurately, version mismatch, output collisions, malformed Store identity, unsafe input paths, and manifest regeneration after a signature changes bytes. Exercise portable versus packaged startup decisions without opening Tk windows. Test that diagnostics still avoid UI creation and that portable update launch behavior remains unchanged. Do not create tests that merely duplicate static prose or inflate test counts.
+
+Run appropriate existing headless tests after runtime changes and the native parity checks if the native binary is rebuilt. Parse PowerShell and workflow syntax, inspect pinned action references and permissions, and validate packaging commands using inert fixtures before real build inputs. If no official packaging tool is installed, obtain or document the exact no-cost tool prerequisite and continue all independent validation. Do not claim a hosted workflow succeeded based only on local parsing. Trigger a manual remote build only after the source and configuration are reviewable and its resource use remains within the authorized no-cost public-runner route.
+
+Perform a read-only independent review of the final changes, with special attention to artifact substitution, trust boundary weakening, startup regressions, accidentally exposed credentials, and incorrect claims of signing or Store approval. Repair material findings within this approved scope, rerun only the affected checks and necessary regression suites, and record the outcome. Preserve prior test receipts rather than rewriting history. If external service identity or acceptance remains missing, clearly separate completed technical preparation from pending real signing and Store certification.
+
+## Delivery and completion criteria
+
+Commit and push the tested preparation using ordinary nonforce Git operations after review. Keep current v0.1.08 release metadata and files untouched. A v0.1.09 signed release may only be created after the corresponding signing gate has actually passed; do not substitute an unsigned prerelease for the user's request for trusted distribution without explicit disclosure. The Store package may be submitted only with a real assigned identity and the necessary account ownership steps completed. Do not mark either external route complete merely because build tooling exists.
+
+Technical preparation is complete when future maintainers have a durable release contract, reproducible guarded build paths, a reviewable SignPath configuration and policy, a validated Store packaging path with channel-safe runtime behavior, meaningful tests, and precise enrollment instructions. End the work with concise evidence: what changed, checks passed, exact external blockers, and the smallest next action required of the user. Do not ask the user again to approve the already accepted technical direction. If signing enrollment or identity verification cannot be performed by the agent, state that limitation directly and leave the technical work ready for continuation.
+
+## Scoreboard
+
+Current score: 43/100
+Score source: provisional
+Last updated: 2026-11-15 18:53:48 Asia/Seoul
+Rationale: Durable implementation and focused/integrated tests pass; frozen package and external service acceptance remain unfinished.
+What improved: The user has chosen both distribution paths and made future-build policy explicit.
+What remains unsatisfactory: The existing EXE is unsigned; service enrollment, trusted signatures and Store certification remain uncompleted.
+Next score-maintenance action: Establish durable policy and executable validation without promising external approval or SmartScreen behavior.
+
+Score history:
+
+- 2026-11-14 20:40:42 Asia/Seoul — 35 provisional: research and approval complete; implementation and external service acceptance pending.
+- 2026-11-15 18:53:48 Asia/Seoul — 43 provisional: 502 headless tests passed, official signing XML schema validated, actual enrollment and package acceptance remain open.
+
+## Progress log
+
+- 2026-11-14 20:40:42 Asia/Seoul — Refreshed global instructions, current source/release state, and build constraints. User approval includes both free distribution paths and all future versions. Read-only CI and Store runtime audits started. No app windows, playback, paid services, registrations, or release replacements performed.
+- 2026-11-15 18:53:48 Asia/Seoul — Implemented Store tri-state native identity with LocalState and early Numba cache selection, portable update defenses, no-overwrite build modes, signing provenance/Authenticode finalizer, MSIX tools and persistent release policy. Targeted red/green logs and work reports retained. Full suite: 502 passed in 91.561 seconds, no skips/failures/errors, 92 GUI cases deferred. Review found signed ZIP filename incompatible with already released updater; regression reproduced and fixed by preserving Portable-Dev naming. Official SignPath XSD validation passes. Store package version mapping explicitly uses app major+1, minor, patch, 0 to meet Store constraints without collisions. Manual workflow defaults to no artifact upload; signing upload requires confirmed free quota and no paid overages. Workers hit service usage limits, so parent continues integration/review without assuming independent acceptance.
+
+- 2026-11-15 Asia/Seoul — Final accepted source suite: 504 headless tests passed in 74.565 seconds, 92 GUI deferred, source hashes exact. Added red/green repairs for existing updater asset-name compatibility, local-account file exclusion, and private media/model/cache rejection before manifest/MSIX/signing binding. Parent read-only source/tool review completed; independent final review was unavailable due worker usage limits. Frozen and full MSIX verification follow.

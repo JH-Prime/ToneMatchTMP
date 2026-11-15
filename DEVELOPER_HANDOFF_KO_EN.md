@@ -1,6 +1,26 @@
-# ToneMatch TMP v0.1.08 — 개발 인수인계 / Developer Handoff
+# ToneMatch TMP v0.1.09 — 개발 인수인계 / Developer Handoff
 
-## Current v0.1.08 / 현행 — 2026-11-11 KST
+## Current preparation / 현행 준비 — 2026-11-15 KST
+
+User approved both free signing routes and their application to all future builds.
+See AGENTS.md and DISTRIBUTION_KO.md. Default builds prepare SigningInput; explicit
+Development mode makes unsigned development ZIPs. Never overwrite released artifacts.
+SignPath verifies only our root EXE initially, then the finalizer rebuilds integrity
+metadata from its verified bytes. Keep the Portable-Dev ZIP name for existing clients;
+signature state is determined by actual verification, not that historical filename.
+
+Store runtime uses native package identity; unknown API state disables the portable
+updater and selects user storage. Packaged runtime uses LocalState and early Numba cache
+configuration. MSIX Store version is app-major+1, minor, patch, 0. Validation-only identity
+is nonpublishable. Real Store identity, installation and certification remain pending.
+
+Current source and build verification is recorded only in QA_REPORT_v0.1.09.json.
+No new trusted release is published until real signing passes. No paid service, normal
+UI launch, audio playback or installation is authorized. Startup animation and damaged
+portable-cache repair remain follow-ups. Current plan:
+plan/20261114-204042--work-plan--free-signing-store-distribution--v01.md.
+
+## Released v0.1.08 / 게시 기록 — 2026-11-11 KST
 
 Source reference: 2026-11-09 KST. [Developer prerelease](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.08) published at **2026-11-11 21:44:09 KST**.
 Source/frozen, fresh archive, exact-ZIP updater installation and offline reuse gates pass.

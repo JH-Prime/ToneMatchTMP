@@ -42,6 +42,10 @@ def _ensure_standard_streams() -> None:
 
 _ensure_standard_streams()
 
+from package_runtime import configure_runtime_cache, managed_data_root
+
+configure_runtime_cache()
+
 import numpy as np
 
 from catalog import APP_VERSION, BUILD_DATE, CHANGELOG, MODEL_GUIDE_REVISION, TARGET_FIRMWARE
@@ -163,7 +167,11 @@ def _portable_root() -> Path:
 
 
 def _runtime_data_root() -> Path:
-    """우선 EXE 옆 data를 쓰고 권한이 없으면 LocalAppData로 안전하게 폴백한다."""
+    """패키지 사용자 데이터 또는 기존 포터블 데이터 경로를 준비한다."""
+    managed = managed_data_root()
+    if managed is not None:
+        managed.mkdir(parents=True, exist_ok=True)
+        return managed
     from update_startup import inherited_context
     context = inherited_context()
     preferred = context[1] if context is not None else _portable_root() / "data"

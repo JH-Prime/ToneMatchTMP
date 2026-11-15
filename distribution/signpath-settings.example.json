@@ -1,0 +1,24 @@
+{
+  "status": "pending_foundation_enrollment",
+  "github_environment": "signpath-production",
+  "repository": "JH-Prime/ToneMatchTMP",
+  "trusted_ref": "refs/heads/main",
+  "variables": {
+    "SIGNPATH_FOUNDATION_APPROVED": "false",
+    "FREE_CI_STORAGE_CONFIRMED": "false",
+    "SIGNPATH_ORGANIZATION_ID": "",
+    "SIGNPATH_PROJECT_SLUG": "",
+    "SIGNPATH_SIGNING_POLICY_SLUG": "",
+    "SIGNPATH_ARTIFACT_CONFIGURATION_SLUG": "",
+    "SIGNPATH_EXPECTED_PUBLISHER": "",
+    "SIGNPATH_EXPECTED_THUMBPRINT": ""
+  },
+  "secret_names_only": ["SIGNPATH_API_TOKEN"],
+  "required_service_configuration": {
+    "trusted_build_system": "GitHub.com",
+    "github_hosted_runners_only": true,
+    "repository_and_main_branch_origin_restrictions": true,
+    "manual_signing_approval": true,
+    "trusted_timestamp": true
+  }
+}

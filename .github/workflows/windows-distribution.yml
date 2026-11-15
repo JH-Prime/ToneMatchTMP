@@ -1,0 +1,182 @@
+name: Prepare Windows distribution
+
+on:
+  workflow_dispatch:
+    inputs:
+      request_signing:
+        description: 'Request approved SignPath Foundation signing (enrollment required)'
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-distribution-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    # Free standard hosted runners only; never execute credentials on a fork/ref.
+    if: github.repository == 'JH-Prime/ToneMatchTMP' && github.ref == 'refs/heads/main' && !github.event.repository.private
+    runs-on: windows-2022
+    timeout-minutes: 90
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      signing-artifact-id: ${{ steps.signing-input.outputs.artifact-id }}
+    steps:
+      - name: Refuse signing uploads until approval and free storage are confirmed
+        if: inputs.request_signing
+        shell: pwsh
+        env:
+          FOUNDATION_APPROVED: ${{ vars.SIGNPATH_FOUNDATION_APPROVED }}
+          FREE_STORAGE_CONFIRMED: ${{ vars.FREE_CI_STORAGE_CONFIRMED }}
+        run: |
+          if ($env:FOUNDATION_APPROVED -cne 'true') { throw 'PENDING: SignPath Foundation enrollment approval is required.' }
+          if ($env:FREE_STORAGE_CONFIRMED -cne 'true') { throw 'PENDING: verify available free artifact storage and disable paid overages before enabling signing uploads.' }
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12.10'
+          architecture: x64
+      - name: Install the checked-in dependency pins
+        shell: pwsh
+        run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
+      - name: Verify and recover pinned Zig and third-party FFmpeg
+        shell: pwsh
+        run: python tools/prepare_ci.py
+      - name: Read the committed application version
+        id: version
+        shell: pwsh
+        run: |
+          $Version = python -c 'from catalog import APP_VERSION; print(APP_VERSION)'
+          if ($LASTEXITCODE -ne 0 -or $Version -notmatch '^[0-9]+\.[0-9]+\.[0-9]+$') { throw 'Invalid application version' }
+          "version=$Version" >> $env:GITHUB_OUTPUT
+      - name: Build from source and run headless verification
+        shell: pwsh
+        run: |
+          ./build.ps1 -PythonExe (Get-Command python).Source -ZigPath 'build/ci-tools/zig-0.15.2/zig.exe' -DistributionMode SigningInput
+      - name: Bind the signing input to every portable build file
+        shell: pwsh
+        env:
+          APP_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          python tools/finalize_signed_release.py prepare --root "build/portable/ToneMatchTMP-v$env:APP_VERSION" --output build/signpath-input --version $env:APP_VERSION --source-commit $env:GITHUB_SHA
+      - name: Validate the Store package structure without installing it
+        shell: pwsh
+        env:
+          APP_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $MakeAppx = Get-ChildItem 'C:/Program Files (x86)/Windows Kits/10/bin/*/x64/makeappx.exe' | Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $MakeAppx) { throw 'Official Windows SDK MakeAppx prerequisite is missing.' }
+          $Signature = Get-AuthenticodeSignature -LiteralPath $MakeAppx.FullName
+          if ($Signature.Status -ne 'Valid' -or $Signature.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation') { throw 'Microsoft packaging tool signature is invalid.' }
+          python tools/package_msix.py --app-dir "dist/ToneMatchTMP-v$env:APP_VERSION" --version $env:APP_VERSION --output-dir build/msix-validation --validation-only --makeappx $MakeAppx.FullName --source-commit $env:GITHUB_SHA
+          if ($LASTEXITCODE -ne 0) { throw 'MSIX structural validation failed.' }
+      - name: Upload the immutable source-built signing input
+        id: signing-input
+        if: inputs.request_signing
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: signing-input-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/signpath-input/
+          if-no-files-found: error
+          retention-days: 1
+      - name: Upload unsigned portable preparation for the finalizer
+        if: inputs.request_signing
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: unsigned-portable-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/portable/
+          if-no-files-found: error
+          include-hidden-files: true
+          compression-level: 6
+          retention-days: 1
+      - name: Record preparation status
+        shell: pwsh
+        run: |
+          'Prepared unsigned signing input and nonpublishable MSIX validation only. No public release was created. Default verification uploads no artifacts. Foundation approval, free-storage confirmation and real signing remain separate gates.' >> $env:GITHUB_STEP_SUMMARY
+
+  sign:
+    needs: build
+    if: inputs.request_signing && github.repository == 'JH-Prime/ToneMatchTMP' && github.ref == 'refs/heads/main' && !github.event.repository.private
+    runs-on: windows-2022
+    timeout-minutes: 45
+    # Configure required human reviewers and main-only deployment before enabling.
+    environment: signpath-production
+    permissions:
+      actions: read
+      contents: read
+    env:
+      APP_VERSION: ${{ needs.build.outputs.version }}
+      SIGNPATH_FOUNDATION_APPROVED: ${{ vars.SIGNPATH_FOUNDATION_APPROVED }}
+      SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+      SIGNPATH_PROJECT_SLUG: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+      SIGNPATH_SIGNING_POLICY_SLUG: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+      SIGNPATH_ARTIFACT_CONFIGURATION_SLUG: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
+      SIGNPATH_EXPECTED_PUBLISHER: ${{ vars.SIGNPATH_EXPECTED_PUBLISHER }}
+      SIGNPATH_EXPECTED_THUMBPRINT: ${{ vars.SIGNPATH_EXPECTED_THUMBPRINT }}
+    steps:
+      - name: Fail closed until Foundation approval and identity are configured
+        shell: pwsh
+        env:
+          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+        run: |
+          if ($env:SIGNPATH_FOUNDATION_APPROVED -cne 'true') { throw 'PENDING: SignPath Foundation enrollment has not been confirmed.' }
+          foreach ($Name in @('SIGNPATH_ORGANIZATION_ID', 'SIGNPATH_PROJECT_SLUG', 'SIGNPATH_SIGNING_POLICY_SLUG', 'SIGNPATH_ARTIFACT_CONFIGURATION_SLUG', 'SIGNPATH_EXPECTED_PUBLISHER', 'SIGNPATH_EXPECTED_THUMBPRINT', 'SIGNPATH_API_TOKEN')) {
+            if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($Name))) { throw "PENDING: configure $Name in the protected signing environment." }
+          }
+          if ($env:SIGNPATH_EXPECTED_THUMBPRINT -notmatch '^[A-Fa-f0-9]{40}$') { throw 'Invalid approved certificate thumbprint.' }
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12.10'
+          architecture: x64
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: unsigned-portable-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/portable
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: signing-input-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/signpath-input
+      - name: Submit the GitHub artifact for manually approved signing
+        id: signpath
+        uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
+          github-artifact-id: ${{ needs.build.outputs.signing-artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 1800
+          output-artifact-directory: build/signpath-returned
+          parameters: |
+            version: ${{ toJSON(needs.build.outputs.version) }}
+      - name: Verify publisher and exact build binding before rebuilding hashes
+        shell: pwsh
+        env:
+          SIGNPATH_REQUEST_ID: ${{ steps.signpath.outputs.signing-request-id }}
+        run: |
+          python tools/finalize_signed_release.py finalize --root "build/portable/ToneMatchTMP-v$env:APP_VERSION" --input-directory build/signpath-input --signed-directory build/signpath-returned --output-dir release --version $env:APP_VERSION --source-commit $env:GITHUB_SHA --expected-publisher $env:SIGNPATH_EXPECTED_PUBLISHER --expected-thumbprint $env:SIGNPATH_EXPECTED_THUMBPRINT --signing-request-id $env:SIGNPATH_REQUEST_ID
+      - name: Upload verified signed candidate for human release review
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: signed-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            release/*-Portable-Dev.zip
+            release/*-SHA256SUMS.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+      - name: Record candidate status
+        shell: pwsh
+        run: |
+          'Root EXE Authenticode and original-build binding verified. Signed candidate prepared; release publication and Store certification are not performed by this workflow.' >> $env:GITHUB_STEP_SUMMARY

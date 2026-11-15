@@ -10,6 +10,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
+def assert_distributable_file(relative: str) -> None:
+    """Keep private media, downloaded weights, generated caches and account files out."""
+    name = relative.lower()
+    if name.endswith((".wav", ".wave", ".mp3", ".flac", ".m4a", ".aac", ".ogg",
+                      ".mp4", ".mkv", ".mov", ".webm", ".safetensors", ".ckpt", ".pth",
+                      ".pt", ".th", ".onnx", ".pkl", ".nbc", ".nbi", ".local.json",
+                      ".pfx", ".key")):
+        raise RuntimeError("Private media, weights, caches or local signing material cannot be distributed.")
+
+
 def _sha256(path: Path) -> str:
     """큰 바이너리도 메모리를 많이 쓰지 않고 SHA-256을 계산한다."""
     digest = hashlib.sha256()
@@ -27,8 +37,7 @@ def write_manifest(root: Path, output: Path, version: str) -> None:
         if not path.is_file() or path.resolve() == resolved_output:
             continue
         relative = path.relative_to(root).as_posix()
-        if relative.lower().endswith((".safetensors", ".ckpt", ".pth", ".pt", ".th", ".onnx", ".pkl")):
-            raise RuntimeError(f"AI 모델 가중치는 배포할 수 없습니다: {relative}")
+        assert_distributable_file(relative)
         files.append({"path": relative, "bytes": path.stat().st_size, "sha256": _sha256(path)})
     payload = {
         "schema": "tonematch-portable-manifest/v1",

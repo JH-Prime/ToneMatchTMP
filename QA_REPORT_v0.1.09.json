@@ -1,0 +1,52 @@
+{
+  "app_version": "0.1.09",
+  "status": "headless_passed_frozen_pending",
+  "source_date_kst": "2026-11-15",
+  "scope": "Future-build free signing and Store MSIX preparation; not a signed public release",
+  "headless": {
+    "ok": true,
+    "tests": 504,
+    "seconds": 74.565,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "gui_creation_guard": true,
+    "deferred_gui_tests": 92,
+    "receipt": "work/v109-accepted-headless.json",
+    "source_hashes_verified": true
+  },
+  "frozen_executable": {
+    "status": "pending"
+  },
+  "signpath": {
+    "enrollment_approved": false,
+    "real_signing_verified": false,
+    "artifact_configuration_official_schema_valid": true
+  },
+  "store": {
+    "identity_configured": false,
+    "structural_package_verified": false,
+    "installed": false,
+    "certified": false,
+    "published": false
+  },
+  "public_release": {
+    "published": false,
+    "existing_tags_and_assets_preserved": true
+  },
+  "native_ui_tested": false,
+  "audio_playback_tested": false,
+  "real_song_accuracy_measured": false,
+  "private_media_packaged": false,
+  "limits": [
+    "External enrollment and Store identity are required",
+    "Native UI, installed MSIX execution and actual-song accuracy remain unverified",
+    "Startup animation and damaged updater-cache repair remain follow-ups"
+  ],
+  "ci": {
+    "workflow_syntax_checked": true,
+    "hosted_workflow_run": false,
+    "default_artifact_uploads": false,
+    "paid_services_used": false
+  }
+}

@@ -2,15 +2,19 @@ param(
     [switch]$SkipTests,
     [switch]$SkipZip,
     [string]$OutputDir = "release",
-    [string]$ZigPath = $env:TONEMATCH_ZIG
+    [string]$ZigPath = $env:TONEMATCH_ZIG,
+    [string]$PythonExe = '',
+    [ValidateSet('SigningInput', 'Development')][string]$DistributionMode = 'SigningInput'
 )
 
 $ErrorActionPreference = "Stop"
-$Version = "0.1.08"
-$AppBaseName = "ToneMatchTMP-v$Version"
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$PythonExe = [System.IO.Path]::GetFullPath((Join-Path $ProjectDir "..\.venv\Scripts\python.exe"))
-$PyInstallerExe = [System.IO.Path]::GetFullPath((Join-Path $ProjectDir "..\.venv\Scripts\pyinstaller.exe"))
+$VersionMatch = [regex]::Match((Get-Content -Raw -LiteralPath (Join-Path $ProjectDir 'catalog.py')), '(?m)^APP_VERSION = "(\d+\.\d+\.\d+)"\r?$')
+if (-not $VersionMatch.Success) { throw 'Cannot read application version from catalog.py.' }
+$Version = $VersionMatch.Groups[1].Value
+$AppBaseName = "ToneMatchTMP-v$Version"
+if (-not $PythonExe) { $PythonExe = Join-Path $ProjectDir '..\.venv\Scripts\python.exe' }
+$PythonExe = [System.IO.Path]::GetFullPath($PythonExe)
 $ReleaseDir = if ([System.IO.Path]::IsPathRooted($OutputDir)) {
     [System.IO.Path]::GetFullPath($OutputDir)
 } else {
@@ -20,6 +24,8 @@ $StageParent = [System.IO.Path]::GetFullPath((Join-Path $ProjectDir "build\porta
 $StageRoot = [System.IO.Path]::GetFullPath((Join-Path $StageParent $AppBaseName))
 $DistRoot = [System.IO.Path]::GetFullPath((Join-Path $ProjectDir "dist\$AppBaseName"))
 $BuildLog = [System.IO.Path]::GetFullPath((Join-Path $ProjectDir "build\$AppBaseName-build.log"))
+. (Join-Path $ProjectDir 'tools\build_distribution.ps1')
+$Distribution = Get-DistributionPlan -Version $Version -OutputDir $ReleaseDir -Mode $DistributionMode -SkipZip:$SkipZip
 
 function Assert-ChildPath {
     param([string]$Path, [string]$Parent)
@@ -50,9 +56,6 @@ function Invoke-LoggedNative {
 if (-not (Test-Path -LiteralPath $PythonExe)) {
     throw "Python 가상환경을 찾지 못했습니다: $PythonExe"
 }
-if (-not (Test-Path -LiteralPath $PyInstallerExe)) {
-    throw "PyInstaller를 찾지 못했습니다: $PyInstallerExe"
-}
 $QaPath = Join-Path $ProjectDir "QA_REPORT_v$Version.json"
 if (-not (Test-Path -LiteralPath $QaPath)) {
     throw "현재 버전 QA 보고서가 필요합니다: $QaPath"
@@ -78,14 +81,16 @@ try {
         Invoke-LoggedNative "Python compileall" {
             & $PythonExe -m compileall -q app.py catalog.py debug_info.py devices.py engine.py chord_chart.py guitar_shapes.py harmony_reference.py i18n.py native_dsp.py recorder.py reference_compare.py report.py separator.py spectrum.py stem_removal.py stem_diagnostics.py voicing.py song_chords.py playback.py playback_ui.py chord_edits.py chord_edit_ui.py stem_mixer.py stem_mixer_ui.py chart_pdf.py music_diagnostics.py quad_cortex.py qc_catalog_ui.py tests tools
         }
-        Invoke-LoggedNative "Unit tests" { & $PythonExe -W error -m unittest discover -s tests -v }
+        Invoke-LoggedNative "Headless tests (GUI creation forbidden)" {
+            & $PythonExe -W error tools\verify_headless.py --output "build\$AppBaseName-headless.json"
+        }
     }
 
     Invoke-LoggedNative "Collect license notices" {
         & $PythonExe tools\collect_licenses.py --requirements requirements.txt --destination licenses\runtime --inventory THIRD_PARTY_RUNTIME_INVENTORY.txt
     }
     Invoke-LoggedNative "Generate Korean function reference" { & $PythonExe tools\generate_function_reference.py }
-    Invoke-LoggedNative "PyInstaller onedir build" { & $PyInstallerExe --noconfirm --clean ToneMatchTMP.spec }
+    Invoke-LoggedNative "PyInstaller onedir build" { & $PythonExe -m PyInstaller --noconfirm --clean ToneMatchTMP.spec }
 
     $ExePath = Join-Path $DistRoot "$AppBaseName.exe"
     if (-not (Test-Path -LiteralPath $ExePath)) {
@@ -126,14 +131,14 @@ try {
     foreach ($Name in @(
         "README.md", "README_KO.md", "DEVELOPMENT_KO.md", "FUNCTION_REFERENCE_KO.md",
         "DEVELOPER_HANDOFF_KO_EN.md", "BUILD_HISTORY.md", "TRANSCRIPTION_RESEARCH_KO.md", "LICENSE.txt",
-        "THIRD_PARTY_NOTICES.txt", "THIRD_PARTY_RUNTIME_INVENTORY.txt"
+        "THIRD_PARTY_NOTICES.txt", "THIRD_PARTY_RUNTIME_INVENTORY.txt", "DISTRIBUTION_KO.md", "CODE_SIGNING_POLICY.md", "PRIVACY.md"
     )) {
         Copy-Item -LiteralPath (Join-Path $ProjectDir $Name) -Destination $DocsRoot -Force
     }
     Copy-Item -LiteralPath (Join-Path $ProjectDir "licenses") -Destination $DocsRoot -Recurse -Force
 
     foreach ($Name in @(
-        "app.py", "auto_update.py", "update_startup.py", "catalog.py", "debug_info.py", "devices.py", "engine.py",
+        "app.py", "auto_update.py", "update_startup.py", "package_runtime.py", "catalog.py", "debug_info.py", "devices.py", "engine.py",
         "quad_cortex.py", "qc_catalog_ui.py",
         "song_chords.py", "playback.py", "playback_ui.py", "chord_edits.py", "chord_edit_ui.py",
         "stem_mixer.py", "stem_mixer_ui.py", "chart_pdf.py", "music_diagnostics.py",
@@ -153,11 +158,12 @@ try {
         "DEVELOPER_HANDOFF_KO_EN.md", "BUILD_HISTORY.md", "TRANSCRIPTION_RESEARCH_KO.md", "LICENSE.txt",
         "THIRD_PARTY_NOTICES.txt", "THIRD_PARTY_RUNTIME_INVENTORY.txt",
         "ToneMatchTMP.spec", "build.ps1", "requirements.txt", "requirements-dev.txt", "requirements-cuda126.txt",
-        "enable_cuda.ps1", "version_info.txt"
+        "enable_cuda.ps1", "version_info.txt", "AGENTS.md", "DISTRIBUTION_KO.md", "CODE_SIGNING_POLICY.md", "PRIVACY.md"
     )) {
         Copy-Item -LiteralPath (Join-Path $ProjectDir $Name) -Destination $SourceRoot -Force
     }
     Copy-Item -LiteralPath (Join-Path $ProjectDir "licenses") -Destination $SourceRoot -Recurse -Force
+    Copy-PublicDistribution -Source (Join-Path $ProjectDir 'distribution') -Destination (Join-Path $SourceRoot 'distribution')
     if (Test-Path -LiteralPath (Join-Path $ProjectDir "QA_REPORT_v$Version.json")) {
         Copy-Item -LiteralPath (Join-Path $ProjectDir "QA_REPORT_v$Version.json") -Destination $SourceRoot -Force
     }
@@ -238,14 +244,28 @@ try {
     Copy-Item -LiteralPath (Join-Path $ProjectDir "build\native\native-build.json") -Destination $DiagnosticsRoot -Force
     Copy-Item -LiteralPath (Join-Path $ProjectDir "build\native\native-verification.json") -Destination $DiagnosticsRoot -Force
 
+    $SourceCommit = (& git -C $ProjectDir rev-parse HEAD 2>$null)
+    $DistributionReceipt = [ordered]@{
+        schema = 'tonematch-build-distribution/v1'; app_version = $Version
+        source_commit = $SourceCommit; status = $Distribution.Status
+        public_signing_verified = $false; store_certified = $false
+        signature_coverage = @(); generated_at_kst = [DateTimeOffset]::UtcNow.ToOffset([TimeSpan]::FromHours(9)).ToString('o')
+    }
+    $DistributionReceipt | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $DiagnosticsRoot 'DISTRIBUTION.json') -Encoding utf8
     & $PythonExe tools\write_manifest.py --root $StageRoot --output (Join-Path $StageRoot "MANIFEST.json") --version $Version
     if ($LASTEXITCODE -ne 0) { throw "배포 manifest 생성에 실패했습니다." }
 
+    if (-not $Distribution.WriteReleaseFiles) {
+        Write-Host "Unsigned signing input only: $StageRoot"
+        Write-Host 'No public ZIP created. Complete SignPath signing and the signed-release verifier before publication.'
+        return
+    }
     New-Item -ItemType Directory -Force -Path $ReleaseDir | Out-Null
-    $ZipPath = Join-Path $ReleaseDir "$AppBaseName-Windows-x64-Portable-Dev.zip"
-    $ChecksumsPath = Join-Path $ReleaseDir "$AppBaseName-SHA256SUMS.txt"
-    if (-not $SkipZip) {
-        if (Test-Path -LiteralPath $ZipPath) { Remove-Item -LiteralPath $ZipPath -Force }
+    # Recheck immediately before output as a second invocation may have completed meanwhile.
+    $Distribution = Get-DistributionPlan -Version $Version -OutputDir $ReleaseDir -Mode $DistributionMode -SkipZip:$SkipZip
+    $ZipPath = $Distribution.ZipPath
+    $ChecksumsPath = $Distribution.ChecksumsPath
+    if ($Distribution.CreateZip) {
         Compress-Archive -LiteralPath $StageRoot -DestinationPath $ZipPath -CompressionLevel Optimal
     }
 
@@ -256,13 +276,17 @@ try {
     $PublicBuildLogPath = Join-Path $HistoryRoot (Split-Path -Leaf $BuildLog)
     $ChecksumLines += "{0}  {1}" -f (Get-FileHash -Algorithm SHA256 -LiteralPath $ManifestPath).Hash, "$AppBaseName\MANIFEST.json"
     $ChecksumLines += "{0}  {1}" -f (Get-FileHash -Algorithm SHA256 -LiteralPath $PublicBuildLogPath).Hash, "$AppBaseName\history\$(Split-Path -Leaf $PublicBuildLogPath)"
-    if (-not $SkipZip) {
+    if ($Distribution.CreateZip) {
         $ChecksumLines += "{0}  {1}" -f (Get-FileHash -Algorithm SHA256 -LiteralPath $ZipPath).Hash, (Split-Path -Leaf $ZipPath)
     }
-    Set-Content -LiteralPath $ChecksumsPath -Encoding ascii -Value $ChecksumLines
+    $ChecksumStream = [System.IO.File]::Open($ChecksumsPath, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write)
+    try {
+        $ChecksumBytes = [System.Text.Encoding]::ASCII.GetBytes(($ChecksumLines -join "`r`n") + "`r`n")
+        $ChecksumStream.Write($ChecksumBytes, 0, $ChecksumBytes.Length)
+    } finally { $ChecksumStream.Dispose() }
 
     Write-Host "완료: $StageRoot"
-    if (-not $SkipZip) { Write-Host "ZIP:  $ZipPath" }
+    if ($Distribution.CreateZip) { Write-Host "Unsigned development ZIP: $ZipPath" }
     Write-Host "SHA:  $ChecksumsPath"
 } finally {
     Pop-Location

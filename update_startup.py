@@ -15,6 +15,8 @@ import sys
 import tempfile
 import threading
 
+from package_runtime import package_identity
+
 
 _launched_processes = []  # Keep the detached Popen alive until this process exits.
 
@@ -27,12 +29,13 @@ def should_check_for_updates(arguments=None) -> bool:
     arguments = sys.argv[1:] if arguments is None else arguments
     return (bool(getattr(sys, 'frozen', False)) and sys.platform == 'win32'
             and '--skip-update' not in arguments
-            and not any(value.startswith(('--self-test', '--stem-self-test')) for value in arguments))
+            and not any(value.startswith(('--self-test', '--stem-self-test')) for value in arguments)
+            and package_identity().status == 'unpackaged')
 
 
 def inherited_context() -> tuple[Path, Path] | None:
     """Accept original data context only inside its own managed update tree."""
-    if not getattr(sys, 'frozen', False):
+    if not getattr(sys, 'frozen', False) or package_identity().status != 'unpackaged':
         return None
     from auto_update import installation_cache
     try:
@@ -69,6 +72,8 @@ def _windows_dll_directory(path) -> None:
 
 def launch_update(executable: Path, installation_root: Path, data_root: Path) -> None:
     """Launch only the core's verified target, with an independent frozen runtime."""
+    if package_identity().status != 'unpackaged':
+        raise ValueError('Portable update launch requires an unpackaged process package identity.')
     executable = executable.resolve()
     environment = os.environ.copy()
     environment.update({
@@ -237,6 +242,8 @@ class _StartupView:
 
 def run_startup_update(root, version: str, installation_root: Path, data_root: Path) -> bool:
     """Return True after handoff/close, False to open the installed application."""
+    if package_identity().status != 'unpackaged':
+        return False
     try:
         settings_path = data_root / 'settings.json'
         settings = json.loads(settings_path.read_text(encoding='utf-8')) if settings_path.stat().st_size < 65536 else {}

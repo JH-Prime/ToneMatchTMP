@@ -1,4 +1,22 @@
-# ToneMatch TMP 0.1.08
+# ToneMatch TMP 0.1.09 — distribution preparation
+
+Current work prepares free SignPath signing and Microsoft Store MSIX distribution for
+this and future versions. **Foundation approval, real signing, Store identity and Store
+certification remain pending.** The latest published release is still v0.1.08 below.
+
+Read [distribution instructions](DISTRIBUTION_KO.md), [Code signing policy](CODE_SIGNING_POLICY.md),
+[privacy](PRIVACY.md), and [current QA](QA_REPORT_v0.1.09.json). The default build now creates
+unsigned signing input only; explicit `-DistributionMode Development` is required for
+an unsigned developer ZIP. Signed bytes are verified before manifests and archives are
+generated. Existing releases cannot be overwritten. The manual CI workflow defaults to
+verification without uploading artifacts; signing uploads require confirmed free storage.
+
+Store builds use package identity, user data/cache storage and Store-managed updates.
+The portable updater remains compatible. App version 0.1.09 maps to Store version 1.1.9.0.
+No application UI, playback or package installation is authorized by these preparations.
+Startup animation remains a follow-up after the distribution work.
+
+## Published v0.1.08 baseline
 
 Source reference: 2026-11-09 KST. Unsigned Windows CPU developer prerelease.
 Published at **2026-11-11 21:44:09 KST**: [v0.1.08 release](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.08).

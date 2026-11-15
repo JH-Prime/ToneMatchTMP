@@ -18,6 +18,30 @@ class ImmediateThread:
 
 
 class StartupTests(unittest.TestCase):
+    def setUp(self):
+        identity = patch.object(startup, 'package_identity',
+                                return_value=Mock(status='unpackaged'), create=True)
+        identity.start()
+        self.addCleanup(identity.stop)
+
+    def test_packaged_or_unknown_identity_cannot_use_portable_updater(self):
+        for status in ('packaged', 'unknown'):
+            with self.subTest(status=status), \
+                    patch.object(startup, 'package_identity', return_value=Mock(status=status)), \
+                    patch.object(startup.sys, 'frozen', True, create=True), \
+                    patch.object(startup.sys, 'platform', 'win32'), \
+                    patch.object(startup.subprocess, 'Popen') as launch, \
+                    patch.object(startup, '_windows_dll_directory') as dll, \
+                    patch.object(startup, '_StartupView') as view:
+                self.assertFalse(startup.should_check_for_updates([]))
+                self.assertIsNone(startup.inherited_context())
+                self.assertFalse(startup.run_startup_update(Mock(), '0.1.09', Path('origin'), Path('data')))
+                with self.assertRaisesRegex(ValueError, 'package identity'):
+                    startup.launch_update(Path('new.exe'), Path('origin'), Path('data'))
+                launch.assert_not_called()
+                dll.assert_not_called()
+                view.assert_not_called()
+
     def controller(self, prepare, launch=None):
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
@@ -126,6 +150,10 @@ class StartupTests(unittest.TestCase):
                     patch.object(startup.sys, 'executable', str(executable)), \
                     patch.dict(startup.os.environ, environment, clear=True):
                 self.assertEqual(startup.inherited_context(), (origin.resolve(), data.resolve()))
+                for status in ('packaged', 'unknown'):
+                    with self.subTest(status=status), \
+                            patch.object(startup, 'package_identity', return_value=Mock(status=status)):
+                        self.assertIsNone(startup.inherited_context())
                 with patch.dict(startup.os.environ, {'TONEMATCH_UPDATE_DATA': str(root / 'unrelated')}):
                     self.assertIsNone(startup.inherited_context())
                 with patch.dict(startup.os.environ, {'TONEMATCH_UPDATE_TARGET': str(origin / 'other.exe')}):

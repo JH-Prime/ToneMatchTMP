@@ -1,4 +1,21 @@
-# ToneMatch TMP 0.1.08
+# ToneMatch TMP 0.1.09 — 무료 서명·Store 배포 준비
+
+이후 모든 버전에 적용할 SignPath 무료 서명과 Microsoft Store MSIX 배포 절차를 준비합니다.
+**Foundation 승인·실제 서명·Store 앱 식별자·Store 인증은 대기 중**입니다.
+현재 게시된 최신 릴리스는 아래의 v0.1.08이며 기존 파일은 바꾸지 않습니다.
+
+[배포 절차](DISTRIBUTION_KO.md), [Code signing policy](CODE_SIGNING_POLICY.md),
+[개인정보 안내](PRIVACY.md), [현행 QA](QA_REPORT_v0.1.09.json)를 확인하세요.
+기본 빌드는 서명 대기 입력만 생성합니다. 서명 없는 개발자 ZIP은 명시적으로
+`-DistributionMode Development`를 지정해야 하며 기존 산출물을 덮어쓰지 않습니다.
+서명 결과 검증 뒤 최종 manifest·ZIP·SHA-256을 생성합니다. 수동 CI는 기본적으로
+검사만 수행하고 자산을 업로드하지 않습니다. 서명용 업로드는 무료 저장 용량 확인이 필요합니다.
+
+Store 패키지에서는 사용자 데이터·캐시 위치와 Store 업데이트를 사용합니다.
+포터블 업데이트 호환성은 유지합니다. 앱 0.1.09의 Store 버전은 1.1.9.0입니다.
+실제 설치·화면·실청은 아직 검증하지 않았고 시작 애니메이션은 후속으로 남겨 둡니다.
+
+## 게시된 v0.1.08 기록
 
 소스 기준일: 2026-11-09 KST. 서명되지 않은 Windows CPU 개발자 프리릴리스입니다.
 **2026-11-11 21:44:09 KST** 게시: [v0.1.08 다운로드](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.08).

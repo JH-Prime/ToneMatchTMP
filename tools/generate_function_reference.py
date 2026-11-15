@@ -7,6 +7,8 @@ from pathlib import Path
 
 
 SOURCE_NAMES = (
+    "package_runtime.py", "update_startup.py", "auto_update.py",
+    "tools/package_msix.py", "tools/finalize_signed_release.py", "tools/prepare_ci.py",
     "quad_cortex.py", "qc_catalog_ui.py", "tools/import_quad_cortex.py", "tools/verify_qc_chords.py",
     "song_chords.py", "playback.py", "playback_ui.py", "chord_edits.py", "chord_edit_ui.py",
     "stem_mixer.py", "stem_mixer_ui.py", "chart_pdf.py", "music_diagnostics.py",
@@ -82,8 +84,12 @@ def _function_rows(path: Path) -> list[tuple[int, str, str]]:
 
 def generate(project_root: Path, output: Path) -> None:
     """모든 배포 모듈의 함수 설명을 버전이 적힌 단일 문서로 저장한다."""
+    catalog_tree = ast.parse((project_root / "catalog.py").read_text(encoding="utf-8"))
+    version = next(ast.literal_eval(node.value) for node in catalog_tree.body
+                   if isinstance(node, ast.Assign)
+                   and any(isinstance(target, ast.Name) and target.id == "APP_VERSION" for target in node.targets))
     lines = [
-        "# ToneMatch TMP 0.1.02 함수 설명서",
+        f"# ToneMatch TMP {version} 함수 설명서",
         "",
         "이 문서는 배포 소스의 모든 함수와 한국어 docstring을 자동으로 모은 색인입니다.",
         "앱의 `개발자 옵션`에서는 처리 순서 블록을 클릭해 같은 함수의 실제 소스와 원본 줄 번호를 볼 수 있습니다.",

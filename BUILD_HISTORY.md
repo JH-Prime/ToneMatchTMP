@@ -8,6 +8,7 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 | 버전 | 상태 | 범위 |
 |---|---|---|
+| `0.1.09` | 무료 서명·Store 배포 기술 준비; 실제 서명·인증 대기 | 향후 빌드 기본 규칙, 서명 후 패키징, MSIX·사용자 저장소·채널별 업데이트 |
 | `0.1.08` | 독립 ZIP·업데이트 설치·공개 파일 검증 완료·개발자 프리릴리스 게시 | 시간별 미확정 관측음 보존, 첫 마디 보정 후 이동, 녹음 종료·재시작 상태, JSON 기호 검증 |
 | `0.1.07` | 독립 ZIP·자동 설치 검증 완료·개발자 프리릴리스 게시 | CQT 배음 오인식 억제, 자동 GitHub 업데이트, 모듈러 편향 점검 |
 | `0.1.06` | 독립 ZIP 검증 완료·개발자 프리릴리스 게시 | CQT 구성음 근거 보완, 일부 7·9화음 완전5도 생략, 저신호 예외 수정, FFT 기존 배음 억제 유지 |
@@ -29,6 +30,21 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 | `0.0.03` | 포터블 개발 프리뷰 빌드 완료 | 포터블 개발 ZIP, 한·영 handoff, 로그·빌드 이력, NumPy 코드/보이싱 분석(실험) |
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
+
+## v0.1.09 distribution preparation — 2026-11-15 KST
+
+User approved no-cost SignPath and Store MSIX routes for every future release.
+Normal builds produce unsigned signing input only. Explicit developer archives remain
+unsigned; all output paths refuse replacement. Root EXE signature/provenance verification
+precedes regenerated manifests and ZIP hashes. Preserve the existing Portable-Dev asset
+name so already released updaters can discover a future signed developer release.
+
+Store package identity disables the portable updater and uses per-user data/cache paths.
+App 0.1.09 maps to Store package 1.1.9.0. MSIX validation-only output is nonpublishable.
+Current checks and limitations: QA_REPORT_v0.1.09.json. No Foundation approval, actual
+signature, real Store identity, installed UI verification or Store certification is claimed.
+The hosted workflow is manual and was not run; default verification uploads no artifacts.
+The signing upload path requires free-storage confirmation and paid-overage prevention.
 
 ## v0.1.08 publication record — 2026-11-11 KST
 

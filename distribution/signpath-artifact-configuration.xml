@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Enrollment preparation only: import and approve in SignPath before use.
+     Only the source-built root EXE is signed. No recursive PE wildcard.
+     Native DSP DLL coverage is deferred until it has constrained VERSIONINFO. -->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <parameters>
+    <parameter name="version" required="true" />
+  </parameters>
+  <zip-file>
+    <pe-file path="ToneMatchTMP-v${version}.exe"
+             product-name="ToneMatch TMP"
+             product-version="${version}"
+             file-version="${version}"
+             original-filename="ToneMatchTMP-v${version}.exe"
+             company-name="ToneMatch TMP contributors">
+      <authenticode-sign hash-algorithm="sha256" />
+    </pe-file>
+  </zip-file>
+</artifact-configuration>

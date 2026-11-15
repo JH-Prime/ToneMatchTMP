@@ -8,17 +8,35 @@
 from __future__ import annotations
 
 
-APP_VERSION = "0.1.08"
+APP_VERSION = "0.1.09"
 TARGET_FIRMWARE = "1.8.58"
 MODEL_GUIDE_REVISION = "Rev. J (2026-07)"
-BUILD_DATE = "2026-11-09"
+BUILD_DATE = "2026-11-15"
 
 
 # 앱 내부의 변경 기록 화면과 배포 문서가 함께 사용하는 단일 원본이다.
 # 기능 버전 0.1.01 이후 수정 릴리스는 0.1.02부터 올리며 공개 산출물을 덮어쓰지 않는다.
 CHANGELOG: list[dict] = [
     {
-        "version": "0.1.08", "date": BUILD_DATE,
+        "version": "0.1.09", "date": BUILD_DATE,
+        "status": "배포 준비 중", "status_en": "Distribution preparation",
+        "changes": [
+            "향후 모든 버전에 무료 SignPath 서명·Store MSIX 배포 규칙 적용",
+            "기본 빌드는 서명 대기 입력만 생성하고 기존 배포 파일 덮어쓰기 거부",
+            "Windows 패키지 실행 시 Store 업데이트와 사용자 데이터·캐시 위치 사용",
+            "서명 후 무결성 목록 생성과 MSIX 구조 검증 절차 추가",
+        ],
+        "changes_en": [
+            "Apply free SignPath and Store MSIX distribution policy to future versions",
+            "Prepare signing inputs by default and refuse existing release output replacement",
+            "Use Store updates and user data/cache locations in Windows package context",
+            "Add post-signing integrity generation and structural MSIX validation",
+        ],
+        "known_issues": ["SignPath 승인·실제 서명·Store 인증 대기", "실제 MSIX 설치·UI·음원 재생 미검증", "시작 애니메이션은 후속 작업"],
+        "known_issues_en": ["SignPath approval, real signing and Store certification pending", "MSIX installation, native UI and playback untested", "Startup animation remains a follow-up"],
+    },
+    {
+        "version": "0.1.08", "date": "2026-11-09",
         "status": "개발자 프리릴리스", "status_en": "Developer prerelease",
         "changes": [
             "CQT·FFT 미확정 구간에서 서로 다른 관측음의 근거를 시간별로 보존",
