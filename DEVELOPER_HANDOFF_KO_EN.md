@@ -15,6 +15,13 @@ configuration. MSIX Store version is app-major+1, minor, patch, 0. Validation-on
 is nonpublishable. Real Store identity, installation and certification remain pending.
 
 Current source and build verification is recorded only in QA_REPORT_v0.1.09.json.
+The accepted runtime/build source is `a4ec3590c5492b6ddadccad2e310206853e4ee14`.
+504 guarded headless tests pass (92 GUI cases deferred), frozen diagnostics pass,
+and full-runtime MakeAppx validation plus 4,904 package-content hash checks pass.
+The unsigned signing input binds 5,499 files. Service accounts are not ready, as
+confirmed by the user; use distribution/ENROLLMENT_KO.md for the concrete next steps.
+Keep the validation-only MSIX local and nonpublishable. Later QA/documentation updates
+record these external checks without mutating the tested staging artifacts.
 No new trusted release is published until real signing passes. No paid service, normal
 UI launch, audio playback or installation is authorized. Startup animation and damaged
 portable-cache repair remain follow-ups. Current plan:

@@ -3,6 +3,8 @@
 이 규칙은 v0.1.09 준비 작업부터 **이후 모든 빌드와 릴리스**에 적용합니다.
 현재 상태는 기술 준비 단계입니다. SignPath Foundation 승인·실제 서명·Microsoft Store
 인증 완료를 의미하지 않습니다. 게시된 v0.1.08과 이전 태그·배포 파일은 보존합니다.
+기술 검증은 완료했으며 두 서비스 계정은 아직 준비되지 않았습니다.
+실제 신청에 복사할 자료는 저장소의 [가입 안내](https://github.com/JH-Prime/ToneMatchTMP/blob/main/distribution/ENROLLMENT_KO.md)에 있습니다.
 
 ## 빌드 결과의 구분
 

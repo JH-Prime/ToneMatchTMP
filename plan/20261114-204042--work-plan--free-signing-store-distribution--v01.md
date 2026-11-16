@@ -3,15 +3,15 @@
 Plan Type: Work plan
 Workstream: ToneMatchTMP v0.1.09 distribution preparation and future release policy
 Version: 01
-Status: Technical implementation complete; integrated build and packaging verification in progress
+Status: Technical preparation verified; external enrollment pending
 Created: 2026-11-14 20:40:42 Asia/Seoul
-Last Updated: 2026-11-15 18:53:48 Asia/Seoul
+Last Updated: 2026-11-16 22:47:24 Asia/Seoul
 Related Plan: plan/20261108-223717--work-plan--v0-1-08-evidence-workflow--v01.md (completed release; retain unchanged)
-Current Completion State: Future-build policy, guarded build/signing/MSIX tools and runtime channel distinction implemented; 502 headless regressions passed
-Completed So Far: Durable AGENTS and policy/privacy guides; explicit unsigned build modes and output protection; native Store identity/storage/update guards; source-bound Authenticode finalizer; official SignPath XSD acceptance; 502 tests passed with 92 GUI cases deferred
-Remaining Work: Final source binding, frozen build, full MSIX structural validation, preparation commit/push and external enrollment handoff
-Current Blockers: Public signing enrollment and Store identity are not configured; signing and Store certification cannot be represented as completed
-Next Step: Finish integrated verification and make the preparation reviewable; preserve all published assets and report pending service approvals
+Current Completion State: Future-build policy and guarded distribution tools implemented; 504 headless tests, frozen diagnostics, full MSIX structural validation and artifact hash readback passed
+Completed So Far: Durable release policy, Store identity/storage/update guards, source-bound signing finalizer, official SignPath XSD validation, accepted source commit a4ec3590c5492b6ddadccad2e310206853e4ee14, 5,499 signing-bound files and 4,904 MSIX content files verified, concrete enrollment guide
+Remaining Work: User enrollment, assigned identities, hosted CI and actual signing, permitted installed-runtime validation, Store certification and public signed release
+Current Blockers: The user confirmed both service accounts are not ready. Actual signing and Store publication require external enrollment; independent final review was unavailable because workers reached service usage limits
+Next Step: User completes SignPath Foundation application and Microsoft Store registration using distribution/ENROLLMENT_KO.md; continue service integration after enrollment while preserving all published assets
 
 ## Objective and approved understanding
 
@@ -77,18 +77,19 @@ Technical preparation is complete when future maintainers have a durable release
 
 ## Scoreboard
 
-Current score: 43/100
+Current score: 48/100
 Score source: provisional
-Last updated: 2026-11-15 18:53:48 Asia/Seoul
-Rationale: Durable implementation and focused/integrated tests pass; frozen package and external service acceptance remain unfinished.
-What improved: The user has chosen both distribution paths and made future-build policy explicit.
+Last updated: 2026-11-16 22:44:37 Asia/Seoul
+Rationale: Technical preparation, full-runtime packaging and artifact readback pass; actual trusted distribution still depends on external account enrollment and acceptance.
+What improved: Future-build policy is executable and documented; 504 headless tests, frozen diagnostics, MSIX structural validation and complete content hash comparison pass; enrollment material is ready.
 What remains unsatisfactory: The existing EXE is unsigned; service enrollment, trusted signatures and Store certification remain uncompleted.
-Next score-maintenance action: Establish durable policy and executable validation without promising external approval or SmartScreen behavior.
+Next score-maintenance action: Connect approved service identities and verify real signed outputs without promising SmartScreen behavior.
 
 Score history:
 
 - 2026-11-14 20:40:42 Asia/Seoul — 35 provisional: research and approval complete; implementation and external service acceptance pending.
 - 2026-11-15 18:53:48 Asia/Seoul — 43 provisional: 502 headless tests passed, official signing XML schema validated, actual enrollment and package acceptance remain open.
+- 2026-11-16 22:44:37 Asia/Seoul — 48 provisional: final 504-test source accepted, frozen and full MSIX checks pass, all signing-bound and MSIX content hashes verified; external accounts and real trusted distribution remain pending.
 
 ## Progress log
 
@@ -96,3 +97,5 @@ Score history:
 - 2026-11-15 18:53:48 Asia/Seoul — Implemented Store tri-state native identity with LocalState and early Numba cache selection, portable update defenses, no-overwrite build modes, signing provenance/Authenticode finalizer, MSIX tools and persistent release policy. Targeted red/green logs and work reports retained. Full suite: 502 passed in 91.561 seconds, no skips/failures/errors, 92 GUI cases deferred. Review found signed ZIP filename incompatible with already released updater; regression reproduced and fixed by preserving Portable-Dev naming. Official SignPath XSD validation passes. Store package version mapping explicitly uses app major+1, minor, patch, 0 to meet Store constraints without collisions. Manual workflow defaults to no artifact upload; signing upload requires confirmed free quota and no paid overages. Workers hit service usage limits, so parent continues integration/review without assuming independent acceptance.
 
 - 2026-11-15 Asia/Seoul — Final accepted source suite: 504 headless tests passed in 74.565 seconds, 92 GUI deferred, source hashes exact. Added red/green repairs for existing updater asset-name compatibility, local-account file exclusion, and private media/model/cache rejection before manifest/MSIX/signing binding. Parent read-only source/tool review completed; independent final review was unavailable due worker usage limits. Frozen and full MSIX verification follow.
+- 2026-11-16 22:44:37 Asia/Seoul — Accepted source a4ec3590c5492b6ddadccad2e310206853e4ee14 built in SigningInput mode. Frozen self-test passes music/native ABI 2/updater checks; 17 known optional/deprecation warnings remain. Root EXE is NotSigned. Signing input binds 5,499 files. Official MakeAppx produced a nonpublishable unsigned MSIX, version 1.1.9.0, 321,532,858 bytes, SHA-256 b286c1b72c0e86e9628883f7b4b05b85f3217ee903073076cb8cc156c3e662a5. All 4,904 staged content files match the package after OPC entry-name decoding. Rechecked source hashes against the accepted suite. QA/docs now record these results without mutating the built stage. Both accounts are not ready; distribution/ENROLLMENT_KO.md contains application facts and next steps. No hosted CI, normal UI, audio, installation, actual signing or Store publication occurred. Public v0.1.08 metadata/assets remain unchanged; preparation source publication is next.
+- 2026-11-16 22:47:24 Asia/Seoul — Pushed accepted implementation a4ec3590c5492b6ddadccad2e310206853e4ee14 to origin/main and verified the remote ref. Existing v0.1.07/v0.1.08 tags still resolve to their original source commits; no v0.1.09 tag exists. Final QA and enrollment documentation are ready for their follow-up commit. The remaining functional gates require external service enrollment; no signed release or Store approval is claimed.

@@ -1,6 +1,6 @@
 {
   "app_version": "0.1.09",
-  "status": "headless_passed_frozen_pending",
+  "status": "technical_preparation_verified_external_enrollment_pending",
   "source_date_kst": "2026-11-15",
   "scope": "Future-build free signing and Store MSIX preparation; not a signed public release",
   "headless": {
@@ -16,19 +16,39 @@
     "source_hashes_verified": true
   },
   "frozen_executable": {
-    "status": "pending"
+    "ok": true,
+    "music_workflow_ok": true,
+    "native_parity_ok": true,
+    "updater_self_test_ok": true,
+    "sha256": "4587e3078e178daed6a098efe635df9bb6a39b6f9d833fa3ac2add9ed40f0d4a",
+    "authenticode_status": "NotSigned",
+    "warnings": 17,
+    "receipt": "build/portable/ToneMatchTMP-v0.1.09/diagnostics/ToneMatchTMP-v0.1.09-SELF-TEST.json"
   },
   "signpath": {
     "enrollment_approved": false,
     "real_signing_verified": false,
-    "artifact_configuration_official_schema_valid": true
+    "artifact_configuration_official_schema_valid": true,
+    "input_prepared": true,
+    "bound_files_verified": 5499,
+    "actual_signature_verified": false,
+    "coverage_planned": [
+      "root application EXE only"
+    ]
   },
   "store": {
     "identity_configured": false,
-    "structural_package_verified": false,
+    "structural_package_verified": true,
     "installed": false,
     "certified": false,
-    "published": false
+    "published": false,
+    "validation_only": true,
+    "submission_eligible": false,
+    "package_version": "1.1.9.0",
+    "artifact_bytes": 321532858,
+    "artifact_sha256": "b286c1b72c0e86e9628883f7b4b05b85f3217ee903073076cb8cc156c3e662a5",
+    "content_files_verified": 4904,
+    "receipt": "build/v109-msix-validation/packaging-receipt.json"
   },
   "public_release": {
     "published": false,
@@ -48,5 +68,23 @@
     "hosted_workflow_run": false,
     "default_artifact_uploads": false,
     "paid_services_used": false
-  }
+  },
+  "recorded_at_kst": "2026-11-16T22:40:14+09:00",
+  "artifact_source_commit": "a4ec3590c5492b6ddadccad2e310206853e4ee14",
+  "external_accounts": {
+    "user_confirmed_on_kst": "2026-11-15",
+    "signpath_ready": false,
+    "store_ready": false
+  },
+  "review": {
+    "parent_source_and_artifact_review_complete": true,
+    "independent_final_review_complete": false,
+    "independent_review_limit": "Workers reached service usage limits; do not infer independent acceptance"
+  },
+  "notes": [
+    "The packaged QA remains its original source-acceptance snapshot; this later repository QA records external build and package checks.",
+    "MSIX uses a test identity and is not installed, signed, certified or published.",
+    "Default signing-input build intentionally creates no public developer ZIP; actual signing and public release remain pending enrollment.",
+    "Hosted CI has not run; local syntax, pinned configuration and build checks do not prove service integration."
+  ]
 }

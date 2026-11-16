@@ -1,5 +1,11 @@
 # Microsoft Store 제출 준비
 
+2026-11-16 검증 기록: 전체 v0.1.09 onedir로 만든 validation-only MSIX의 MakeAppx
+구조 검증과 내부 4,904개 파일 해시 대조를 통과했습니다. 크기 321,532,858바이트,
+SHA-256 `b286c1b72c0e86e9628883f7b4b05b85f3217ee903073076cb8cc156c3e662a5`입니다.
+검증 소스는 `a4ec3590c5492b6ddadccad2e310206853e4ee14`이고 실제 설치·서명·인증은
+하지 않았습니다. 아래의 초기 fixture 검사와 전체 런타임 검사를 구분하세요.
+
 현재 준비 범위는 unsigned MSIX 생성 도구·manifest·필수 아이콘·런타임 분기입니다.
 실제 Partner Center 앱 ID, Store 서명, 설치 시험 및 Store 인증은 완료되지 않았습니다.
 GitHub 포터블 배포와는 별도 채널이며, Store의 서명이 GitHub ZIP에 적용되지는 않습니다.

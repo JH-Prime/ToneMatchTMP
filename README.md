@@ -16,6 +16,11 @@ The portable updater remains compatible. App version 0.1.09 maps to Store versio
 No application UI, playback or package installation is authorized by these preparations.
 Startup animation remains a follow-up after the distribution work.
 
+Technical preparation verified: 504 headless tests, frozen executable diagnostics and
+full-runtime MakeAppx validation pass; all 4,904 MSIX content files match their hashes.
+The validation package is unsigned and nonpublishable. Both service accounts remain
+unconfigured. Use the ready-to-copy [enrollment guide](distribution/ENROLLMENT_KO.md).
+
 ## Published v0.1.08 baseline
 
 Source reference: 2026-11-09 KST. Unsigned Windows CPU developer prerelease.

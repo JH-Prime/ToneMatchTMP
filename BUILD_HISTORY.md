@@ -33,6 +33,20 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 ## v0.1.09 distribution preparation — 2026-11-15 KST
 
+Verification completion recorded 2026-11-16 22:40:14 Asia/Seoul. Accepted source:
+`a4ec3590c5492b6ddadccad2e310206853e4ee14`. Headless 504/504 pass in 74.565 seconds;
+92 GUI cases deferred. Frozen self-test passes music, native ABI 2 parity and updater
+checks; the build retains 17 known optional/deprecation warnings. The EXE is NotSigned.
+The signing input binds 5,499 files (5,498 manifest entries plus MANIFEST.json).
+
+Full-runtime validation MSIX: 321,532,858 bytes, SHA-256
+`b286c1b72c0e86e9628883f7b4b05b85f3217ee903073076cb8cc156c3e662a5`.
+Official Microsoft MakeAppx semantic packaging succeeds; all 4,904 staged content files
+match the archive after decoding OPC entry names. Package version 1.1.9.0 uses the
+validation-only identity. It is unsigned, not installed and not submission eligible.
+Public signing, Store certification and hosted CI have not occurred. Both accounts
+are not ready according to the user; enrollment instructions are saved separately.
+
 User approved no-cost SignPath and Store MSIX routes for every future release.
 Normal builds produce unsigned signing input only. Explicit developer archives remain
 unsigned; all output paths refuse replacement. Root EXE signature/provenance verification
