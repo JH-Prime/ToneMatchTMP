@@ -1,4 +1,4 @@
-# ToneMatch TMP 0.1.09 함수 설명서
+# ToneMatch TMP 0.1.10 함수 설명서
 
 이 문서는 배포 소스의 모든 함수와 한국어 docstring을 자동으로 모은 색인입니다.
 앱의 `개발자 옵션`에서는 처리 순서 블록을 클릭해 같은 함수의 실제 소스와 원본 줄 번호를 볼 수 있습니다.
@@ -15,24 +15,32 @@
 
 | 줄 | 함수 | 설명 |
 |---:|---|---|
-| 24 | `cache_root` | 설명 누락 |
-| 28 | `should_check_for_updates` | 설명 누락 |
-| 36 | `inherited_context` | Accept original data context only inside its own managed update tree. |
-| 66 | `_windows_dll_directory` | 설명 누락 |
-| 73 | `launch_update` | Launch only the core's verified target, with an independent frozen runtime. |
-| 110 | `StartupController.__init__` | 설명 누락 |
-| 128 | `StartupController.start` | 설명 누락 |
-| 132 | `StartupController._progress` | 설명 누락 |
-| 139 | `StartupController._work` | 설명 누락 |
-| 150 | `StartupController._finish` | 설명 누락 |
-| 155 | `StartupController.cancel` | 설명 누락 |
-| 159 | `StartupController.poll` | Called by the main thread; return whether polling should continue. |
-| 187 | `_StartupView.__init__` | 설명 누락 |
-| 217 | `_StartupView.progress` | 설명 누락 |
-| 238 | `_StartupView.destroy` | 설명 누락 |
-| 243 | `run_startup_update` | Return True after handoff/close, False to open the installed application. |
-| 256 | `run_startup_update.<local>.finish` | 설명 누락 |
-| 265 | `run_startup_update.<local>.poll` | 설명 누락 |
+| 26 | `cache_root` | 설명 누락 |
+| 30 | `should_show_startup` | The EXE intro is independent of portable update eligibility. |
+| 37 | `should_check_for_updates` | 설명 누락 |
+| 43 | `inherited_context` | Accept original data context only inside its own managed update tree. |
+| 73 | `_windows_dll_directory` | 설명 누락 |
+| 80 | `launch_update` | Launch only the core's verified target, with an independent frozen runtime. |
+| 117 | `StartupController.__init__` | 설명 누락 |
+| 135 | `StartupController.start` | 설명 누락 |
+| 139 | `StartupController._progress` | 설명 누락 |
+| 146 | `StartupController._work` | 설명 누락 |
+| 157 | `StartupController._finish` | 설명 누락 |
+| 162 | `StartupController.cancel` | 설명 누락 |
+| 166 | `StartupController.poll` | Called by the main thread; return whether polling should continue. |
+| 191 | `waveform_heights` | Decorative half-heights, unrelated to audio or measured progress. |
+| 201 | `WaveformAnimation.__init__` | 설명 누락 |
+| 212 | `WaveformAnimation._tick` | 설명 누락 |
+| 227 | `WaveformAnimation.stop` | 설명 누락 |
+| 241 | `_StartupView.__init__` | 설명 누락 |
+| 287 | `_StartupView.progress` | 설명 누락 |
+| 312 | `_StartupView.destroy` | 설명 누락 |
+| 325 | `run_startup` | Return True after handoff/close, False to open the installed application. |
+| 343 | `run_startup.<local>.schedule` | 설명 누락 |
+| 344 | `run_startup.<local>.schedule.<local>.invoke` | 설명 누락 |
+| 351 | `run_startup.<local>.finish` | 설명 누락 |
+| 361 | `run_startup.<local>.update_finished` | 설명 누락 |
+| 374 | `run_startup.<local>.poll` | 설명 누락 |
 
 ## `auto_update.py`
 
@@ -1495,4 +1503,4 @@
 
 ---
 
-총 함수 수: **1119**
+총 함수 수: **1127**

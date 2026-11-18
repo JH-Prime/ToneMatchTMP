@@ -1,4 +1,4 @@
-"""ToneMatch TMP v0.1.07 데스크톱 애플리케이션.
+"""ToneMatch TMP 데스크톱 애플리케이션.
 
 로컬 오디오·영상 또는 Windows PC 재생음 녹음을 받아 AI로 guitar stem만
 분리하고, Tone Master Pro 또는 Quad Cortex에 수동 적용할 톤 체인을 추천한다.
@@ -4244,8 +4244,8 @@ def main() -> int:
         except (IndexError, ValueError):
             return 2
     root = tk.Tk()
-    from update_startup import run_startup_update, should_check_for_updates
-    if should_check_for_updates() and run_startup_update(root, APP_VERSION, _portable_root(), _runtime_data_root()):
+    from update_startup import run_startup, should_show_startup
+    if should_show_startup() and run_startup(root, APP_VERSION, _portable_root(), _runtime_data_root()):
         root.destroy()
         return 0
     ToneMatchApp(root)

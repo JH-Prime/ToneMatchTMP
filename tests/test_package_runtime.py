@@ -170,7 +170,7 @@ class PackageRuntimeTests(unittest.TestCase):
         with patch.object(runtime, 'package_identity', return_value=runtime.PackageIdentity('packaged', FAMILY)), \
                 patch.object(app.tk, 'Tk', side_effect=AssertionError('Tk is forbidden')), \
                 patch.object(app.multiprocessing, 'freeze_support'), \
-                patch.object(update_startup, 'run_startup_update', side_effect=AssertionError('updater is forbidden')):
+                patch.object(update_startup, 'run_startup', side_effect=AssertionError('startup UI is forbidden')):
             with patch.object(app.sys, 'argv', ['app', '--self-test-output', 'result.json']), \
                     patch.object(app, 'run_self_test', return_value=0) as diagnostic:
                 self.assertEqual(app.main(), 0)

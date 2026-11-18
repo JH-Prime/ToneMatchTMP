@@ -1,4 +1,31 @@
-# ToneMatch TMP 0.1.09 — 무료 서명·Store 배포 준비
+# ToneMatch TMP 0.1.10 — 시작 애니메이션 구현 완료
+
+소스 검증 기준일: **2026-11-17 KST**. 어두운 ToneMatch TMP 로고와 민트 파형을
+기존 업데이트 상태에 통합했습니다. **무거운 라이브러리 import가 끝난 뒤** 표시하며,
+업데이트가 없을 때 약 700ms 후 앱으로 들어갑니다. 계속·닫기·성공한 업데이트 전환은
+즉시 처리하고 업데이트 확인은 소개 시간과 겹쳐 실행합니다.
+다운로드·검증의 실제 진행률과 장식용 파형은 구분합니다.
+
+일반 Windows EXE는 `--skip-update`와 패키지 설치에서도 시작 화면을 표시할 수 있습니다.
+Store·패키지 식별 실패·skip-update의 포터블 업데이트 제한은 유지합니다. 소스 실행과
+진단 경로는 소개를 생략합니다. 기존 Tkinter에서 Canvas 항목 25개를 33ms 주기로
+재사용하며 새 미디어·UI 프레임워크나 파형을 위한 오디오·장치 작업은 추가하지 않았습니다.
+
+**창 생성을 차단한 테스트 526개를 78.525초에 통과**했고 실패·오류·skip은 0개입니다.
+GUI 테스트 92개는 보류했습니다. 독립 검토에서 발견한 mainloop 진입 전 완료 처리의
+멈춤 문제를 재현·수정한 뒤 집중 시험 53개도 통과했습니다. 실제 UI 부드러움·DPI 배치·
+실청·실곡 정답률은 미검증입니다. [v0.1.10 QA](QA_REPORT_v0.1.10.json)를 확인하세요.
+
+**실행파일 빌드·독립 ZIP 검증·공개 게시는 아직 대기 중**입니다. 예정된 공개 개발자 패치는
+명시적 `Development` 모드의 **미서명 배포본**이며 Store 인증·SmartScreen 해결을
+뜻하지 않습니다. 기본 빌드는 계속 `SigningInput`입니다. SignPath·Store 가입은
+**사용자 선택으로 보류**했으며 v0.1.09의 기술 준비 검증과 향후 모든 버전의 무료 배포
+정책을 유지합니다. [승인 계획](plan/20261116-230144--work-plan--v0-1-10-startup-animation--v01.md),
+[배포 규칙](DISTRIBUTION_KO.md), [가입 안내](distribution/ENROLLMENT_KO.md)를 확인하세요.
+
+## 보존된 v0.1.09 무료 서명·Store 배포 준비 기록
+
+아래 상태·검증 결과와 후속 작업 표현은 v0.1.09 당시 기록입니다.
 
 이후 모든 버전에 적용할 SignPath 무료 서명과 Microsoft Store MSIX 배포 절차를 준비합니다.
 **Foundation 승인·실제 서명·Store 앱 식별자·Store 인증은 대기 중**입니다.
@@ -331,8 +358,8 @@ Git clone은 큰 FFmpeg/DLL 바이너리를 포함하지 않습니다. FFmpeg는
 py -3.12 -m venv ..\.venv
 & ..\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 & ..\.venv\Scripts\python.exe tools\build_native.py --zig C:\Tools\zig-0.15.2\zig.exe
-& ..\.venv\Scripts\python.exe -W error tools\verify_headless.py --output .\headless-v0.1.08.json
-& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.1.08.json
+& ..\.venv\Scripts\python.exe -W error tools\verify_headless.py --output .\headless-v0.1.10.json
+& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.1.10.json
 & .\build.ps1 -SkipTests -SkipZip -ZigPath C:\Tools\zig-0.15.2\zig.exe
 ```
 
@@ -351,7 +378,8 @@ CUDA 소스 개발은 `enable_cuda.ps1`와 별도 호환 GPU 환경을 사용하
 실제로 스피커를 울리거나 AI 모델을 실행하지 않습니다.
 실제 캐시 모델 검사는 `--stem-self-test-source`와 `--stem-self-test-output` CLI를 사용합니다.
 
-v0.1.08 게시와 공개 파일 검증을 완료했습니다. 후속 수정은 0.1.09로 진행합니다.
+v0.1.08 게시와 공개 파일 검증을 완료했습니다. v0.1.09의 배포 준비 검증을 보존하며,
+현행 시작 애니메이션은 0.1.10으로 구현·검증 중입니다.
 v0.1.08 소스·태그·ZIP과 v0.1.07을 포함한 기존 태그·배포 파일은 보존합니다.
 인수인계는 [DEVELOPER_HANDOFF_KO_EN.md](DEVELOPER_HANDOFF_KO_EN.md),
 알고리즘 근거는 [TRANSCRIPTION_RESEARCH_KO.md](TRANSCRIPTION_RESEARCH_KO.md)를 확인하세요.

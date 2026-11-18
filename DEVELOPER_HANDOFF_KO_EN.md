@@ -1,6 +1,45 @@
-# ToneMatch TMP v0.1.09 — 개발 인수인계 / Developer Handoff
+# ToneMatch TMP v0.1.10 — 개발 인수인계 / Developer Handoff
 
-## Current preparation / 현행 준비 — 2026-11-15 KST
+## Source acceptance / 소스 검증 완료 — 2026-11-17 KST
+
+Implemented under the [approved v0.1.10 plan](plan/20261116-230144--work-plan--v0-1-10-startup-animation--v01.md).
+The shared Tk startup surface shows dark ToneMatch TMP branding and a mint procedural
+waveform after heavy imports. Its 25 reused Canvas items use a 33ms timer. The approximately
+700ms intro overlaps update checking; continue, close and successful handoff bypass the wait.
+Actual transfer/verification progress remains distinct from decoration. One root owns the
+transition, with explicit timer cancellation and close-protocol restoration on teardown.
+
+Frozen Windows presentation and portable-update eligibility are separate. Packaged, unknown
+identity and `--skip-update` paths can show the intro without constructing portable update work.
+Source execution, diagnostics and frozen multiprocessing dispatch bypass presentation.
+Updater cancellation precedence, verified handoff, offline fallback and original data paths
+are preserved. No media, new framework or audio/device work drives the animation.
+
+The guarded source receipt `work/v110-headless.json` records **526 passes in 78.525 seconds**,
+zero failures/errors/skips and **92 deferred GUI cases**, with hard Tk/Toplevel guards.
+Independent review found that an expired intro could call quit before mainloop began.
+A deterministic red regression reproduced it; completion now always uses the scheduled
+`after` path, including zero remaining duration. Re-review passed 53 focused tests:
+17 lifecycle, 3 waveform, 16 updater and 17 package-runtime. No unresolved material finding
+was reported. These tests are included in the source suite, not 53 additional unique cases.
+
+[QA_REPORT_v0.1.10.json](QA_REPORT_v0.1.10.json) is the new source acceptance record.
+**Accepted source commit, frozen build/diagnostics, fresh archive verification and publication
+remain pending.** Build from the subsequent accepted source commit, then record those gates
+separately; do not reuse v0.1.09 artifact evidence. Windows fixed version is 0.1.10.0 and
+the Store mapping is 1.1.10.0, without claiming a Store package or release.
+Native UI smoothness, DPI layout, listening and actual-song accuracy remain unverified.
+
+The intended public developer patch must use explicit `Development` mode and be disclosed
+as unsigned, not Store certified, with SmartScreen unresolved. `SigningInput` stays the default.
+The user deferred SignPath and Store enrollment; verified technical preparation and both
+free routes remain future policy. Preserve enrollment guidance, earlier tags, QA and releases.
+가입·서명·Store 인증은 사용자 선택으로 보류하며 삭제된 요구가 아닙니다. 구현·무창 검증은
+완료했고 빌드·ZIP·게시가 다음 단계입니다. 실제 화면·음원 재생·패키지 설치는 미검증입니다.
+
+## Preserved v0.1.09 preparation / 보존된 준비 기록 — 2026-11-15 KST
+
+The following current/follow-up wording and verification belong to v0.1.09.
 
 User approved both free signing routes and their application to all future builds.
 See AGENTS.md and DISTRIBUTION_KO.md. Default builds prepare SigningInput; explicit

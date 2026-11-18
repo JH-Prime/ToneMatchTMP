@@ -31,16 +31,29 @@ class StartupTests(unittest.TestCase):
                     patch.object(startup.sys, 'frozen', True, create=True), \
                     patch.object(startup.sys, 'platform', 'win32'), \
                     patch.object(startup.subprocess, 'Popen') as launch, \
-                    patch.object(startup, '_windows_dll_directory') as dll, \
-                    patch.object(startup, '_StartupView') as view:
+                    patch.object(startup, '_windows_dll_directory') as dll:
                 self.assertFalse(startup.should_check_for_updates([]))
                 self.assertIsNone(startup.inherited_context())
-                self.assertFalse(startup.run_startup_update(Mock(), '0.1.09', Path('origin'), Path('data')))
+                self.assertTrue(startup.should_show_startup([]))
                 with self.assertRaisesRegex(ValueError, 'package identity'):
                     startup.launch_update(Path('new.exe'), Path('origin'), Path('data'))
                 launch.assert_not_called()
                 dll.assert_not_called()
-                view.assert_not_called()
+
+    def test_startup_presentation_is_independent_of_update_eligibility(self):
+        for frozen, platform, arguments, expected in (
+                (False, 'win32', [], False),
+                (True, 'linux', [], False),
+                (True, 'win32', [], True),
+                (True, 'win32', ['--skip-update'], True),
+                (True, 'win32', ['--self-test-output', 'x'], False),
+                (True, 'win32', ['--stem-self-test-output', 'x'], False)):
+            with self.subTest(frozen=frozen, platform=platform, arguments=arguments), \
+                    patch.object(startup.sys, 'frozen', frozen, create=True), \
+                    patch.object(startup.sys, 'platform', platform), \
+                    patch.object(startup.sys, 'argv', ['app', *arguments]):
+                self.assertEqual(startup.should_show_startup(arguments), expected)
+                self.assertEqual(startup.should_show_startup(), expected)
 
     def controller(self, prepare, launch=None):
         self.directory = tempfile.TemporaryDirectory()
@@ -197,30 +210,50 @@ class StartupTests(unittest.TestCase):
                 patch.object(app.multiprocessing, 'freeze_support'), \
                 patch.object(app, 'run_self_test', return_value=0) as diagnostic, \
                 patch.object(app.tk, 'Tk') as tk, \
-                patch.object(startup, 'run_startup_update') as update:
+                patch.object(startup, 'run_startup') as presentation:
             self.assertEqual(app.main(), 0)
         diagnostic.assert_called_once_with('diagnostic.json')
         tk.assert_not_called()
-        update.assert_not_called()
+        presentation.assert_not_called()
+
+    def test_stem_diagnostic_and_frozen_worker_bypass_presentation(self):
+        import app
+        with patch.object(app.sys, 'argv', ['app', '--stem-self-test-output', 'diagnostic.json']), \
+                patch.object(app.multiprocessing, 'freeze_support'), \
+                patch('stem_diagnostics.stem_self_test_cli', return_value=0) as diagnostic, \
+                patch.object(app.tk, 'Tk') as tk, \
+                patch.object(startup, 'run_startup') as presentation:
+            self.assertEqual(app.main(), 0)
+            diagnostic.assert_called_once_with(['--stem-self-test-output', 'diagnostic.json'])
+            tk.assert_not_called()
+            presentation.assert_not_called()
+        with patch.object(app.sys, 'argv', ['app', '--multiprocessing-fork']), \
+                patch.object(app.multiprocessing, 'freeze_support', side_effect=SystemExit(0)), \
+                patch.object(app.tk, 'Tk') as tk, \
+                patch.object(startup, 'run_startup') as presentation:
+            with self.assertRaises(SystemExit):
+                app.main()
+            tk.assert_not_called()
+            presentation.assert_not_called()
 
     def test_app_normal_start_routes_handoff_fallback_and_bypass(self):
         import app
-        for check, handed_off in ((True, True), (True, False), (False, False)):
-            with self.subTest(check=check, handed_off=handed_off), \
+        for show, handed_off in ((True, True), (True, False), (False, False)):
+            with self.subTest(show=show, handed_off=handed_off), \
                     patch.object(app.sys, 'argv', ['app']), \
                     patch.object(app.multiprocessing, 'freeze_support'), \
                     patch.object(app.tk, 'Tk') as tk, \
                     patch.object(app, '_portable_root', return_value=Path('origin')), \
                     patch.object(app, '_runtime_data_root', return_value=Path('data')), \
                     patch.object(app, 'ToneMatchApp') as application, \
-                    patch.object(startup, 'should_check_for_updates', return_value=check), \
-                    patch.object(startup, 'run_startup_update', return_value=handed_off) as update:
+                    patch.object(startup, 'should_show_startup', return_value=show), \
+                    patch.object(startup, 'run_startup', return_value=handed_off) as presentation:
                 self.assertEqual(app.main(), 0)
-                if check:
-                    update.assert_called_once_with(tk.return_value, app.APP_VERSION, Path('origin'), Path('data'))
+                if show:
+                    presentation.assert_called_once_with(tk.return_value, app.APP_VERSION, Path('origin'), Path('data'))
                 else:
-                    update.assert_not_called()
-                if check and handed_off:
+                    presentation.assert_not_called()
+                if show and handed_off:
                     application.assert_not_called()
                     tk.return_value.destroy.assert_called_once()
                     tk.return_value.mainloop.assert_not_called()

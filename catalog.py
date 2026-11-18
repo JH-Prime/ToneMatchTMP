@@ -8,17 +8,35 @@
 from __future__ import annotations
 
 
-APP_VERSION = "0.1.09"
+APP_VERSION = "0.1.10"
 TARGET_FIRMWARE = "1.8.58"
 MODEL_GUIDE_REVISION = "Rev. J (2026-07)"
-BUILD_DATE = "2026-11-15"
+BUILD_DATE = "2026-11-17"
 
 
 # 앱 내부의 변경 기록 화면과 배포 문서가 함께 사용하는 단일 원본이다.
 # 기능 버전 0.1.01 이후 수정 릴리스는 0.1.02부터 올리며 공개 산출물을 덮어쓰지 않는다.
 CHANGELOG: list[dict] = [
     {
-        "version": "0.1.09", "date": BUILD_DATE,
+        "version": "0.1.10", "date": BUILD_DATE,
+        "status": "미서명 개발자 프리릴리스", "status_en": "Unsigned developer prerelease",
+        "changes": [
+            "무거운 라이브러리 로딩 후 어두운 ToneMatch TMP 로고·민트 파형 시작 화면을 업데이트 상태와 통합",
+            "업데이트가 없으면 약 700ms 소개 후 앱 진입; 즉시 계속·닫기와 실제 다운로드 진행률 유지",
+            "--skip-update·Store 패키지에서도 시작 화면을 분리 표시하고 기존 포터블 업데이트 제한 유지",
+            "새 미디어·UI 프레임워크 없이 기존 Tkinter 사용; 무료 서명·Store 정책과 이전 배포 이력 보존",
+        ],
+        "changes_en": [
+            "Integrate dark ToneMatch TMP branding and a mint waveform with update status after heavy imports",
+            "Allow an approximately 700ms intro without an update; retain immediate continue/close and real download progress",
+            "Separate the startup surface from portable update eligibility, including --skip-update and Store packages",
+            "Reuse Tkinter without new media or UI frameworks; preserve free signing/Store policy and previous releases",
+        ],
+        "known_issues": ["미서명 Development 배포이며 SmartScreen 해결을 보장하지 않음; 가입·서명·Store 인증은 사용자 선택으로 보류", "실제 UI·DPI·실청·실곡 정답률 미검증; EXE 초기 import 대기 시간은 포함하지 않음"],
+        "known_issues_en": ["Development distribution is unsigned with no SmartScreen guarantee; enrollment, signing and Store certification are deferred by the user", "Native UI, DPI, listening and real-song accuracy are unverified; initial EXE imports precede the animation"],
+    },
+    {
+        "version": "0.1.09", "date": "2026-11-15",
         "status": "배포 준비 중", "status_en": "Distribution preparation",
         "changes": [
             "향후 모든 버전에 무료 SignPath 서명·Store MSIX 배포 규칙 적용",

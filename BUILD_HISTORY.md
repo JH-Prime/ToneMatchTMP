@@ -8,6 +8,7 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 | 버전 | 상태 | 범위 |
 |---|---|---|
+| `0.1.10` | 시작 애니메이션 소스 검증 완료; 빌드·ZIP·게시 대기 | import 이후 로고·민트 파형, 즉시 계속·닫기, 업데이트와 소개 시간 통합 |
 | `0.1.09` | 무료 서명·Store 배포 기술 준비; 실제 서명·인증 대기 | 향후 빌드 기본 규칙, 서명 후 패키징, MSIX·사용자 저장소·채널별 업데이트 |
 | `0.1.08` | 독립 ZIP·업데이트 설치·공개 파일 검증 완료·개발자 프리릴리스 게시 | 시간별 미확정 관측음 보존, 첫 마디 보정 후 이동, 녹음 종료·재시작 상태, JSON 기호 검증 |
 | `0.1.07` | 독립 ZIP·자동 설치 검증 완료·개발자 프리릴리스 게시 | CQT 배음 오인식 억제, 자동 GitHub 업데이트, 모듈러 편향 점검 |
@@ -30,6 +31,35 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 | `0.0.03` | 포터블 개발 프리뷰 빌드 완료 | 포터블 개발 ZIP, 한·영 handoff, 로그·빌드 이력, NumPy 코드/보이싱 분석(실험) |
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
+
+## v0.1.10 source acceptance — 2026-11-17 KST
+
+Startup animation is implemented; the accepted source commit, frozen build/diagnostics,
+fresh archive validation and public developer publication are still pending.
+No v0.1.10 artifact hash, signature or publication result is claimed by this source entry.
+
+- Existing Tkinter shows dark ToneMatch TMP branding and a mint waveform after heavy
+  library imports. Twenty-five Canvas items are reused on a 33ms timer.
+- The approximately 700ms intro overlaps update checking. Continue, close and successful
+  update handoff skip the remaining interval; actual transfer progress remains separate.
+- Frozen presentation is independent of portable-update eligibility. Packaged, unknown
+  identity and skip-update paths retain update guards; source and diagnostics bypass the intro.
+- Guarded source receipt `work/v110-headless.json`: **526 passes, 78.525 seconds,
+  zero failures/errors/skips**, hard Tk/Toplevel guards and **92 deferred GUI cases**.
+- Independent review reproduced an expired-intro quit-before-mainloop deadlock. Scheduling
+  completion through `after` even at zero remaining duration resolves the regression.
+  Re-review passed 53 focused cases (17 lifecycle, 3 waveform, 16 updater, 17 package-runtime)
+  with no unresolved material finding. These cases are included in the 526-test suite.
+- New source snapshot: `QA_REPORT_v0.1.10.json`. Native UI smoothness, DPI, listening and
+  actual-song accuracy are untested; this presentation patch does not claim a measured
+  cold-start improvement or new music-accuracy result.
+
+The intended public developer patch is explicitly unsigned and uses `Development` mode.
+`SigningInput` remains the normal build default. SignPath/Store enrollment is intentionally
+deferred by the user; verified v0.1.09 technical preparation and both free routes remain
+future policy. Actual signing and Store certification are not complete. Preserve every
+earlier QA, tag, artifact and historical entry. Later artifact receipts supplement this
+source acceptance record.
 
 ## v0.1.09 distribution preparation — 2026-11-15 KST
 

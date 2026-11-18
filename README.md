@@ -1,4 +1,34 @@
-# ToneMatch TMP 0.1.09 — distribution preparation
+# ToneMatch TMP 0.1.10 — startup animation implemented
+
+Source acceptance: **2026-11-17 KST**. The startup surface now combines dark ToneMatch TMP
+branding and a mint procedural waveform with existing update status. It begins **after heavy
+library imports**, with an approximately 700ms intro when no update is needed. Continue, close
+and successful update handoff act immediately. Update checking overlaps the intro, while real
+download/verification progress stays separate from the decorative waveform.
+
+Normal frozen Windows launches can show the intro, including `--skip-update` and packaged
+installations. Store packages, unknown package identity and skip-update execution retain their
+portable-update guards. Source runs and diagnostics bypass the intro. The existing Tkinter
+view reuses 25 Canvas items on a 33ms timer; no media, new UI framework or audio/device work
+was added for the animation.
+
+**526 guarded headless tests passed in 78.525 seconds**, with zero failures, errors or skips;
+92 GUI-containing tests are deferred. Independent review verified 53 focused tests after
+correcting a pre-mainloop completion deadlock. These checks cover lifecycle, waveform and
+update/package policy; native UI smoothness, DPI layout, listening and actual-song accuracy
+remain unverified. See [v0.1.10 QA](QA_REPORT_v0.1.10.json).
+
+The **executable build, archive verification and publication remain pending**. The intended
+public developer patch uses explicit `Development` mode and is **unsigned**, with no Store
+certification or SmartScreen resolution claimed. Normal builds remain `SigningInput`.
+SignPath and Store enrollment are **intentionally deferred by the user**; verified v0.1.09
+technical preparation and the free distribution policy for every future version remain.
+See the [approved plan](plan/20261116-230144--work-plan--v0-1-10-startup-animation--v01.md),
+[distribution rules](DISTRIBUTION_KO.md) and [enrollment guide](distribution/ENROLLMENT_KO.md).
+
+## Archived v0.1.09 distribution-preparation record
+
+The following status and results belong to v0.1.09; its follow-up wording is historical.
 
 Current work prepares free SignPath signing and Microsoft Store MSIX distribution for
 this and future versions. **Foundation approval, real signing, Store identity and Store
@@ -307,8 +337,8 @@ and rebuild the native DLL with pinned Zig 0.15.2.
 py -3.12 -m venv ..\.venv
 & ..\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 & ..\.venv\Scripts\python.exe tools\build_native.py --zig C:\Tools\zig-0.15.2\zig.exe
-& ..\.venv\Scripts\python.exe -W error tools\verify_headless.py --output .\headless-v0.1.08.json
-& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.1.08.json
+& ..\.venv\Scripts\python.exe -W error tools\verify_headless.py --output .\headless-v0.1.10.json
+& ..\.venv\Scripts\python.exe app.py --self-test-output .\self-test-v0.1.10.json
 & .\build.ps1 -SkipTests -SkipZip -ZigPath C:\Tools\zig-0.15.2\zig.exe
 ```
 
@@ -327,7 +357,8 @@ PDF/font, PortAudio loading and native parity without audible output or actual m
 The separate `--stem-self-test-source` / `--stem-self-test-output` CLI checks an already
 cached CPU model, writes redacted JSON and cleans temporary audio.
 
-v0.1.08 is published and its public asset bytes are verified. Subsequent fixes use 0.1.09.
+v0.1.08 is published and its public asset bytes are verified. v0.1.09 preserves verified
+distribution preparation; current startup-animation work uses 0.1.10 with acceptance pending.
 Preserve the v0.1.08 source/tag/ZIP and all older tags/assets, including v0.1.07.
 Read [handoff](DEVELOPER_HANDOFF_KO_EN.md) and [research](TRANSCRIPTION_RESEARCH_KO.md).
 Application source: MIT. See `THIRD_PARTY_NOTICES.txt`, inventory and `licenses/`.

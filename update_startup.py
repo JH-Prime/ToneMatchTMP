@@ -1,4 +1,4 @@
-"""Optional frozen-app startup update, before a working session is opened.
+"""Post-import executable startup presentation and optional verified update.
 
 Network/archive work uses one daemon thread. The Tk thread alone renders status,
 honours cancellation and hands off to a verified executable. No work runs on import.
@@ -6,6 +6,7 @@ honours cancellation and hands off to a verified executable. No work runs on imp
 from __future__ import annotations
 
 import json
+import math
 import os
 from pathlib import Path
 import queue
@@ -14,6 +15,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 
 from package_runtime import package_identity
 
@@ -25,11 +27,16 @@ def cache_root() -> Path:
     return Path(os.environ.get('LOCALAPPDATA', tempfile.gettempdir())) / 'ToneMatchTMP' / 'updates'
 
 
-def should_check_for_updates(arguments=None) -> bool:
+def should_show_startup(arguments=None) -> bool:
+    """The EXE intro is independent of portable update eligibility."""
     arguments = sys.argv[1:] if arguments is None else arguments
     return (bool(getattr(sys, 'frozen', False)) and sys.platform == 'win32'
-            and '--skip-update' not in arguments
-            and not any(value.startswith(('--self-test', '--stem-self-test')) for value in arguments)
+            and not any(value.startswith(('--self-test', '--stem-self-test')) for value in arguments))
+
+
+def should_check_for_updates(arguments=None) -> bool:
+    arguments = sys.argv[1:] if arguments is None else arguments
+    return (should_show_startup(arguments) and '--skip-update' not in arguments
             and package_identity().status == 'unpackaged')
 
 
@@ -181,27 +188,90 @@ class StartupController:
         return False
 
 
-class _StartupView:
-    """A compact progress surface; created only during normal executable startup."""
+def waveform_heights(elapsed: float) -> tuple[float, ...]:
+    """Decorative half-heights, unrelated to audio or measured progress."""
+    return tuple(3.0 + 33.0 * math.exp(-((index - 12) / 9.0) ** 2)
+                 * (0.25 + 0.75 * math.sin(elapsed * 3.2 - index * 0.38) ** 2)
+                 for index in range(25))
 
-    def __init__(self, root, language):
+
+class WaveformAnimation:
+    """Own a bounded set of Canvas items and a single main-thread timer."""
+
+    def __init__(self, root, canvas):
+        self.root = root
+        self.canvas = canvas
+        self.started = time.monotonic()
+        self.stopped = False
+        self.job = None
+        self.bars = [canvas.create_line(18 + index * 12, 46, 18 + index * 12, 46,
+                                       fill='#39d6a5', width=5, capstyle='round')
+                     for index in range(25)]
+        self._tick()
+
+    def _tick(self):
+        from tkinter import TclError
+        self.job = None
+        if self.stopped:
+            return
+        try:
+            heights = waveform_heights(time.monotonic() - self.started)
+            for index, (item, height) in enumerate(zip(self.bars, heights)):
+                x = 18 + index * 12
+                self.canvas.coords(item, x, 46 - height, x, 46 + height)
+            self.job = self.root.after(33, self._tick)
+        except TclError:
+            # Motion is optional: a missing canvas must not block continuation.
+            self.stopped = True
+
+    def stop(self):
+        from tkinter import TclError
+        self.stopped = True
+        if self.job is not None:
+            try:
+                self.root.after_cancel(self.job)
+            except TclError:
+                pass
+            self.job = None
+
+
+class _StartupView:
+    """One branded surface for the brief intro and real update progress."""
+
+    def __init__(self, root, language, version):
         import tkinter as tk
         from tkinter import ttk
         self.english = language == 'en'
         font = 'Arial Narrow' if self.english else 'Malgun Gothic'
         self.root = root
+        self.destroyed = False
         self.frame = tk.Frame(root, bg='#121b24', padx=24, pady=24)
         self.frame.pack(fill='both', expand=True)
         root.title('ToneMatch TMP')
-        root.geometry('520x230')
-        root.minsize(440, 220)
-        tk.Label(self.frame, text='ToneMatch TMP', font=(font, 19, 'bold'),
-                 bg='#121b24', fg='#edf4f7').pack(anchor='w')
+        root.configure(bg='#121b24')
+        width, height = 540, 350
+        left = max(0, (root.winfo_screenwidth() - width) // 2)
+        top = max(0, (root.winfo_screenheight() - height) // 2)
+        root.geometry(f'{width}x{height}+{left}+{top}')
+        root.minsize(480, 350)
+        heading = tk.Frame(self.frame, bg='#121b24')
+        heading.pack(fill='x')
+        tk.Label(heading, text='ToneMatch TMP', font=('Arial Narrow', 25, 'bold'),
+                 bg='#121b24', fg='#edf4f7').pack(side='left')
+        tk.Label(heading, text=f'v{version}', font=('Arial Narrow', 11),
+                 bg='#121b24', fg='#9fb0bc').pack(side='right', anchor='s', pady=5)
+        self.canvas = tk.Canvas(self.frame, width=324, height=92, bg='#121b24',
+                                highlightthickness=0)
+        self.canvas.pack(pady=(8, 0))
+        self.animation = WaveformAnimation(root, self.canvas)
         self.status = tk.Label(self.frame, text='', font=(font, 11),
                                bg='#121b24', fg='#edf4f7', wraplength=450, anchor='w')
-        self.status.pack(fill='x', pady=(16, 8))
+        self.status.pack(fill='x', pady=(8, 8))
         style = ttk.Style(root)
-        style.theme_use('clam')
+        try:
+            style.theme_use('clam')
+        except tk.TclError:
+            pass
         style.configure('Update.Horizontal.TProgressbar', troughcolor='#283846',
                         background='#39d6a5', borderwidth=0)
         self.bar = ttk.Progressbar(self.frame, mode='indeterminate',
@@ -212,10 +282,11 @@ class _StartupView:
                                 bg='#283846', fg='#edf4f7', activebackground='#39d6a5',
                                 activeforeground='#0b1117', relief='flat', padx=12, pady=7)
         self.button.pack(anchor='e', pady=(16, 0))
-        self.progress('checking', 0, 0)
+        self.progress('opening', 0, 0)
 
     def progress(self, stage, done, total):
         labels = {
+            'opening': ('Opening ToneMatch TMP…', 'ToneMatch TMP를 시작합니다…'),
             'checking': ('Checking for updates…', '최신 버전을 확인하고 있습니다…'),
             'downloading': ('Downloading update', '업데이트 다운로드 중'),
             'verifying': ('Verifying update', '업데이트 검증 중'),
@@ -230,47 +301,108 @@ class _StartupView:
             percent = max(0., min(100., 100. * done / total))
             text += f' · {percent:.0f}%'
             self.bar.configure(mode='determinate', maximum=100, value=percent)
-        else:
+        elif stage != 'opening':
             self.bar.configure(mode='indeterminate')
             self.bar.start(30)
+        else:
+            # The waveform is activity feedback; there is no measured percentage.
+            self.bar.configure(mode='determinate', maximum=100, value=0)
         self.status.configure(text=text)
 
     def destroy(self):
-        self.bar.stop()
-        self.frame.destroy()
+        from tkinter import TclError
+        if self.destroyed:
+            return
+        self.destroyed = True
+        self.animation.stop()
+        try:
+            self.bar.stop()
+            self.frame.destroy()
+        except TclError:
+            pass
 
 
-def run_startup_update(root, version: str, installation_root: Path, data_root: Path) -> bool:
+def run_startup(root, version: str, installation_root: Path, data_root: Path) -> bool:
     """Return True after handoff/close, False to open the installed application."""
-    if package_identity().status != 'unpackaged':
-        return False
+    from tkinter import TclError
     try:
         settings_path = data_root / 'settings.json'
         settings = json.loads(settings_path.read_text(encoding='utf-8')) if settings_path.stat().st_size < 65536 else {}
         language = settings.get('language', 'ko') if isinstance(settings, dict) else 'ko'
     except (OSError, ValueError):
         language = 'ko'
-    view = _StartupView(root, language)
+    view = _StartupView(root, language, version)
+    deadline = time.monotonic() + 0.7
+    previous_close = root.protocol('WM_DELETE_WINDOW')
+    temporary_close = None
+    controller = None
+    timers = set()
     exit_application = False
+    finished = False
+
+    def schedule(delay, callback):
+        def invoke():
+            timers.discard(identifier)
+            if not finished:
+                callback()
+        identifier = root.after(delay, invoke)
+        timers.add(identifier)
 
     def finish(exit_requested):
-        nonlocal exit_application
+        nonlocal exit_application, finished
+        if finished:
+            return
+        finished = True
         exit_application = exit_requested
+        if controller is not None:
+            controller.cancel(exit_application=exit_requested)
         root.quit()
 
-    controller = StartupController(version, installation_root, data_root, cache_root(), view, finish)
-    view.button.configure(command=controller.cancel)
-    root.protocol('WM_DELETE_WINDOW', lambda: controller.cancel(exit_application=True))
+    def update_finished(exit_requested):
+        if finished:
+            return
+        if exit_requested:
+            finish(True)
+        else:
+            # Updates and presentation overlap. Explicit continue/close bypass
+            # this timer even if the updater controller has already finished.
+            remaining = max(0, math.ceil((deadline - time.monotonic()) * 1000))
+            # Even an expired intro must finish inside the event loop: Tk
+            # clears a prior quit request when mainloop() starts.
+            schedule(remaining, lambda: finish(False))
 
     def poll():
         if controller.poll():
-            root.after(80, poll)
+            schedule(80, poll)
 
-    controller.start()
-    root.after(0, poll)
     try:
+        view.button.configure(command=lambda: finish(False))
+        root.protocol('WM_DELETE_WINDOW', lambda: finish(True))
+        temporary_close = root.protocol('WM_DELETE_WINDOW')
+        if should_check_for_updates():
+            view.progress('checking', 0, 0)
+            controller = StartupController(version, installation_root, data_root,
+                                           cache_root(), view, update_finished)
+            controller.start()
+            schedule(0, poll)
+        else:
+            update_finished(False)
         root.mainloop()
     finally:
-        controller.cancel_event.set()
+        finished = True
+        if controller is not None:
+            controller.cancel_event.set()
+        for identifier in timers:
+            try:
+                root.after_cancel(identifier)
+            except TclError:
+                pass
+        timers.clear()
+        try:
+            root.protocol('WM_DELETE_WINDOW', previous_close)
+            if isinstance(temporary_close, str) and temporary_close != previous_close:
+                root.deletecommand(temporary_close)
+        except TclError:
+            pass
         view.destroy()
     return exit_application

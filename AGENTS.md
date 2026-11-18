@@ -24,5 +24,10 @@ and [PRIVACY.md](PRIVACY.md). Enrollment and certification remain external gates
 - User audio, including the local Room 335 sample, never belongs in source, CI,
   signing artifacts, GitHub releases, or Store packages.
 
-The startup-animation request remains a follow-up after trusted-distribution preparation;
-do not silently drop it or claim it is part of the current completed release.
+The approved v0.1.10 startup-animation work is active under
+`plan/20261116-230144--work-plan--v0-1-10-startup-animation--v01.md`.
+SignPath and Store technical preparation is verified; account enrollment is intentionally
+deferred by the user, not removed from future release policy. This work permits an explicitly
+unsigned Development ZIP and does not resolve SmartScreen or authorize native UI/audio checks.
+Keep implementation, guarded verification, artifact delivery and deferred visual acceptance
+distinct; do not claim completed checks before their evidence is recorded.
