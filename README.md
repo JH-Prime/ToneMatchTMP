@@ -18,9 +18,12 @@ correcting a pre-mainloop completion deadlock. These checks cover lifecycle, wav
 update/package policy; native UI smoothness, DPI layout, listening and actual-song accuracy
 remain unverified. See [v0.1.10 QA](QA_REPORT_v0.1.10.json).
 
-The **executable build, archive verification and publication remain pending**. The intended
-public developer patch uses explicit `Development` mode and is **unsigned**, with no Store
-certification or SmartScreen resolution claimed. Normal builds remain `SigningInput`.
+The [v0.1.10 developer release](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.10) is published and all three public files were
+downloaded and hash-verified on 2026-11-19 19:47:53 Asia/Seoul. The 357,299,155-byte ZIP passed
+full manifest verification (5,500 files), fresh EXE diagnostics, actual archive
+update installation and offline cache reuse. It uses explicit `Development` mode and is
+**unsigned**; Store certification and SmartScreen resolution are not claimed. Normal builds
+remain `SigningInput`. The 17 existing build warnings are unchanged.
 SignPath and Store enrollment are **intentionally deferred by the user**; verified v0.1.09
 technical preparation and the free distribution policy for every future version remain.
 See the [approved plan](plan/20261116-230144--work-plan--v0-1-10-startup-animation--v01.md),

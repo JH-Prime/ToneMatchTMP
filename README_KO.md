@@ -16,9 +16,11 @@ GUI 테스트 92개는 보류했습니다. 독립 검토에서 발견한 mainloo
 멈춤 문제를 재현·수정한 뒤 집중 시험 53개도 통과했습니다. 실제 UI 부드러움·DPI 배치·
 실청·실곡 정답률은 미검증입니다. [v0.1.10 QA](QA_REPORT_v0.1.10.json)를 확인하세요.
 
-**실행파일 빌드·독립 ZIP 검증·공개 게시는 아직 대기 중**입니다. 예정된 공개 개발자 패치는
-명시적 `Development` 모드의 **미서명 배포본**이며 Store 인증·SmartScreen 해결을
-뜻하지 않습니다. 기본 빌드는 계속 `SigningInput`입니다. SignPath·Store 가입은
+[v0.1.10 개발자 배포](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.10)를 게시했고 공개 파일 3개를 다시 내려받아
+크기·해시를 검증했습니다(2026-11-19 19:47:53 Asia/Seoul). ZIP은 357,299,155바이트이며
+5,500개 파일 검증, 새 압축 해제본 진단, 실제 ZIP 업데이트 설치와
+오프라인 캐시 재사용을 통과했습니다. 기존 빌드 경고 17개는 동일합니다.
+명시적 `Development` 모드의 **미서명 배포본**이며 Store 인증·SmartScreen 해결을 뜻하지 않습니다. 기본 빌드는 계속 `SigningInput`입니다. SignPath·Store 가입은
 **사용자 선택으로 보류**했으며 v0.1.09의 기술 준비 검증과 향후 모든 버전의 무료 배포
 정책을 유지합니다. [승인 계획](plan/20261116-230144--work-plan--v0-1-10-startup-animation--v01.md),
 [배포 규칙](DISTRIBUTION_KO.md), [가입 안내](distribution/ENROLLMENT_KO.md)를 확인하세요.

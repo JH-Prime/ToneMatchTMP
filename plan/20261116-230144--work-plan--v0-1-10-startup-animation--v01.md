@@ -3,15 +3,15 @@
 Plan Type: Work plan
 Workstream: ToneMatchTMP v0.1.10 startup animation
 Version: 01
-Status: Source verified; developer build and delivery in progress
+Status: Authorized implementation and developer delivery complete; visual acceptance deferred
 Created: 2026-11-16 23:01:44 Asia/Seoul
-Last Updated: 2026-11-18 22:43:49 Asia/Seoul
+Last Updated: 2026-11-19 19:47:53 Asia/Seoul
 Related Plan: plan/20261114-204042--work-plan--free-signing-store-distribution--v01.md (technical preparation complete; enrollment deferred by the user)
-Current Completion State: Shared startup surface implemented; 526 guarded tests and independent review pass; source hashes match the accepted receipt
+Current Completion State: Startup animation implemented, tested and independently reviewed; frozen/archive/update/public-byte checks pass; v0.1.10 developer release published
 Completed So Far: Procedural bounded waveform, ~700ms intro overlapping updates, immediate close/continue/handoff, separate package/update eligibility, callback cleanup, version metadata and initial documentation
-Remaining Work: Developer build and archive validation, publication and actual public-byte verification, final delivery records
-Current Blockers: Real visual interaction is not authorized; signing accounts remain unavailable by user choice
-Next Step: Commit accepted source and build the unsigned Development archive, then independently verify the exact output before publication
+Remaining Work: No remaining authorized implementation or release gates; native visual acceptance and service enrollment remain deliberately deferred
+Current Blockers: None for authorized delivery; native UI verification and signing/Store enrollment require later user action
+Next Step: Deliver the verified developer release; resume visual verification or enrollment only when the user chooses those follow-ups
 
 ## Approved objective and limits
 
@@ -61,13 +61,13 @@ The feature is technically complete when the animation and transitions are imple
 
 ## Scoreboard
 
-Current score: 46/100
+Current score: 49/100
 Score source: provisional
-Last updated: 2026-11-18 22:43:49 Asia/Seoul
-Rationale: The full source suite and independent review pass; exact source hashes are verified. Executable/archive delivery and deferred visual acceptance remain.
+Last updated: 2026-11-19 19:47:53 Asia/Seoul
+Rationale: The requested feature and developer release are delivered with full source, archive and public-byte evidence; native visual acceptance remains deferred.
 What improved: Review exposed a pre-mainloop quit timing issue; deterministic reproduction failed before the fix and now passes.
-What remains unsatisfactory: Developer artifact and public-byte verification remain unfinished; native visual verification remains unauthorized.
-Next score-maintenance action: Complete integrated verification and deliver the developer artifact with precise visual and signing limits.
+What remains unsatisfactory: Native visual smoothness and DPI have not been observed; trusted signing remains user-deferred.
+Next score-maintenance action: Preserve the verified release and evaluate real visual feedback or signing enrollment when authorized.
 
 Score history:
 
@@ -75,8 +75,12 @@ Score history:
 - 2026-11-17 07:02:53 Asia/Seoul — 43 provisional: implementation and focused tests complete; review correction verified; integrated suite and artifacts pending.
 - 2026-11-18 22:43:49 Asia/Seoul — 46 provisional: 526 guarded tests pass in 78.525 seconds; 53 independently reviewed focused cases pass. All 108 source hashes still match; developer artifacts and public verification are next.
 
+- 2026-11-19 19:47:53 Asia/Seoul — 49 provisional: developer release and actual public-byte verification complete; visual acceptance and enrollment remain deferred.
+
 ## Progress log
 
 - 2026-11-16 23:01:44 Asia/Seoul — User explicitly approved the dark logo/mint-waveform scope with retained skip/close and no real UI launch. Independent read-only audit confirmed the post-import boundary and recommended separating presentation from portable update eligibility. No source changes or visible app launches performed before this plan.
 - 2026-11-17 07:02:53 Asia/Seoul — Added 25 reusable procedural waveform items with a single 33ms timer, shared startup runner, frozen presentation policy independent of portable update policy, bounded intro and complete timer/protocol teardown. Initial focused suite passed 51 tests. Independent review found a quit-before-mainloop issue if setup exceeds the intro deadline; reproduced in work/v110-expired-intro-red.log and fixed by scheduling completion even at zero remaining duration. All 17 lifecycle tests now pass, including actual packaged/unknown/skip policy integration. No native window, playback or Store installation performed.
 - 2026-11-18 22:43:49 Asia/Seoul — Rechecked the completed work/v110-headless.json receipt: 526 tests, 78.525 seconds, zero failures/errors/skips, 92 GUI deferred, all 108 source inputs unchanged. Independent source review has no unresolved material findings. New QA and source-acceptance documentation prepared without changing older QA snapshots. Offline publication gates pass 8 tests and archive-verifier fixtures pass 12 tests; the copied publication test URL was corrected from the old version to v0.1.10. Actual archive checks and publication have not yet occurred.
+
+- 2026-11-19 19:47:53 Asia/Seoul — Source ede0666bd23e10a404908ce85254585bec25dff6 built in Development mode and published as v0.1.10. Archive 357299155 bytes, 5500 manifest files, 127 build inputs; frozen/fresh diagnostics, actual ZIP updater installation, offline reuse and public downloads all pass. Prior 18 release records/assets and 35 tag refs remain unchanged. Seventeen existing warnings are unchanged. Delivery-script review added explicit optimized-Python rejection; actual Windows checksum paths and the build-log checksum were reproduced and verified in nine offline publication tests. No native UI, audio playback, Store installation or actual signing occurred.

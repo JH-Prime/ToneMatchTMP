@@ -24,9 +24,11 @@ A deterministic red regression reproduced it; completion now always uses the sch
 was reported. These tests are included in the source suite, not 53 additional unique cases.
 
 [QA_REPORT_v0.1.10.json](QA_REPORT_v0.1.10.json) is the new source acceptance record.
-**Accepted source commit, frozen build/diagnostics, fresh archive verification and publication
-remain pending.** Build from the subsequent accepted source commit, then record those gates
-separately; do not reuse v0.1.09 artifact evidence. Windows fixed version is 0.1.10.0 and
+Accepted tagged source: `ede0666bd23e10a404908ce85254585bec25dff6`. The [developer release](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.10) is published;
+all three public assets were downloaded and verified at 2026-11-19 19:47:53 Asia/Seoul. Frozen diagnostics,
+5,500 manifest files, 127 build inputs, full archive update installation and offline
+cache reuse pass. The EXE is NotSigned; 17 build warnings are unchanged. Final QA records
+these external checks; the immutable archive retains its original source-acceptance QA snapshot. Windows fixed version is 0.1.10.0 and
 the Store mapping is 1.1.10.0, without claiming a Store package or release.
 Native UI smoothness, DPI layout, listening and actual-song accuracy remain unverified.
 
@@ -35,7 +37,7 @@ as unsigned, not Store certified, with SmartScreen unresolved. `SigningInput` st
 The user deferred SignPath and Store enrollment; verified technical preparation and both
 free routes remain future policy. Preserve enrollment guidance, earlier tags, QA and releases.
 가입·서명·Store 인증은 사용자 선택으로 보류하며 삭제된 요구가 아닙니다. 구현·무창 검증은
-완료했고 빌드·ZIP·게시가 다음 단계입니다. 실제 화면·음원 재생·패키지 설치는 미검증입니다.
+완료했고 빌드·ZIP·공개 파일 검증과 개발자 게시도 완료했습니다. 실제 화면·음원 재생·패키지 설치는 미검증입니다.
 
 ## Preserved v0.1.09 preparation / 보존된 준비 기록 — 2026-11-15 KST
 

@@ -8,7 +8,7 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 | 버전 | 상태 | 범위 |
 |---|---|---|
-| `0.1.10` | 시작 애니메이션 소스 검증 완료; 빌드·ZIP·게시 대기 | import 이후 로고·민트 파형, 즉시 계속·닫기, 업데이트와 소개 시간 통합 |
+| `0.1.10` | 독립 ZIP·업데이트 설치·공개 파일 검증 완료·미서명 개발자 프리릴리스 게시 | import 이후 로고·민트 파형, 즉시 계속·닫기, 업데이트와 소개 시간 통합 |
 | `0.1.09` | 무료 서명·Store 배포 기술 준비; 실제 서명·인증 대기 | 향후 빌드 기본 규칙, 서명 후 패키징, MSIX·사용자 저장소·채널별 업데이트 |
 | `0.1.08` | 독립 ZIP·업데이트 설치·공개 파일 검증 완료·개발자 프리릴리스 게시 | 시간별 미확정 관측음 보존, 첫 마디 보정 후 이동, 녹음 종료·재시작 상태, JSON 기호 검증 |
 | `0.1.07` | 독립 ZIP·자동 설치 검증 완료·개발자 프리릴리스 게시 | CQT 배음 오인식 억제, 자동 GitHub 업데이트, 모듈러 편향 점검 |
@@ -31,6 +31,20 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 | `0.0.03` | 포터블 개발 프리뷰 빌드 완료 | 포터블 개발 ZIP, 한·영 handoff, 로그·빌드 이력, NumPy 코드/보이싱 분석(실험) |
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
+
+## v0.1.10 verified developer publication — 2026-11-19 KST
+
+Published 2026-11-19 19:46:13 Asia/Seoul; public-byte verification completed 2026-11-19 19:47:53 Asia/Seoul.
+Release: https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.10. Accepted source: `ede0666bd23e10a404908ce85254585bec25dff6`.
+Archive: 357,299,155 bytes; SHA-256 `cbac246708fd9a22280cc0f387c08f4919830b2b1d64a03e906d9e4f3c7a2c42`.
+Manifest: 5,500 files; build inputs: 127; checksum entries: 5.
+Frozen and fresh-extraction diagnostics, native ABI 2 parity, exact-ZIP updater installation,
+offline cache reuse and all three unauthenticated public downloads pass. EXE: NotSigned.
+Seventeen actual build warnings match v0.1.09 (11 WARNING and 6 DeprecationWarning lines).
+All 18 prior release records/assets and 35 prior tag refs remain unchanged.
+The archive retains the original source-acceptance QA; later repository QA records external
+checks. Native UI, DPI, listening and real-song accuracy remain unverified. Free signing/Store
+enrollment is intentionally deferred. No existing release or artifact was replaced.
 
 ## v0.1.10 source acceptance — 2026-11-17 KST
 

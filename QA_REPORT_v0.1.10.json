@@ -1,10 +1,10 @@
 {
   "app_version": "0.1.10",
-  "status": "source_headless_verified_build_archive_publication_pending",
+  "status": "unsigned_developer_release_verified",
   "source_date_kst": "2026-11-17",
   "scope": "Post-import startup animation and lifecycle integration; unsigned public developer patch intended",
-  "source_commit": null,
-  "source_commit_status": "pending source acceptance commit",
+  "source_commit": "ede0666bd23e10a404908ce85254585bec25dff6",
+  "source_commit_status": "accepted tagged artifact source",
   "headless": {
     "ok": true,
     "tests": 526,
@@ -271,12 +271,52 @@
     }
   },
   "frozen_executable": {
-    "status": "pending",
-    "diagnostics_verified": false
+    "status": "verified",
+    "diagnostics_verified": true,
+    "music_workflow_ok": true,
+    "native_parity_ok": true,
+    "updater_self_test_ok": true,
+    "authenticode_status": "NotSigned",
+    "build_warnings": 17,
+    "receipt": "diagnostics/ToneMatchTMP-v0.1.10-SELF-TEST.json"
   },
   "archive": {
-    "status": "pending",
-    "independently_verified": false
+    "status": "verified",
+    "independently_verified": true,
+    "receipt": "release/ToneMatchTMP-v0.1.10-ARCHIVE-VERIFICATION.json",
+    "ok": true,
+    "app_version": "0.1.10",
+    "verified_at_kst": "2026-11-19T19:44:00.559675+09:00",
+    "source_commit": "ede0666bd23e10a404908ce85254585bec25dff6",
+    "source_inputs": 127,
+    "headless_tests": 526,
+    "headless_receipt_sha256": "99d11423b576c839db020b9d80a2a098300568e3009b46b1ffbfee727c379c64",
+    "headless_source_hashes_match": true,
+    "manifest_files": 5500,
+    "manifest_complete": true,
+    "sha256sums_entries_verified": 5,
+    "fresh_exe_self_test": true,
+    "embedded_executable_version_matches": true,
+    "native_parity": true,
+    "native_abi_version": 2,
+    "private_paths_absent": true,
+    "media_weights_absent": true,
+    "development_jit_caches_absent": true,
+    "local_account_configs_absent": true,
+    "auto_update_full_archive_install": true,
+    "auto_update_cached_reopen": true,
+    "auto_update_offline_diagnostic": true,
+    "original_portable_data_preserved": true,
+    "network_accessed": false,
+    "native_ui_tested": false,
+    "audible_output_tested": false,
+    "real_song_accuracy_measured": false,
+    "signature": "unsigned",
+    "public_signing_verified": false,
+    "store_certified": false,
+    "validation_directory": "work/v110-aklpvonp",
+    "archive_bytes": 357299155,
+    "archive_sha256": "cbac246708fd9a22280cc0f387c08f4919830b2b1d64a03e906d9e4f3c7a2c42"
   },
   "distribution": {
     "default_build_mode": "SigningInput",
@@ -303,9 +343,39 @@
   "public_release": {
     "intended": true,
     "channel": "unsigned developer prerelease",
-    "published": false,
-    "public_bytes_verified": false,
-    "existing_tags_and_assets_preserved": true
+    "published": true,
+    "public_bytes_verified": true,
+    "existing_tags_and_assets_preserved": true,
+    "url": "https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.10",
+    "published_at": "2026-11-19T10:46:13Z",
+    "checked_at_kst": "2026-11-19T19:47:53.262399+09:00",
+    "tag_commit": "ede0666bd23e10a404908ce85254585bec25dff6",
+    "assets": [
+      {
+        "name": "ToneMatchTMP-v0.1.10-ARCHIVE-VERIFICATION.json",
+        "size": 1307,
+        "digest": "sha256:ead6f59a540638b12a3b4f5d14e76cc0a69859bc9066a92b50acbb07596318e3",
+        "browser_download_url": "https://github.com/JH-Prime/ToneMatchTMP/releases/download/v0.1.10/ToneMatchTMP-v0.1.10-ARCHIVE-VERIFICATION.json",
+        "downloaded_bytes": 1307,
+        "downloaded_sha256": "sha256:ead6f59a540638b12a3b4f5d14e76cc0a69859bc9066a92b50acbb07596318e3"
+      },
+      {
+        "name": "ToneMatchTMP-v0.1.10-SHA256SUMS.txt",
+        "size": 595,
+        "digest": "sha256:afad007dbced151901f8c77f11dd9797afb53e671d665555d55b1b67daf5f855",
+        "browser_download_url": "https://github.com/JH-Prime/ToneMatchTMP/releases/download/v0.1.10/ToneMatchTMP-v0.1.10-SHA256SUMS.txt",
+        "downloaded_bytes": 595,
+        "downloaded_sha256": "sha256:afad007dbced151901f8c77f11dd9797afb53e671d665555d55b1b67daf5f855"
+      },
+      {
+        "name": "ToneMatchTMP-v0.1.10-Windows-x64-Portable-Dev.zip",
+        "size": 357299155,
+        "digest": "sha256:cbac246708fd9a22280cc0f387c08f4919830b2b1d64a03e906d9e4f3c7a2c42",
+        "browser_download_url": "https://github.com/JH-Prime/ToneMatchTMP/releases/download/v0.1.10/ToneMatchTMP-v0.1.10-Windows-x64-Portable-Dev.zip",
+        "downloaded_bytes": 357299155,
+        "downloaded_sha256": "sha256:cbac246708fd9a22280cc0f387c08f4919830b2b1d64a03e906d9e4f3c7a2c42"
+      }
+    ]
   },
   "native_ui_tested": false,
   "dpi_layout_tested": false,
@@ -314,14 +384,14 @@
   "limits": [
     "The animation begins after heavy imports; pre-import feedback and cold-start speed improvement are not claimed",
     "Native UI smoothness, DPI layout, listening and actual-song accuracy remain unverified",
-    "Frozen build, hidden executable diagnostics, archive integrity and publication require later receipts",
     "SignPath and Store enrollment remain user-deferred; actual signing and Store certification are incomplete",
     "Damaged installed-update cache repair remains deferred"
   ],
   "notes": [
-    "This is a new v0.1.10 source-acceptance snapshot; prior QA and historical release records are preserved",
-    "Source hashes and deferred GUI identifiers are copied exactly from the guarded receipt",
-    "The source commit is unknown at this pre-build stage and no artifact hash is invented",
-    "Private user media must remain outside source, build inputs and public artifacts"
-  ]
+    "The immutable published ZIP retains the source-acceptance QA snapshot from its build; this repository QA records subsequent external checks.",
+    "Runtime Python source still matches all 108 accepted headless receipt hashes; documentation-only completion does not replace the artifact source tag.",
+    "All 18 prior releases/assets and 35 prior tag refs are preserved.",
+    "Checksums prove integrity; the executable is unsigned and SmartScreen resolution is not claimed."
+  ],
+  "recorded_at_kst": "2026-11-19T19:47:53.262399+09:00"
 }
