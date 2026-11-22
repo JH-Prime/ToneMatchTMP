@@ -1,4 +1,11 @@
-# ToneMatch TMP 0.1.10 — startup animation implemented
+# ToneMatch TMP 0.1.11 — portable update HTTPS repair
+
+The Windows executable now bundles the Python TLS policy file required for
+GitHub updates. Older affected installations need the fixed developer ZIP
+extracted into a new folder or the missing resource restored once. See
+[v0.1.11 QA](QA_REPORT_v0.1.11.json) for verification.
+
+## v0.1.10 startup animation release record
 
 Source acceptance: **2026-11-17 KST**. The startup surface now combines dark ToneMatch TMP
 branding and a mint procedural waveform with existing update status. It begins **after heavy

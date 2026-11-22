@@ -3,11 +3,12 @@ import hashlib
 import io
 import json
 from pathlib import Path
+import ssl
 import stat
 import tempfile
 import threading
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 import zipfile
 
 import auto_update as updater
@@ -45,6 +46,8 @@ def release(data, version=VERSION):
 
 
 class Response(io.BytesIO):
+    status = 200
+
     def __init__(self, data, url):
         super().__init__(data)
         self.url = url
@@ -109,6 +112,34 @@ class UpdateTests(unittest.TestCase):
     def test_network_failure_without_cache_returns_current(self):
         self.assertIsNone(self.prepare(fail=OSError('offline')))
 
+    def test_latest_update_failure_is_bounded_and_omits_exception_details(self):
+        target = self.prepare()
+        managed = updater.installation_cache(self.install, self.cache)
+        pointer = (managed / 'current.json').read_bytes()
+        record_path = managed / 'last-failure.json'
+        for private_error in (FileNotFoundError(2, 'private path', r'C:\private\settings'),
+                              PermissionError(13, 'https://example.invalid/asset?token=private')):
+            with self.subTest(kind=type(private_error).__name__):
+                self.assertEqual(self.prepare(fail=private_error), target)
+                raw = record_path.read_bytes()
+                report = json.loads(raw)
+                self.assertLess(len(raw), 512)
+                self.assertNotIn(b'private', raw)
+                self.assertNotIn(b'example.invalid', raw)
+                self.assertEqual(report['stage'], 'checking')
+                self.assertEqual(report['error_type'], type(private_error).__name__)
+                self.assertEqual(report['errno'], private_error.errno)
+        self.assertEqual((managed / 'current.json').read_bytes(), pointer)
+        self.assertEqual(list(managed.glob('*failure*.json')), [record_path])
+
+    def test_failure_record_write_problem_does_not_prevent_fallback(self):
+        target = self.prepare()
+        managed = updater.installation_cache(self.install, self.cache)
+        (managed / 'last-failure.json').mkdir()
+        self.assertEqual(self.prepare(fail=OSError('offline')), target)
+        self.assertTrue((managed / 'last-failure.json').is_dir())
+        self.assertFalse(list(managed.glob('failure-*')))
+
     def test_corrupt_archive_or_manifest_does_not_activate(self):
         original = archive_bytes()
         self.assertIsNone(self.prepare(data=b'not a zip', releases=[release(original)]))
@@ -140,6 +171,7 @@ class UpdateTests(unittest.TestCase):
     def test_cancelled_download_never_activates(self):
         self.assertIsNone(self.prepare(callback=lambda stage, *_: self.cancel.set() if stage == 'downloading' else None))
         self.assertFalse(list(self.cache.rglob('current.json')))
+        self.assertFalse(list(self.cache.rglob('last-failure.json')))
 
     def test_cancelled_verification_never_hands_off(self):
         self.assertIsNone(self.prepare(callback=lambda stage, *_: self.cancel.set() if stage == 'verifying' else None))
@@ -189,6 +221,7 @@ class UpdateTests(unittest.TestCase):
         managed.mkdir(parents=True)
         with updater._cache_lock(managed):
             self.assertIsNone(self.prepare())
+        self.assertFalse((managed / 'last-failure.json').exists())
 
     def test_installations_use_separate_cache_names(self):
         self.assertNotEqual(updater.installation_cache(self.install, self.cache),
@@ -205,8 +238,56 @@ class UpdateTests(unittest.TestCase):
         with patch.object(updater, '_open', side_effect=AssertionError('network forbidden')):
             result = updater.offline_self_test()
             self.assertTrue(result['ok'])
+            self.assertTrue(result['tls_context_ok'])
+            self.assertTrue(result['certificate_verification_required'])
+            self.assertTrue(result['hostname_verification'])
             self.assertTrue(result['archive_verified'])
             self.assertTrue(result['tamper_rejected'])
+
+    def test_offline_diagnostic_fails_when_tls_cannot_verify(self):
+        with patch.object(ssl, 'create_default_context', side_effect=FileNotFoundError('private certificate path')):
+            result = updater.offline_self_test()
+            self.assertFalse(result['ok'])
+            self.assertFalse(result['tls_context_ok'])
+            self.assertNotIn('private', json.dumps(result))
+        for verify_mode, check_hostname in ((ssl.CERT_NONE, True), (ssl.CERT_REQUIRED, False)):
+            with self.subTest(verify_mode=verify_mode, check_hostname=check_hostname), \
+                    patch.object(ssl, 'create_default_context',
+                                 return_value=Mock(verify_mode=verify_mode, check_hostname=check_hostname)):
+                self.assertFalse(updater.offline_self_test()['ok'])
+
+    def test_online_diagnostic_reads_only_the_selected_asset_prefix(self):
+        data = archive_bytes()
+        selected = release(data)
+        asset_url = selected['assets'][0]['browser_download_url']
+        metadata = Response(json.dumps([selected]).encode(), updater.RELEASES_URL)
+        asset = Response(data, asset_url)
+        with patch.object(metadata, 'read', wraps=metadata.read) as read_metadata, \
+                patch.object(asset, 'read', wraps=asset.read) as read_asset, \
+                patch.object(updater, '_open', side_effect=[metadata, asset]) as open_url:
+            result = updater.online_self_test(VERSION)
+        self.assertTrue(result['ok'])
+        self.assertFalse(result['update_available'])
+        self.assertEqual(result['release_version'], VERSION)
+        self.assertEqual(result['asset_prefix_bytes'], 4)
+        self.assertEqual([call.args[0] for call in open_url.call_args_list], [updater.RELEASES_URL, asset_url])
+        read_metadata.assert_called_once_with(updater.MAX_METADATA_BYTES + 1)
+        read_asset.assert_called_once_with(4)
+
+    def test_online_diagnostic_rejects_non_zip_prefix_and_sanitizes_errors(self):
+        data = archive_bytes()
+        asset = release(data)
+        metadata = Response(json.dumps([asset]).encode(), updater.RELEASES_URL)
+        invalid = Response(b'html', asset['assets'][0]['browser_download_url'])
+        with patch.object(updater, '_open', side_effect=[metadata, invalid]):
+            result = updater.online_self_test('0.1.07')
+        self.assertFalse(result['ok'])
+        self.assertEqual(result['stage'], 'asset')
+        with patch.object(updater, '_open', side_effect=OSError('https://example.invalid/?token=private')):
+            result = updater.online_self_test('0.1.07')
+        self.assertFalse(result['ok'])
+        self.assertEqual(result['stage'], 'metadata')
+        self.assertNotIn('private', json.dumps(result))
 
 
 if __name__ == '__main__':

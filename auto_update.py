@@ -7,16 +7,20 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import datetime, timezone
 import hashlib
+from http.client import HTTPException
 import json
 import os
 from pathlib import Path
 import re
 import shutil
+import ssl
 import stat
 import tempfile
 import time
 from urllib.parse import urlsplit
+from urllib.error import HTTPError, URLError
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 import zipfile
 
@@ -42,6 +46,9 @@ class UpdateError(Exception):
 
 class UpdateCancelled(UpdateError):
     pass
+
+
+_UPDATE_FAILURES = (OSError, ValueError, UpdateError, HTTPException, zipfile.BadZipFile, EOFError)
 
 
 @dataclass(frozen=True)
@@ -138,6 +145,17 @@ def _open(url: str):
     return response
 
 
+def _release_metadata() -> tuple[int, object]:
+    with _open(RELEASES_URL) as response:
+        raw = response.read(MAX_METADATA_BYTES + 1)
+        status = response.status
+    if len(raw) > MAX_METADATA_BYTES:
+        raise UpdateError('Release metadata too large')
+    if status != 200:
+        raise UpdateError('Unexpected metadata response')
+    return status, json.loads(raw)
+
+
 def _cancelled(cancel) -> None:
     if cancel.is_set():
         raise UpdateCancelled('Update cancelled')
@@ -155,6 +173,61 @@ def _ordinary(path: Path) -> None:
     info = path.lstat()
     if stat.S_ISLNK(info.st_mode) or getattr(info, 'st_file_attributes', 0) & 0x400:
         raise UpdateError('Unsafe update cache path')
+
+
+def _failure_details(stage: str, error: Exception) -> dict:
+    """Use controlled facts only, including for urllib errors containing signed URLs."""
+    kind = type(error).__name__
+    details = {'stage': stage, 'error_type': kind if re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]{0,79}', kind) else 'Exception'}
+    cause = error.reason if isinstance(error, URLError) else error
+    for key in ('errno', 'winerror', 'verify_code'):
+        value = getattr(cause, key, None)
+        if type(value) is int and -(2**31) <= value < 2**31:
+            details[key] = value
+    if isinstance(error, HTTPError) and type(error.code) is int and 100 <= error.code <= 599:
+        details['http_status'] = error.code
+    return details
+
+
+def _write_failure(root: Path, version: str, stage: str, error: Exception) -> None:
+    """Best-effort atomic replacement while the installation lock is held."""
+    try:
+        _ordinary(root)
+        target = root / 'last-failure.json'
+        if target.exists() or target.is_symlink():
+            _ordinary(target)
+        record = {'app_version': version, 'at_utc': datetime.now(timezone.utc).isoformat(timespec='seconds'),
+                  **_failure_details(stage, error)}
+        temporary = None
+        try:
+            with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=root,
+                                             prefix='failure-', delete=False) as stream:
+                temporary = Path(stream.name)
+                json.dump(record, stream, separators=(',', ':'))
+            os.replace(temporary, target)
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
+    except (OSError, UpdateError):
+        pass
+
+
+@contextmanager
+def _record_update_failure(root: Path, version: str, cancel):
+    stage = 'cache'
+
+    def set_stage(value: str) -> None:
+        nonlocal stage
+        stage = value
+
+    try:
+        yield set_stage
+    except UpdateCancelled:
+        raise
+    except _UPDATE_FAILURES as error:
+        if not cancel.is_set():
+            _write_failure(root, version, stage, error)
+        raise
 
 
 @contextmanager
@@ -385,18 +458,17 @@ def prepare_update(current_version: str, installation_root: Path, cache_root: Pa
         root = installation_cache(installation_root, cache_root)
         root.mkdir(parents=True, exist_ok=True)
         _ordinary(root)
-        with _cache_lock(root):
+        with _cache_lock(root), _record_update_failure(root, current_version, cancel) as set_stage:
             try:
                 cached = _cached(root, current_version, cancel, progress)
-            except (OSError, ValueError, UpdateError):
+            except (OSError, ValueError, UpdateError) as error:
                 _cancelled(cancel)
+                _write_failure(root, current_version, 'cache', error)
+            set_stage('checking')
             progress('checking', 0, 0)
             _cancelled(cancel)
-            with _open(RELEASES_URL) as response:
-                raw = response.read(MAX_METADATA_BYTES + 1)
-            if len(raw) > MAX_METADATA_BYTES:
-                raise UpdateError('Release metadata too large')
-            release = select_release(json.loads(raw), current_version)
+            _, metadata = _release_metadata()
+            release = select_release(metadata, current_version)
             _cancelled(cancel)
             if release is None:
                 progress('ready' if cached else 'current', 0, 0)
@@ -404,6 +476,7 @@ def prepare_update(current_version: str, installation_root: Path, cache_root: Pa
             if cached and parse_version(cached.parent.name.removeprefix('ToneMatchTMP-v')) >= parse_version(release.version):
                 progress('ready', 0, 0)
                 return None if cancel.is_set() else cached
+            set_stage('staging')
             versions = root / 'versions'
             versions.mkdir(exist_ok=True)
             _ordinary(versions)
@@ -413,7 +486,9 @@ def prepare_update(current_version: str, installation_root: Path, cache_root: Pa
             with tempfile.TemporaryDirectory(prefix='staging-', dir=root) as staging_name:
                 staging = Path(staging_name)
                 archive = staging / 'download.zip'
+                set_stage('downloading')
                 _download(release, archive, cancel, progress)
+                set_stage('verifying')
                 progress('verifying', 0, 0)
                 extracted = _extract(archive, staging, release, cancel)
                 manifest_digest = verify_installation(extracted, release.version, cancel, progress)
@@ -427,6 +502,7 @@ def prepare_update(current_version: str, installation_root: Path, cache_root: Pa
                 else:
                     os.replace(extracted, target)
             _cancelled(cancel)
+            set_stage('activating')
             state = {'version': release.version, 'manifest_sha256': manifest_digest}
             with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=root,
                                              prefix='pointer-', delete=False) as stream:
@@ -441,15 +517,62 @@ def prepare_update(current_version: str, installation_root: Path, cache_root: Pa
             return None if cancel.is_set() else target / ('ToneMatchTMP-v' + release.version + '.exe')
     except UpdateCancelled:
         return None
-    except (OSError, ValueError, UpdateError, zipfile.BadZipFile, EOFError):
+    except _UPDATE_FAILURES:
         progress('unavailable', 0, 0)
         return None if cancel.is_set() else cached
+
+
+def _tls_context_report() -> dict:
+    """Load the bundled trust data and check the default HTTPS verification policy."""
+    result = {'tls_context_ok': False, 'certificate_verification_required': False,
+              'hostname_verification': False}
+    try:
+        context = ssl.create_default_context()
+        result['certificate_verification_required'] = context.verify_mode == ssl.CERT_REQUIRED
+        result['hostname_verification'] = context.check_hostname is True
+        result['tls_context_ok'] = result['certificate_verification_required'] and result['hostname_verification']
+    except (OSError, ValueError, RuntimeError) as error:
+        result.update(_failure_details('tls', error))
+    return result
+
+
+def online_self_test(current_version: str) -> dict:
+    """Check project metadata and four ZIP signature bytes without installing anything."""
+    result = {'ok': False, **_tls_context_report()}
+    if not result['tls_context_ok']:
+        return result
+    stage = 'version'
+    try:
+        installed = parse_version(current_version)
+        result['app_version'] = current_version
+        stage = 'metadata'
+        result['metadata_status'], metadata = _release_metadata()
+        # Exercise the asset connection even when checking from the latest version.
+        release = select_release(metadata, '0.0.0')
+        if release is None:
+            raise UpdateError('No eligible release asset')
+        result['release_version'] = release.version
+        result['update_available'] = parse_version(release.version) > installed
+        stage = 'asset'
+        with _open(release.url) as response:
+            result['asset_status'] = response.status
+            if response.status != 200:
+                raise UpdateError('Unexpected asset response')
+            prefix = response.read(4)
+        result['asset_prefix_bytes'] = len(prefix)
+        if prefix != b'PK\x03\x04':
+            raise UpdateError('Invalid portable archive signature')
+        result['ok'] = True
+    except _UPDATE_FAILURES as error:
+        result.update(_failure_details(stage, error))
+    return result
 
 
 def offline_self_test() -> dict:
     """Small frozen-runtime check with no network, GUI or process execution."""
     import threading
 
+    tls = _tls_context_report()
     version_order = parse_version('0.1.10') > parse_version('0.1.09')
     address_rejection = False
     try:
@@ -486,7 +609,8 @@ def offline_self_test() -> dict:
             verify_installation(extracted, version, cancel, lambda *_: None)
         except UpdateError:
             tamper_rejected = True
-    return {'ok': version_order and address_rejection and path_rejection and archive_verified and tamper_rejected,
+    return {'ok': all((tls['tls_context_ok'], version_order, address_rejection, path_rejection,
+                       archive_verified, tamper_rejected)), **tls,
             'version_order': version_order, 'address_rejection': address_rejection,
             'path_rejection': path_rejection, 'archive_verified': archive_verified,
             'tamper_rejected': tamper_rejected, 'network_used': False, 'process_launched': False}

@@ -1,0 +1,45 @@
+{
+  "app_version": "0.1.11",
+  "status": "source_verified_pending_distribution",
+  "source_date_kst": "2026-11-22",
+  "scope": "Portable updater HTTPS runtime resource, frozen verification and bounded local failure record",
+  "root_cause": {
+    "affected_bundles_confirmed": [
+      "0.1.08",
+      "0.1.10"
+    ],
+    "missing_resource": "codex-rejected-cas.pem",
+    "frozen_failure": "FileNotFoundError during SSL context construction",
+    "restoring_runtime_resource_restored_metadata_and_asset_connection": true
+  },
+  "native_ui_tested": false,
+  "audible_output_tested": false,
+  "real_song_accuracy_measured": false,
+  "signed": false,
+  "store_certified": false,
+  "headless": {
+    "ok": true,
+    "tests": 532,
+    "seconds": 86.137,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "gui_creation_guard": true,
+    "deferred_gui_tests": 92,
+    "source_files_verified": 108,
+    "receipt_sha256": "58f82bebfcd52c76f3ed98e3c7229ad990cb881172ac6270cb31e95c1cd42c5a"
+  },
+  "independent_source_review": true,
+  "source_online_https": {
+    "ok": true,
+    "tls_context_ok": true,
+    "certificate_verification_required": true,
+    "hostname_verification": true,
+    "app_version": "0.1.11",
+    "metadata_status": 200,
+    "release_version": "0.1.10",
+    "update_available": false,
+    "asset_status": 200,
+    "asset_prefix_bytes": 4
+  }
+}

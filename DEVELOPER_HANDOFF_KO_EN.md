@@ -1,4 +1,23 @@
-# ToneMatch TMP v0.1.10 — 개발 인수인계 / Developer Handoff
+# ToneMatch TMP v0.1.11 — 개발 인수인계 / Developer Handoff
+
+## Portable HTTPS repair / 포터블 HTTPS 복구
+
+The bundled Python runtime could not create an SSL context because its
+adjacent `codex-rejected-cas.pem` was missing from v0.1.08 and v0.1.10.
+PyInstaller now includes the build runtime's resource when present.
+The packaged offline self-test checks certificate and hostname verification.
+Run the EXE with `--self-test-update-https <report.json>` for an explicit
+online metadata and ZIP prefix check without opening the app window.
+Update failures leave one sanitized `last-failure.json` under the installation's
+update cache when its lock and directory are available.
+
+실제 원인은 GitHub 연결 전에 필요한 TLS 정책 파일이 빠진 것이었습니다.
+이전 공개 ZIP은 보존하고, 영향을 받은 로컬 포터블 설치는 새 ZIP 또는
+원본 런타임에 맞는 파일 복구로 전환합니다. 이전 ZIP 검증의 로컬 전송
+시험에는 frozen HTTPS 경로가 포함되지 않았습니다.
+검증 기록은 [v0.1.11 QA](QA_REPORT_v0.1.11.json)에 있습니다.
+
+## v0.1.10 startup animation history
 
 ## Source acceptance / 소스 검증 완료 — 2026-11-17 KST
 

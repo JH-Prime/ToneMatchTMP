@@ -1,16 +1,18 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-"""ToneMatch TMP 0.1.10 Windows x64 onedir 배포 사양이다.
+"""ToneMatch TMP 0.1.11 Windows x64 onedir 배포 사양이다.
 
 PyTorch와 Demucs는 단일 파일 압축 해제 방식보다 onedir에서 첫 실행과 모델
 로딩이 안정적이다. AI 모델 가중치는 포함하지 않고 첫 분리 시 사용자 캐시에
 받는다.
 """
 
+from pathlib import Path
+import ssl
 from PyInstaller.utils.hooks import collect_all, copy_metadata
 
 
-APP_VERSION = "0.1.10"
+APP_VERSION = "0.1.11"
 APP_BASENAME = f"ToneMatchTMP-v{APP_VERSION}"
 
 source_files = [
@@ -80,6 +82,14 @@ dynamic_packages = [
 
 extra_datas = []
 extra_binaries = []
+# Preserve the build runtime's certificate distrust policy in the frozen bundle.
+# Stock Python has no such file. A customized runtime missing its resource
+# fails here instead of producing an executable unable to initialize HTTPS.
+ssl.create_default_context()
+rejected_cas = Path(ssl.__file__).with_name("codex-rejected-cas.pem")
+if rejected_cas.is_file():
+    extra_datas.append((str(rejected_cas), "."))
+
 # SciPy의 vendored NumPy namespace는 문자열 __import__로 FFT를 불러온다.
 # PyInstaller 정적 탐색에서 누락되므로 실제 CQT frozen 진단으로 함께 검증한다.
 hidden_imports = ["scipy._external.array_api_compat.numpy.fft"]

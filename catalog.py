@@ -8,17 +8,33 @@
 from __future__ import annotations
 
 
-APP_VERSION = "0.1.10"
+APP_VERSION = "0.1.11"
 TARGET_FIRMWARE = "1.8.58"
 MODEL_GUIDE_REVISION = "Rev. J (2026-07)"
-BUILD_DATE = "2026-11-17"
+BUILD_DATE = "2026-11-22"
 
 
 # 앱 내부의 변경 기록 화면과 배포 문서가 함께 사용하는 단일 원본이다.
 # 기능 버전 0.1.01 이후 수정 릴리스는 0.1.02부터 올리며 공개 산출물을 덮어쓰지 않는다.
 CHANGELOG: list[dict] = [
     {
-        "version": "0.1.10", "date": BUILD_DATE,
+        "version": "0.1.11", "date": BUILD_DATE,
+        "status": "미서명 개발자 프리릴리스", "status_en": "Unsigned developer prerelease",
+        "changes": [
+            "배포 EXE에 TLS 보안 정책 파일을 포함해 업데이트 HTTPS 연결 복구",
+            "배포 자체 진단에 TLS 인증서·호스트명 검증 추가",
+            "업데이트 실패 단계와 오류 종류를 개인정보 없이 로컬에 기록",
+        ],
+        "changes_en": [
+            "Bundle the runtime TLS policy resource to restore updater HTTPS",
+            "Check certificate and hostname verification in the packaged self-test",
+            "Record updater failure stage and type locally without private details",
+        ],
+        "known_issues": ["기존 누락 배포본은 파일 복구 또는 새 ZIP 설치가 필요", "실제 GUI 전환은 미검증"],
+        "known_issues_en": ["Older affected builds require a resource repair or the new ZIP", "Native GUI handoff is unverified"],
+    },
+    {
+        "version": "0.1.10", "date": "2026-11-17",
         "status": "미서명 개발자 프리릴리스", "status_en": "Unsigned developer prerelease",
         "changes": [
             "무거운 라이브러리 로딩 후 어두운 ToneMatch TMP 로고·민트 파형 시작 화면을 업데이트 상태와 통합",

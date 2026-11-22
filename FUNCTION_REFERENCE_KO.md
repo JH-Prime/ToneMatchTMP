@@ -1,4 +1,4 @@
-# ToneMatch TMP 0.1.10 함수 설명서
+# ToneMatch TMP 0.1.11 함수 설명서
 
 이 문서는 배포 소스의 모든 함수와 한국어 docstring을 자동으로 모은 색인입니다.
 앱의 `개발자 옵션`에서는 처리 순서 블록을 클릭해 같은 함수의 실제 소스와 원본 줄 번호를 볼 수 있습니다.
@@ -46,24 +46,31 @@
 
 | 줄 | 함수 | 설명 |
 |---:|---|---|
-| 56 | `parse_version` | 설명 누락 |
-| 62 | `select_release` | Choose the highest newer published portable build, including dev releases. |
-| 99 | `_validate_url` | 설명 누락 |
-| 122 | `_TrustedRedirect.redirect_request` | 설명 누락 |
-| 127 | `_open` | 설명 누락 |
-| 141 | `_cancelled` | 설명 누락 |
-| 146 | `installation_cache` | The original portable path gives each installation a separate cache. |
-| 153 | `_ordinary` | Do not follow a junction/symlink while reading or modifying managed state. |
-| 161 | `_cache_lock` | 설명 누락 |
-| 195 | `_relative_parts` | 설명 누락 |
-| 206 | `_digest_file` | 설명 누락 |
-| 218 | `_read_json` | 설명 누락 |
-| 225 | `verify_installation` | Verify every manifest entry and the actual file inventory before handoff. |
-| 282 | `_extract` | 설명 누락 |
-| 329 | `_download` | 설명 누락 |
-| 353 | `_cached` | 설명 누락 |
-| 374 | `prepare_update` | Prepare a newer verified executable, falling back safely on any I/O failure. Call on a worker thread. progress(stage, completed_bytes, total_bytes) must not touch Tk directly. None means continue with the installed application. |
-| 449 | `offline_self_test` | Small frozen-runtime check with no network, GUI or process execution. |
+| 63 | `parse_version` | 설명 누락 |
+| 69 | `select_release` | Choose the highest newer published portable build, including dev releases. |
+| 106 | `_validate_url` | 설명 누락 |
+| 129 | `_TrustedRedirect.redirect_request` | 설명 누락 |
+| 134 | `_open` | 설명 누락 |
+| 148 | `_release_metadata` | 설명 누락 |
+| 159 | `_cancelled` | 설명 누락 |
+| 164 | `installation_cache` | The original portable path gives each installation a separate cache. |
+| 171 | `_ordinary` | Do not follow a junction/symlink while reading or modifying managed state. |
+| 178 | `_failure_details` | Use controlled facts only, including for urllib errors containing signed URLs. |
+| 192 | `_write_failure` | Best-effort atomic replacement while the installation lock is held. |
+| 216 | `_record_update_failure` | 설명 누락 |
+| 219 | `_record_update_failure.<local>.set_stage` | 설명 누락 |
+| 234 | `_cache_lock` | 설명 누락 |
+| 268 | `_relative_parts` | 설명 누락 |
+| 279 | `_digest_file` | 설명 누락 |
+| 291 | `_read_json` | 설명 누락 |
+| 298 | `verify_installation` | Verify every manifest entry and the actual file inventory before handoff. |
+| 355 | `_extract` | 설명 누락 |
+| 402 | `_download` | 설명 누락 |
+| 426 | `_cached` | 설명 누락 |
+| 447 | `prepare_update` | Prepare a newer verified executable, falling back safely on any I/O failure. Call on a worker thread. progress(stage, completed_bytes, total_bytes) must not touch Tk directly. None means continue with the installed application. |
+| 525 | `_tls_context_report` | Load the bundled trust data and check the default HTTPS verification policy. |
+| 539 | `online_self_test` | Check project metadata and four ZIP signature bytes without installing anything. |
+| 571 | `offline_self_test` | Small frozen-runtime check with no network, GUI or process execution. |
 
 ## `tools/package_msix.py`
 
@@ -634,7 +641,8 @@
 | 4126 | `_self_test_harmony_reference` | 동결 앱의 이론 사전이 확장음·음이름·펜타토닉·다이어토닉 자료를 실제 계산하는지 확인한다. |
 | 4144 | `_self_test_chord_chart` | 마디 페이지·변화 보존·미확정·원본 믹스 안전 표시와 확장 운지 모듈을 검사한다. |
 | 4168 | `run_self_test` | 합성 기타로 오프라인 분석·한영 변환·개발자 소스와 런타임을 검사한다. |
-| 4234 | `main` | 자체 진단 인수를 처리하거나 한·영 데스크톱 GUI 이벤트 루프를 시작한다. |
+| 4234 | `run_update_https_diagnostic` | Run the portable updater's HTTPS probe without constructing a window. |
+| 4246 | `main` | 자체 진단 인수를 처리하거나 한·영 데스크톱 GUI 이벤트 루프를 시작한다. |
 
 ## `catalog.py`
 
@@ -1503,4 +1511,4 @@
 
 ---
 
-총 함수 수: **1127**
+총 함수 수: **1135**

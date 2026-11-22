@@ -216,6 +216,20 @@ class StartupTests(unittest.TestCase):
         tk.assert_not_called()
         presentation.assert_not_called()
 
+    def test_online_update_diagnostic_does_not_start_app(self):
+        import app
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'https.json'
+            for success, code in ((True, 0), (False, 2)):
+                with self.subTest(success=success), \
+                        patch.object(app.sys, 'argv', ['app', '--self-test-update-https', str(output)]), \
+                        patch.object(app.multiprocessing, 'freeze_support'), \
+                        patch('auto_update.online_self_test', return_value={'ok': success}, create=True) as diagnose, \
+                        patch.object(app.tk, 'Tk', side_effect=AssertionError('Tk must be bypassed')):
+                    self.assertEqual(app.main(), code)
+                    diagnose.assert_called_once_with(app.APP_VERSION)
+                    self.assertEqual(json.loads(output.read_text(encoding='utf-8')), {'ok': success})
+
     def test_stem_diagnostic_and_frozen_worker_bypass_presentation(self):
         import app
         with patch.object(app.sys, 'argv', ['app', '--stem-self-test-output', 'diagnostic.json']), \

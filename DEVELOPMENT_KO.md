@@ -1,6 +1,16 @@
-# ToneMatch TMP 개발자 안내서 · 0.1.10 소스 검증 완료
+# ToneMatch TMP 개발자 안내서 · 0.1.11
 
-## 현행 시작 화면 계약 — 소스 2026-11-17 · 공개 검증 2026-11-19 KST
+## Windows 배포의 HTTPS 검사
+
+PyInstaller 사양은 빌드 환경의 기본 SSL 컨텍스트를 확인하고 런타임에
+`codex-rejected-cas.pem`이 있을 때 EXE의 `_internal`에 포함합니다.
+빌드된 EXE 자체 진단은 오프라인에서 인증서와 호스트명 검증이 켜진
+SSL 컨텍스트를 생성합니다. `--self-test-update-https <report.json>`은
+별도의 온라인 진단으로 GitHub 릴리스 정보와 ZIP 처음 4바이트를 읽습니다.
+업데이트 실패 기록은 `%LOCALAPPDATA%\ToneMatchTMP\updates\<설치 식별자>\last-failure.json`에 남습니다.
+오류 단계와 종류를 확인할 수 있고, 파일 경로와 URL은 기록하지 않습니다.
+
+## 시작 화면 계약 — 소스 2026-11-17 · 공개 검증 2026-11-19 KST
 
 [승인 계획](plan/20261116-230144--work-plan--v0-1-10-startup-animation--v01.md)에 따라
 기존 Tkinter 시작 화면에 어두운 ToneMatch TMP 로고와 민트 파형을 통합했습니다.

@@ -4231,9 +4231,25 @@ def run_self_test(output_path: str | Path) -> int:
         return 1
 
 
+def run_update_https_diagnostic(output_path: str | Path) -> int:
+    """Run the portable updater's HTTPS probe without constructing a window."""
+    from auto_update import online_self_test
+
+    payload = online_self_test(APP_VERSION)
+    try:
+        Path(output_path).write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    except OSError:
+        return 2
+    return 0 if payload["ok"] else 2
+
+
 def main() -> int:
     """자체 진단 인수를 처리하거나 한·영 데스크톱 GUI 이벤트 루프를 시작한다."""
     multiprocessing.freeze_support()
+    if "--self-test-update-https" in sys.argv[1:]:
+        if len(sys.argv) != 3 or sys.argv[1] != "--self-test-update-https":
+            return 2
+        return run_update_https_diagnostic(sys.argv[2])
     if any(argument.startswith("--stem-self-test-") for argument in sys.argv[1:]):
         from stem_diagnostics import stem_self_test_cli
         return stem_self_test_cli(sys.argv[1:])
