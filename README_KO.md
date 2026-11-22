@@ -1,5 +1,7 @@
 # ToneMatch TMP 0.1.11 — 자동 업데이트 HTTPS 복구
 
+[v0.1.11 개발자 ZIP](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.11)을 게시했습니다. 배포 EXE의 실제 HTTPS, ZIP 업데이트 설치·오프라인 캐시, 공개 파일 3개의 해시를 검증했습니다.
+
 Windows 배포 EXE에서 빠진 Python TLS 보안 정책 파일을 포함해 GitHub 자동
 업데이트 연결을 복구합니다. 시작 화면과 기존 버전으로 이어가는 동작은 유지합니다.
 이전 배포본에서 업데이트 화면 없이 기존 앱이 열리면 수정된 개발자 ZIP을

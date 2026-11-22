@@ -1,5 +1,7 @@
 # ToneMatch TMP 0.1.11 — portable update HTTPS repair
 
+The [v0.1.11 developer ZIP](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.11) is published. Frozen HTTPS, archive update installation, offline cache reuse and all three public downloads passed verification.
+
 The Windows executable now bundles the Python TLS policy file required for
 GitHub updates. Older affected installations need the fixed developer ZIP
 extracted into a new folder or the missing resource restored once. See

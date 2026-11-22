@@ -1,6 +1,6 @@
 {
   "app_version": "0.1.11",
-  "status": "source_verified_pending_distribution",
+  "status": "unsigned_developer_release_verified_and_local_recovery_complete",
   "source_date_kst": "2026-11-22",
   "scope": "Portable updater HTTPS runtime resource, frozen verification and bounded local failure record",
   "root_cause": {
@@ -41,5 +41,118 @@
     "update_available": false,
     "asset_status": 200,
     "asset_prefix_bytes": 4
-  }
+  },
+  "source_commit": "c866aec52abe1b7f54566229e1711de5c075d4ce",
+  "archive_verification": {
+    "ok": true,
+    "app_version": "0.1.11",
+    "verified_at_kst": "2026-11-22T20:00:16.280457+09:00",
+    "source_commit": "c866aec52abe1b7f54566229e1711de5c075d4ce",
+    "source_inputs": 127,
+    "headless_tests": 532,
+    "headless_receipt_sha256": "58f82bebfcd52c76f3ed98e3c7229ad990cb881172ac6270cb31e95c1cd42c5a",
+    "headless_source_hashes_match": true,
+    "manifest_files": 5501,
+    "manifest_complete": true,
+    "sha256sums_entries_verified": 5,
+    "fresh_exe_self_test": true,
+    "embedded_executable_version_matches": true,
+    "native_parity": true,
+    "native_abi_version": 2,
+    "private_paths_absent": true,
+    "media_weights_absent": true,
+    "development_jit_caches_absent": true,
+    "local_account_configs_absent": true,
+    "auto_update_full_archive_install": true,
+    "auto_update_cached_reopen": true,
+    "auto_update_offline_diagnostic": true,
+    "original_portable_data_preserved": true,
+    "auto_update_frozen_tls_context_verified": true,
+    "auto_update_frozen_https_live_verified": true,
+    "auto_update_frozen_https_release_version": "0.1.10",
+    "certificate_distrust_resource_sha256": "c916ce1b14ed8ca69e9b5c9fab22799a900dd610d6d4ec9b1347f4fd48e53718",
+    "network_accessed": true,
+    "native_ui_tested": false,
+    "audible_output_tested": false,
+    "real_song_accuracy_measured": false,
+    "signature": "unsigned",
+    "public_signing_verified": false,
+    "store_certified": false,
+    "validation_directory": "work/v111-dykcvblg",
+    "archive_bytes": 357294184,
+    "archive_sha256": "c480c7ecc4bb628df0f0b3fa39953ffd4a372904a0ce16e6a031a5a3943974b8",
+    "manifest_sha256": "2303bd6dd246d14ebdc3608c45f44c713497689fd3cbfcf4bcc152726fe8fa88",
+    "executable_sha256": "3384c6918c43ba328f9413537bc773964cd74d6800f704ea0f555663d0f9da72"
+  },
+  "public_delivery": {
+    "ok": true,
+    "unauthenticated": true,
+    "actual_downloads_verified": true,
+    "frozen_exe_https_verified_after_publication": true,
+    "checked_at_kst": "2026-11-22T20:02:23.034359+09:00",
+    "url": "https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.11",
+    "published_at": "2026-11-22T11:01:13Z",
+    "tag_commit": "c866aec52abe1b7f54566229e1711de5c075d4ce",
+    "assets": [
+      {
+        "name": "ToneMatchTMP-v0.1.11-ARCHIVE-VERIFICATION.json",
+        "size": 1759,
+        "digest": "sha256:e38f3bf9bdf69d299fb124bfc1022dcd42e74385f63f6fd3110f96a2932c69bf",
+        "browser_download_url": "https://github.com/JH-Prime/ToneMatchTMP/releases/download/v0.1.11/ToneMatchTMP-v0.1.11-ARCHIVE-VERIFICATION.json",
+        "downloaded_bytes": 1759,
+        "downloaded_sha256": "sha256:e38f3bf9bdf69d299fb124bfc1022dcd42e74385f63f6fd3110f96a2932c69bf"
+      },
+      {
+        "name": "ToneMatchTMP-v0.1.11-SHA256SUMS.txt",
+        "size": 595,
+        "digest": "sha256:3608c8450a2a8a24c6c0b6e241c8b008677fe50bbbdfd410e193813527f3bd85",
+        "browser_download_url": "https://github.com/JH-Prime/ToneMatchTMP/releases/download/v0.1.11/ToneMatchTMP-v0.1.11-SHA256SUMS.txt",
+        "downloaded_bytes": 595,
+        "downloaded_sha256": "sha256:3608c8450a2a8a24c6c0b6e241c8b008677fe50bbbdfd410e193813527f3bd85"
+      },
+      {
+        "name": "ToneMatchTMP-v0.1.11-Windows-x64-Portable-Dev.zip",
+        "size": 357294184,
+        "digest": "sha256:c480c7ecc4bb628df0f0b3fa39953ffd4a372904a0ce16e6a031a5a3943974b8",
+        "browser_download_url": "https://github.com/JH-Prime/ToneMatchTMP/releases/download/v0.1.11/ToneMatchTMP-v0.1.11-Windows-x64-Portable-Dev.zip",
+        "downloaded_bytes": 357294184,
+        "downloaded_sha256": "sha256:c480c7ecc4bb628df0f0b3fa39953ffd4a372904a0ce16e6a031a5a3943974b8"
+      }
+    ]
+  },
+  "previous_version_preservation": {
+    "old_release_metadata_and_assets_preserved": true,
+    "old_tag_refs_preserved": true,
+    "prior_releases": 19,
+    "prior_tag_refs": 37,
+    "previous_assets": 46
+  },
+  "local_v108_recovery": {
+    "ok": true,
+    "desktop_install_version": "0.1.08",
+    "added_missing_resource": true,
+    "resource_sha256": "c916ce1b14ed8ca69e9b5c9fab22799a900dd610d6d4ec9b1347f4fd48e53718",
+    "original_executable_unchanged": true,
+    "old_manifest_unchanged": true,
+    "local_inventory_differs_by_repair_file": true,
+    "live_update_cache_modified": false,
+    "native_ui_tested": false,
+    "audible_output_tested": false,
+    "hidden_frozen_diagnostic": {
+      "ok": true,
+      "native_ui_tested": false,
+      "audible_output_tested": false,
+      "frozen": true,
+      "certificate_verification_required": true,
+      "hostname_verification": true,
+      "metadata_status": 200,
+      "release_version": "0.1.11",
+      "asset_bytes": 357294184,
+      "asset_sha256": "c480c7ecc4bb628df0f0b3fa39953ffd4a372904a0ce16e6a031a5a3943974b8",
+      "archive_size_and_sha256_verified": true,
+      "verified_manifest_sha256": "2303bd6dd246d14ebdc3608c45f44c713497689fd3cbfcf4bcc152726fe8fa88"
+    },
+    "validation_directory": "work/v108-recovery-9n8a_sca"
+  },
+  "build_warning_count": 17
 }

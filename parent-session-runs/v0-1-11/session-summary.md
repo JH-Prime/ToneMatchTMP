@@ -8,3 +8,7 @@
 - Separate feature request: title/key prompt, pasted editable and transposable chart, and practice accompaniment. The feature remains outside the approved repair patch. Its scope confirmation was requested separately.
 
 - 2026-11-22 19:48:20 Asia/Seoul: 532 guarded tests passed in 86.136 seconds, 92 GUI cases deferred, and source hashes match. Receipt: `work/v111-headless.json`.
+- 2026-11-22 20:04:19 Asia/Seoul: v0.1.11 delivery complete. Source c866aec52abe1b7f54566229e1711de5c075d4ce. https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.11
+- ZIP 357,294,184 bytes, SHA-256 c480c7ecc4bb628df0f0b3fa39953ffd4a372904a0ce16e6a031a5a3943974b8, 5,501 manifest files. Guarded and frozen diagnostics, actual HTTPS, offline cache and three public hash checks passed.
+- Old v0.1.08 frozen updater verified the full public archive. Desktop resource restored. EXE and old manifest unchanged. No native window/audio used.
+- Final records: QA_REPORT_v0.1.11.json and work/v111-v108-recovery.json.

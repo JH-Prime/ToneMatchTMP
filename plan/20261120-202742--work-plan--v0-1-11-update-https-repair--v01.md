@@ -3,15 +3,15 @@
 Plan Type: Work plan
 Workstream: ToneMatchTMP v0.1.11 frozen HTTPS repair and recovery
 Version: 01
-Status: Source accepted; Development build starting
+Status: Approved delivery and local recovery complete
 Created: 2026-11-20 20:27:42 Asia/Seoul
-Last Updated: 2026-11-22 19:48:20 Asia/Seoul
+Last Updated: 2026-11-22 20:04:19 Asia/Seoul
 Related Plan: plan/20261116-230144--work-plan--v0-1-10-startup-animation--v01.md
-Current Completion State: Resource inclusion, diagnostics, failure record, and version metadata implemented and independently reviewed
-Completed So Far: Frozen transport defect reproduced, actual source HTTPS success verified, 21 updater and 17 startup cases passed, independent source review complete
-Remaining Work: Versioned developer build, frozen verification, publication, public readback, and local v0.1.08 recovery
-Current Blockers: None within the approved scope
-Next Step: Build from accepted source and verify the packaged TLS runtime
+Current Completion State: Public v0.1.11 developer artifact verified and desktop v0.1.08 repaired
+Completed So Far: 532 guarded tests, independent review, frozen TLS and actual HTTPS, archive/cache checks, publication/readback, old frozen full download and single-file local recovery
+Remaining Work: Interactive UI verification remains deferred by user instruction
+Current Blockers: None for approved delivery
+Next Step: Proceed with separately approved work when its scope is confirmed
 
 ## Approved objective and evidence
 
@@ -61,13 +61,13 @@ Completion requires the narrow fixes, meaningful passing regression and guarded 
 
 ## Scoreboard
 
-Current score: 43/100
+Current score: 49/100
 Score source: provisional
-Last updated: 2026-11-22 19:48:20 Asia/Seoul
-Rationale: Reviewed source fixes pass focused regressions and actual source HTTPS; fixed artifact and old-installation recovery still need verification.
-What improved: The build includes the resource and verifies secure SSL initialization, and the updater writes sanitized local failures under its lock.
-What remains unsatisfactory: v0.1.08 and v0.1.10 cannot initialize HTTPS in their current distributions; earlier verification missed this runtime boundary.
-Next score-maintenance action: Deliver a verified fixed package, preserve old assets, and restore the user's original executable installation without launching its UI.
+Last updated: 2026-11-22 20:04:19 Asia/Seoul
+Rationale: The confirmed failure is fixed in the public patch and original desktop folder with actual frozen HTTPS and archive verification.
+What improved: The old frozen updater verified the public archive and the local repair preserved the original executable and manifest.
+What remains unsatisfactory: Interactive update handoff and visual acceptance remain unverified.
+Next score-maintenance action: Retain immutable public records and check interactive behavior only within the user-authorized scope.
 
 Score history:
 
@@ -76,8 +76,11 @@ Score history:
 
 - 2026-11-22 19:48:20 Asia/Seoul — 43 provisional: 532 guarded tests passed in 86.136 seconds and all source hashes matched. Packaged verification is next.
 
+- 2026-11-22 20:04:19 Asia/Seoul — 49 provisional: actual frozen HTTPS, public artifact verification and local recovery complete.
+
 ## Progress log
 
 - 2026-11-20 20:27:42 Asia/Seoul — Explicit user approval received for v0.1.11 repair, tests, ZIP, publication, and adding the missing resource to desktop v0.1.08. Root-cause receipts are in ignored work/v108-runtime-probe-8rexm11i/result.json. Original executable and live cache were not altered during diagnosis.
 - 2026-11-22 19:47:30 Asia/Seoul — Added TLS resource collection, offline context validation, explicit online EXE diagnostic and sanitized update failure record. Added regression tests that fail before the repair. Independent review confirmed PyInstaller data placement, guard ordering and record privacy. Source diagnostic reached GitHub release metadata and read the v0.1.10 archive signature with verification enabled. Started the guarded 532-case suite.
 - 2026-11-22 19:48:20 Asia/Seoul — Integrated 532-case suite passed with zero failures, errors or skips. GUI 92 deferred. Source hashes verified before the Development build.
+- 2026-11-22 20:04:19 Asia/Seoul — v0.1.11 verified and published, three public assets read back, prior artifacts preserved. Repaired the desktop v0.1.08 resource after isolated full public ZIP download and verification by its frozen runtime.

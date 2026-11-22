@@ -17,6 +17,9 @@ update cache when its lock and directory are available.
 시험에는 frozen HTTPS 경로가 포함되지 않았습니다.
 검증 기록은 [v0.1.11 QA](QA_REPORT_v0.1.11.json)에 있습니다.
 
+[v0.1.11](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.11) was published at 2026-11-22 20:01:13 Asia/Seoul. The frozen certificate and hostname checks, actual HTTPS, archive update, offline reuse and public downloads passed.
+The old embedded updater verified the complete public archive in an isolated probe before the local v0.1.08 resource was restored. The original EXE and historical manifest match their previous bytes.
+
 ## v0.1.10 startup animation history
 
 ## Source acceptance / 소스 검증 완료 — 2026-11-17 KST
