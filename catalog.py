@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 
-APP_VERSION = "0.1.11"
+APP_VERSION = "0.1.12"
 TARGET_FIRMWARE = "1.8.58"
 MODEL_GUIDE_REVISION = "Rev. J (2026-07)"
 BUILD_DATE = "2026-11-22"
@@ -18,7 +18,23 @@ BUILD_DATE = "2026-11-22"
 # 기능 버전 0.1.01 이후 수정 릴리스는 0.1.02부터 올리며 공개 산출물을 덮어쓰지 않는다.
 CHANGELOG: list[dict] = [
     {
-        "version": "0.1.11", "date": BUILD_DATE,
+        "version": "0.1.12", "date": BUILD_DATE,
+        "status": "미서명 개발자 프리릴리스", "status_en": "Unsigned developer prerelease",
+        "changes": [
+            "곡 제목과 키로 AI용 질문을 만들고 붙여넣은 코드표를 마디별로 확인하고 이조",
+            "7가지 로컬 합성 반주 스타일, 파트별 믹서, 카운트인과 반복 재생",
+            "연습 프로젝트 저장과 열기, 믹스 WAV·MP3 및 개별 파트 WAV 내보내기",
+        ],
+        "changes_en": [
+            "Prepare an AI question from title and key, then preview and transpose pasted charts",
+            "Seven local synthesized accompaniment styles, part mixer, count-in and loop playback",
+            "Save and open practice projects, export WAV or MP3 mixes and individual WAV parts",
+        ],
+        "known_issues": ["AI의 코드표는 사용자가 확인해야 함", "실제 창 배치 및 음원 재생은 미검증"],
+        "known_issues_en": ["Review AI-suggested charts before use", "Native layout and listening are unverified"],
+    },
+    {
+        "version": "0.1.11", "date": "2026-11-22",
         "status": "미서명 개발자 프리릴리스", "status_en": "Unsigned developer prerelease",
         "changes": [
             "배포 EXE에 TLS 보안 정책 파일을 포함해 업데이트 HTTPS 연결 복구",

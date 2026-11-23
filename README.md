@@ -1,4 +1,20 @@
-# ToneMatch TMP 0.1.11 — portable update HTTPS repair
+# ToneMatch TMP 0.1.12 — practice accompaniment
+
+Open **Practice backing…** to paste or write a 4/4 chord chart. Enter a song title
+and optional key to prepare a question for ChatGPT or Claude. Submit it in the
+browser and review the returned chart before playing. The app generates the question locally.
+
+Use pipes between bars, optional `[A]` section labels and spaces for chord changes.
+For example, `| D/F# A7 | Bm - | Gmaj7 |` gives the first two bars two beats per
+chord or rest. `D:3 A:1` sets explicit durations. Use `-` for a rest and resolve
+`?` before playing. Semitone transposition shifts both a slash chord's root and bass.
+
+Choose Rock, Pop, Ballad, Funk, Blues Shuffle, Bossa Nova or Jazz Swing. Set tempo,
+count-in and looping, then click Play. The synth generates drums, bass, chords
+and click locally. Save a practice project, export the mix as WAV or MP3, or save a
+part as WAV. Audio exports omit the count-in. See [v0.1.12 QA](QA_REPORT_v0.1.12.json).
+
+## v0.1.11 portable update HTTPS repair record
 
 The [v0.1.11 developer ZIP](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.11) is published. Frozen HTTPS, archive update installation, offline cache reuse and all three public downloads passed verification.
 

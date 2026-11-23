@@ -1,0 +1,33 @@
+{
+  "app_version": "0.1.12",
+  "status": "source_verified_pending_distribution",
+  "source_date_kst": "2026-11-22",
+  "scope": "Local practice charts, AI prompt preparation, transposition, seven synthesized styles, part mixer and audio export",
+  "native_ui_tested": false,
+  "audible_output_tested": false,
+  "real_song_accuracy_measured": false,
+  "signed": false,
+  "store_certified": false,
+  "headless": {
+    "ok": true,
+    "tests": 556,
+    "seconds": 96.41,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "gui_creation_guard": true,
+    "audio_output_guard": true,
+    "deferred_gui_tests": 92,
+    "source_files_verified": 114,
+    "receipt_sha256": "d387d5f2ef8c08d4aa2aaf9cfd6889bbed125e59619f6716ec4ff617453a8386"
+  },
+  "independent_source_review": true,
+  "practice_source_verification": {
+    "project_roundtrip": true,
+    "slash_bass_transposed": true,
+    "aligned_frames": true,
+    "finite_pcm": true,
+    "mp3_export": true,
+    "audible_output_tested": false
+  }
+}

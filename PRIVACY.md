@@ -20,6 +20,10 @@ contain file paths and error details; review them before sharing them with maint
 - Opening a help or reference link launches the user's browser and is subject to
   that destination's privacy policy. There is no ToneMatchTMP account service or
   application-maintainer analytics endpoint in this release.
+- Practice accompaniment prepares the question and synthesizes backing audio locally.
+  The ChatGPT and Claude buttons open the chosen provider in your browser. You choose
+  whether to paste and submit the copied question there. Practice projects and exported
+  audio are written to destinations you select.
 
 Third-party policies: [GitHub privacy](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement),
 [Hugging Face privacy](https://huggingface.co/privacy),

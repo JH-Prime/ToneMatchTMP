@@ -12,6 +12,7 @@ SOURCE_NAMES = (
     "quad_cortex.py", "qc_catalog_ui.py", "tools/import_quad_cortex.py", "tools/verify_qc_chords.py",
     "song_chords.py", "playback.py", "playback_ui.py", "chord_edits.py", "chord_edit_ui.py",
     "stem_mixer.py", "stem_mixer_ui.py", "chart_pdf.py", "music_diagnostics.py",
+    "practice_chart.py", "practice_audio.py", "practice_ui.py",
     "tests/test_song_chords.py", "tests/test_playback.py", "tests/test_playback_ui.py",
     "tests/test_chord_edits.py", "tests/test_chord_edit_ui.py", "tests/test_stem_mixer.py",
     "tests/test_stem_mixer_ui.py", "tests/test_chart_pdf.py", "tests/test_chart_pdf_ui.py",

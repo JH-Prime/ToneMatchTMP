@@ -7,7 +7,7 @@ import threading
 import time
 import unittest
 import wave
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import numpy as np
 
@@ -200,7 +200,48 @@ class PlayerTests(unittest.TestCase):
         session.clear()
 
 
+class PracticeArbitrationTests(unittest.TestCase):
+    def test_pending_practice_output_blocks_other_players_until_suspended(self):
+        from app import ToneMatchApp
+
+        app = ToneMatchApp.__new__(ToneMatchApp)
+        app.closing = app.hardware_probe_active = False
+        app.worker = app.record_worker = None
+        app._stem_is_running = Mock(return_value=False)
+        app._spectrum_is_running = Mock(return_value=False)
+        app.playback = Mock()
+        app.playback.suspend.return_value = True
+        app.mixer = Mock(player=None)
+        app.mixer.suspend.return_value = True
+        app.practice_window = Mock(playback_active=True)
+        app.practice_window.suspend.side_effect = (False, True)
+
+        self.assertFalse(app._can_play_audio())
+        self.assertFalse(app._can_start_mixer())
+        self.assertTrue(app._can_start_practice())
+        self.assertFalse(app._suspend_playback())
+        self.assertTrue(app._suspend_playback())
+        app.practice_window.playback_active = False
+        self.assertTrue(app._can_play_audio())
+
+
 class TransportTests(unittest.TestCase):
+    def test_count_in_plays_once_per_start_and_is_skipped_on_loop(self):
+        transport = Transport(100, 10)
+        transport.set_loop(2, 10, pre_roll=True)
+        transport.play()
+        self.assertEqual(transport.next_span(64), (0, 64))
+        transport.advance(64)
+        self.assertEqual(transport.next_span(64), (64, 100))
+        transport.advance(36)
+        self.assertEqual(transport.next_span(12), (20, 32))
+        transport.pause()
+        transport.play()
+        self.assertEqual(transport.next_span(12), (20, 32))
+        transport.stop()
+        transport.play()
+        self.assertEqual(transport.next_span(12), (0, 12))
+
     """샘플 위치를 기준으로 탐색·재생·반복 상태를 확인한다."""
 
     def test_initial_state_never_autoplays(self):

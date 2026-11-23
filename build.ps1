@@ -79,7 +79,7 @@ try {
     if (-not $SkipTests) {
         # 이전 build/dist의 수천 개 런타임 파일을 다시 컴파일하지 않고 배포 소스만 검사한다.
         Invoke-LoggedNative "Python compileall" {
-            & $PythonExe -m compileall -q app.py catalog.py debug_info.py devices.py engine.py chord_chart.py guitar_shapes.py harmony_reference.py i18n.py native_dsp.py recorder.py reference_compare.py report.py separator.py spectrum.py stem_removal.py stem_diagnostics.py voicing.py song_chords.py playback.py playback_ui.py chord_edits.py chord_edit_ui.py stem_mixer.py stem_mixer_ui.py chart_pdf.py music_diagnostics.py quad_cortex.py qc_catalog_ui.py tests tools
+            & $PythonExe -m compileall -q app.py catalog.py debug_info.py devices.py engine.py chord_chart.py guitar_shapes.py harmony_reference.py i18n.py native_dsp.py recorder.py reference_compare.py report.py separator.py spectrum.py stem_removal.py stem_diagnostics.py voicing.py song_chords.py playback.py playback_ui.py chord_edits.py chord_edit_ui.py stem_mixer.py stem_mixer_ui.py chart_pdf.py music_diagnostics.py practice_chart.py practice_audio.py practice_ui.py quad_cortex.py qc_catalog_ui.py tests tools
         }
         Invoke-LoggedNative "Headless tests (GUI creation forbidden)" {
             & $PythonExe -W error tools\verify_headless.py --output "build\$AppBaseName-headless.json"
@@ -142,6 +142,7 @@ try {
         "quad_cortex.py", "qc_catalog_ui.py",
         "song_chords.py", "playback.py", "playback_ui.py", "chord_edits.py", "chord_edit_ui.py",
         "stem_mixer.py", "stem_mixer_ui.py", "chart_pdf.py", "music_diagnostics.py",
+        "practice_chart.py", "practice_audio.py", "practice_ui.py",
         "chord_chart.py", "guitar_shapes.py", "harmony_reference.py", "i18n.py", "native_dsp.py", "recorder.py", "reference_compare.py", "report.py", "separator.py", "spectrum.py", "stem_removal.py", "stem_diagnostics.py", "voicing.py"
     )) {
         Copy-Item -LiteralPath (Join-Path $ProjectDir $Name) -Destination $SourceRoot -Force
@@ -219,6 +220,9 @@ try {
     $SelfTest = Get-Content -Raw -LiteralPath $SelfTestPath | ConvertFrom-Json
     if (-not $SelfTest.music_workflow.ok) {
         throw "새 CQT/재생/믹서/PDF 배포 자체 진단이 실패했습니다."
+    }
+    if (-not $SelfTest.practice_accompaniment.ok) {
+        throw "연습 반주 배포 자체 진단이 실패했습니다."
     }
     if (-not $SelfTest.ok -or -not $SelfTest.chord_voicing.ok -or -not $SelfTest.harmony_reference.ok -or -not $SelfTest.harmony_reference_source_ok -or -not $SelfTest.chord_chart.ok -or -not $SelfTest.chord_chart_source_ok -or -not $SelfTest.guitar_shapes_source_ok -or $SelfTest.app_version -ne $Version -or -not $SelfTest.stem_removal_source_ok -or -not $SelfTest.stem_diagnostics_source_ok -or -not $SelfTest.native_dsp.available -or -not $SelfTest.native_dsp.parity_ok -or $SelfTest.native_dsp.abi_version -ne 2 -or -not $SelfTest.native_dsp.float32_parity_ok -or -not $SelfTest.native_dsp.stream_stats_ok) {
         throw "패키지 자체 진단 결과가 올바르지 않습니다."

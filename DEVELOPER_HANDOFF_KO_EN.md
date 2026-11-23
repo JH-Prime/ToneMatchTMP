@@ -1,4 +1,19 @@
-# ToneMatch TMP v0.1.11 — 개발 인수인계 / Developer Handoff
+# ToneMatch TMP v0.1.12 — 개발 인수인계 / Developer Handoff
+
+## Practice accompaniment / 연습 반주
+
+`practice_chart.py` validates bounded 4/4 charts, transposition, project files and
+local prompt creation. `practice_audio.py` renders aligned synthesized parts and
+exports them using the same mix as playback. `practice_ui.py` owns the practice
+window, workers and temporary audio. Playback uses the existing WavPlayer with
+optional pre-roll, and the main app arbitrates access alongside recording,
+device monitoring and stem playback.
+
+코드표와 연습 데이터는 기존 분석 결과와 별도로 저장됩니다. EXE 자체 진단은
+합성 코드표를 이조·저장·재열기하고, WAV와 MP3를 생성해 장치 출력 없이 검증합니다.
+테스트 결과와 개발자 ZIP의 검증 내역은 [v0.1.12 QA](QA_REPORT_v0.1.12.json)를 확인하세요.
+
+## v0.1.11 updater repair history
 
 ## Portable HTTPS repair / 포터블 HTTPS 복구
 

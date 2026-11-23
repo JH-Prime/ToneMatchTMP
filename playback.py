@@ -24,6 +24,7 @@ class Transport:
         self.position = 0
         self.state = "ready"
         self.loop: tuple[int, int] | None = None
+        self._pre_roll = False
 
     @property
     def seconds(self) -> float:
@@ -45,19 +46,29 @@ class Transport:
         elif self.state == "finished":
             self.state = "paused"
 
-    def set_loop(self, start: float | None = None, end: float | None = None) -> None:
+    def set_loop(self, start: float | None = None, end: float | None = None,
+                 *, pre_roll=False) -> None:
         """유효한 반복 구간을 적용하거나 인수 없이 반복을 해제한다."""
         if start is None and end is None:
             self.loop = None
+            self._pre_roll = False
             return
         first, last = self._frame(start), self._frame(end)
         if first >= last:
             raise ValueError("Loop must contain audio")
         self.loop = first, last
+        self._pre_roll = pre_roll
+
+    def _at_loop_boundary(self) -> bool:
+        """Allow the count-in before the first loop start when explicitly enabled."""
+        if self.loop is None:
+            return False
+        first, last = self.loop
+        return self.position >= last or (self.position < first and not self._pre_roll)
 
     def play(self) -> None:
         """재생을 명시적으로 시작하고 반복 범위 밖이나 EOF 위치를 보정한다."""
-        if self.loop and not self.loop[0] <= self.position < self.loop[1]:
+        if self.loop and self._at_loop_boundary():
             self.position = self.loop[0]
         elif self.position >= self.frames:
             self.position = 0
@@ -79,7 +90,7 @@ class Transport:
             raise ValueError("Invalid block size")
         if self.state != "playing":
             return None
-        if self.loop and not self.loop[0] <= self.position < self.loop[1]:
+        if self.loop and self._at_loop_boundary():
             self.position = self.loop[0]
         limit = self.loop[1] if self.loop else self.frames
         return self.position, min(limit, self.position + block_frames)
@@ -184,12 +195,12 @@ class WavPlayer:
                     'loop': self.transport.loop,
                     'error': self._error, 'output_active': self._output_active}
 
-    def _command(self, name, *args):
+    def _command(self, name, *args, **kwargs):
         """검증된 명령만 반영하고 이전 블록 완료의 위치 갱신을 무효화한다."""
         with self._condition:
             if self._closed:
                 raise RuntimeError('Playback is closed')
-            getattr(self.transport, name)(*args)
+            getattr(self.transport, name)(*args, **kwargs)
             if name == 'pause' and self.transport.state == 'finished' and self._output_active:
                 self.transport.state = 'paused'
             self._error = ''
@@ -212,9 +223,9 @@ class WavPlayer:
         """검증된 새 위치로 이동하며 이전 위치의 쓰기 완료를 무시한다."""
         self._command('seek', seconds)
 
-    def set_loop(self, start=None, end=None):
+    def set_loop(self, start=None, end=None, *, pre_roll=False):
         """반복 구간 변경을 출력 작업자와 직렬화한다."""
-        self._command('set_loop', start, end)
+        self._command('set_loop', start, end, pre_roll=pre_roll)
 
     def close(self):
         """작업자 종료만 요청하므로 Tk 이벤트 처리를 막지 않는다."""

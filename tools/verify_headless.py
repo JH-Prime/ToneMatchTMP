@@ -1,5 +1,6 @@
-"""Run non-GUI regressions with a hard Tk guard; disclose all deferred cases."""
+"""Run regressions with hard Tk and audio output guards; report deferred cases."""
 import argparse
+from contextlib import ExitStack
 import hashlib
 import json
 from pathlib import Path
@@ -25,8 +26,12 @@ def cases(suite):
 
 def verify():
     selected, deferred = [], []
-    with patch('tkinter.Tk', side_effect=AssertionError('GUI forbidden in headless verification')), \
-            patch('tkinter.Toplevel', side_effect=AssertionError('GUI forbidden in headless verification')):
+    guards = ('tkinter.Tk', 'tkinter.Toplevel', 'sounddevice.OutputStream',
+              'sounddevice.RawOutputStream', 'sounddevice.Stream', 'sounddevice.RawStream',
+              'sounddevice.play', 'sounddevice.playrec')
+    with ExitStack() as stack:
+        for name in guards:
+            stack.enter_context(patch(name, side_effect=AssertionError(f'{name} forbidden in headless verification')))
         suite = unittest.defaultTestLoader.discover(str(ROOT / 'tests'))
         for test in cases(suite):
             module = test.id().split('.')[0]
@@ -43,6 +48,7 @@ def verify():
             'tests': result.testsRun, 'seconds': round(elapsed, 3),
             'failures': len(result.failures), 'errors': len(result.errors), 'skipped': len(result.skipped),
             'gui_creation_guard': True, 'native_ui_tested': False,
+            'audio_output_guard': True, 'audible_output_tested': False,
             'deferred_gui_tests': [test.id() for test in deferred], 'source_sha256': inputs}
 
 

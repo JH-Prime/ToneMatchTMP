@@ -243,6 +243,7 @@ class ToneMatchApp:
         self.playback = PlaybackSession()
         self.mixer = MixerSession()
         self.mixer_window = None
+        self.practice_window = None
         self.pdf_worker = None
         self.pdf_cancel_event = threading.Event()
         self._analysis_source_path = None
@@ -505,6 +506,8 @@ class ToneMatchApp:
         self.header_tools = tools
         self.header_compact = None
         tools.grid(row=0, column=1, sticky="e")
+        ttk.Button(tools, text=tr("practice.open", self.language),
+                   command=self._open_practice).grid(row=2, column=0, sticky="e", padx=(0, 6), pady=(5, 0))
         ttk.Label(tools, text=tr("ui.language", self.language), foreground=COLORS["muted"]).grid(row=0, column=0, sticky="e", padx=(0, 6))
         self.language_combo = ttk.Combobox(tools, textvariable=self.language_var, values=tuple(LANGUAGE_LABELS.values()), width=12, state="readonly")
         self.language_combo.grid(row=0, column=1, sticky="e")
@@ -1077,12 +1080,15 @@ class ToneMatchApp:
         canvas.configure(scrollregion=(0, 0, page_width, y))
         self._highlight_chart_bars()
 
-    def _can_play_audio(self, *, allow_mixer=False) -> bool:
+    def _can_play_audio(self, *, allow_mixer=False, allow_practice=False) -> bool:
         """녹음·AI·장치 진단과 원본 재생이 장치를 동시에 잡지 않게 한다."""
         mixer = getattr(self, 'mixer', None)
         snapshot = mixer.player.snapshot() if mixer and mixer.player else {}
         mixer_output = snapshot.get('output_active') or snapshot.get('state') in ('playing', 'draining')
-        return not (self.closing or (mixer_output and not allow_mixer) or (self.worker and self.worker.is_alive())
+        practice = getattr(self, 'practice_window', None)
+        practice_output = practice and practice.playback_active
+        return not (self.closing or (mixer_output and not allow_mixer)
+                    or (practice_output and not allow_practice) or (self.worker and self.worker.is_alive())
                     or (self.record_worker and self.record_worker.is_alive())
                     or self._stem_is_running() or self._spectrum_is_running() or self.hardware_probe_active)
 
@@ -1149,9 +1155,37 @@ class ToneMatchApp:
         """장치 작업 진입 전에 재생을 멈추고 남은 출력의 종료 여부를 반환한다."""
         session = getattr(self, 'playback', None)
         mixer = getattr(self, 'mixer', None)
+        practice = getattr(self, 'practice_window', None)
         playback_ready = session.suspend() if session else True
         mixer_ready = mixer.suspend() if mixer else True
-        return playback_ready and mixer_ready
+        practice_ready = practice.suspend() if practice else True
+        return playback_ready and mixer_ready and practice_ready
+
+    def _open_practice(self):
+        """연습 프로젝트를 독립 창에서 열고 이미 열린 창의 편집을 보존한다."""
+        from practice_ui import PracticeWindow
+
+        current = getattr(self, 'practice_window', None)
+        if current is not None:
+            if current.window.winfo_exists():
+                current.window.lift()
+            return current
+        if self.closing:
+            return None
+        self.practice_window = PracticeWindow(self.root, self.language, COLORS,
+                                              can_play=self._can_start_practice,
+                                              release=self._release_practice)
+        return self.practice_window
+
+    def _release_practice(self, window):
+        """종료한 연습 창만 현재 참조에서 해제한다."""
+        if self.practice_window is window:
+            self.practice_window = None
+
+    def _can_start_practice(self) -> bool:
+        """원본 출력의 해제가 끝나고 다른 장치 작업이 없을 때만 재생한다."""
+        return (self._can_play_audio(allow_practice=True) and self.playback.suspend()
+                and self.mixer.suspend())
 
     def _open_mixer(self):
         """코드표와 별도 창에서 악기별 레벨과 WAV 저장을 제공한다."""
@@ -2608,8 +2642,10 @@ class ToneMatchApp:
         self.language = new_language
         if self.result:
             self.result = relocalize_result(self.result, self.language)
+        practice = getattr(self, 'practice_window', None)
         for child in self.root.winfo_children():
-            child.destroy()
+            if practice is None or child is not practice.window:
+                child.destroy()
         self._configure_style()
         self._build_ui()
         self.developer_var.set(developer_enabled)
@@ -3934,6 +3970,8 @@ class ToneMatchApp:
             self.playback.clear()
         if getattr(self, 'mixer', None):
             self.mixer.clear()
+        if getattr(self, 'practice_window', None):
+            self.practice_window.close()
         if getattr(self, 'pdf_cancel_event', None):
             self.pdf_cancel_event.set()
         self.analysis_cancel_event.set()
@@ -3951,9 +3989,11 @@ class ToneMatchApp:
         worker = getattr(self, "stem_worker", None)
         playback = getattr(self, 'playback', None)
         mixer = getattr(self, 'mixer', None)
+        practice = getattr(self, 'practice_window', None)
         pdf_worker = getattr(self, 'pdf_worker', None)
         if ((worker is not None and worker.is_alive()) or (playback and not playback.is_closed())
-                or (mixer and not mixer.is_closed()) or (pdf_worker and pdf_worker.is_alive())):
+                or (mixer and not mixer.is_closed()) or (pdf_worker and pdf_worker.is_alive())
+                or (practice and not practice.wait_closed())):
             self.root.after(80, self._finish_close_after_stem_cleanup)
             return
         self._save_settings()
@@ -4195,14 +4235,16 @@ def run_self_test(output_path: str | Path) -> int:
         chord_voicing_status = _self_test_voicing()
         harmony_reference_status = _self_test_harmony_reference()
         chord_chart_status = _self_test_chord_chart()
-        from music_diagnostics import run_music_self_test
+        from music_diagnostics import run_music_self_test, run_practice_self_test
         music_workflow_status = run_music_self_test()
+        practice_status = run_practice_self_test()
         from auto_update import offline_self_test
         auto_update_status = offline_self_test()
         payload = {
-            "ok": len(result.get("recipes", [])) == 3 and debug_sources_ok and stem_removal_source_ok and stem_diagnostics_source_ok and harmony_reference_source_ok and chord_chart_source_ok and guitar_shapes_source_ok and english.get("language") == "en" and bool(separator_status.get("available")) and reference_compare_ok and native_dsp_status["smoke_ok"] and chord_voicing_status["ok"] and harmony_reference_status["ok"] and chord_chart_status["ok"] and music_workflow_status["ok"] and auto_update_status["ok"],
+            "ok": len(result.get("recipes", [])) == 3 and debug_sources_ok and stem_removal_source_ok and stem_diagnostics_source_ok and harmony_reference_source_ok and chord_chart_source_ok and guitar_shapes_source_ok and english.get("language") == "en" and bool(separator_status.get("available")) and reference_compare_ok and native_dsp_status["smoke_ok"] and chord_voicing_status["ok"] and harmony_reference_status["ok"] and chord_chart_status["ok"] and music_workflow_status["ok"] and auto_update_status["ok"] and practice_status["ok"],
             "auto_update": auto_update_status,
             "music_workflow": music_workflow_status,
+            "practice_accompaniment": practice_status,
             "chord_voicing": chord_voicing_status,
             "harmony_reference": harmony_reference_status,
             "chord_chart": chord_chart_status,

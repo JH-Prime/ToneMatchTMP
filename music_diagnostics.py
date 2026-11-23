@@ -17,6 +17,41 @@ from stem_mixer import StemBank, MixState, MixReader
 from quad_cortex import load_catalog, recipes
 
 
+def run_practice_self_test():
+    """합성 반주를 생성하고 프레임·이조·내보내기를 장치 출력 없이 확인한다."""
+    from practice_audio import MixSettings, render_practice
+    from practice_chart import PracticeProject, load_project, parse_chart, save_project, transpose_chart
+
+    bars = transpose_chart(parse_chart("[A] | D/F# A7 | Bm - |"), 2)
+    project = PracticeProject(bars, bpm=140, style='Funk')
+    with tempfile.TemporaryDirectory(prefix='tonematch-practice-check-') as folder:
+        directory = Path(folder)
+        save_project(project, directory / 'practice.json')
+        restored = load_project(directory / 'practice.json')
+        audio = render_practice(restored)
+        try:
+            mix = MixSettings()
+            with audio.open_mix(lambda: mix) as source:
+                frames = audio.frames == source.getnframes()
+                start = audio.start_frame
+                first = read_pcm_block(source, start, start + min(audio.rate, audio.frames - start))
+                pcm = bool(np.all(np.isfinite(first)) and 0.01 < np.max(np.abs(first)) < 1.0)
+            audio.export(directory / 'bass.wav', mix, part='bass')
+            with wave.open(str(directory / 'bass.wav'), 'rb') as exported:
+                aligned_export = (exported.getnframes() == audio.frames - start
+                                  and exported.getframerate() == audio.rate)
+            audio.export(directory / 'mix.mp3', mix)
+            mp3_export = (directory / 'mix.mp3').stat().st_size > 1024
+            count_in = start > 0 and audio.bar_starts[0] == start
+        finally:
+            audio.close()
+    transpose = bars[0].chords == ('E/G#', 'B7') and bars[1].chords == ('C#m', '-')
+    checks = {'project_roundtrip': restored == project, 'slash_bass_transposed': transpose,
+              'aligned_frames': frames and aligned_export and count_in,
+              'finite_pcm': pcm, 'mp3_export': mp3_export}
+    return {'ok': all(checks.values()), **checks, 'audible_output_tested': False}
+
+
 def run_music_self_test():
     """CQT·수정·파일 기반 믹싱·한글 PDF·PortAudio 로딩을 실제 실행한다."""
     import sounddevice

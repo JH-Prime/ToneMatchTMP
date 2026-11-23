@@ -9,6 +9,7 @@ LANGUAGE_LABELS = {"ko": "한국어", "en": "English"}
 
 
 TEXT: dict[str, dict[str, str]] = {
+    "practice.open": {"ko": "연습 반주…", "en": "Practice backing…"},
     "analysis.method": {"ko": "코드 분석 방식", "en": "Chord analysis method"},
     "analysis.method_used": {"ko": "분석 방식: {method}", "en": "Analysis method: {method}"},
     "analysis.method_hint": {"ko": "CQT: 로그 음높이 · FFT: 기존 방식. 곡에 따라 결과가 다를 수 있습니다.", "en": "CQT: logarithmic pitches · FFT: legacy method. Results depend on the recording."},
