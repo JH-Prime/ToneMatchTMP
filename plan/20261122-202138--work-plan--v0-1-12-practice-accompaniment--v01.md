@@ -3,15 +3,15 @@
 Plan Type: Work plan
 Workstream: ToneMatchTMP v0.1.12 practice accompaniment
 Version: 01
-Status: Source acceptance complete; Development build starting
+Status: Approved implementation and developer delivery complete
 Created: 2026-11-22 20:21:38 Asia/Seoul
-Last Updated: 2026-11-23 19:37:21 Asia/Seoul
+Last Updated: 2026-11-23 19:51:27 Asia/Seoul
 Related Plan: plan/20261120-202742--work-plan--v0-1-11-update-https-repair--v01.md
-Current Completion State: Practice workflow implemented and reviewed; guarded regression suite passed
-Completed So Far: Chart, synth, transport, mixer, file exports, integration, documentation, and 556 headless tests
-Remaining Work: Versioned build, frozen release acceptance, publication, and public-byte readback
-Current Blockers: None for the approved delivery
-Next Step: Build the accepted source and verify the exact Windows ZIP
+Current Completion State: Source, frozen practice workflow and GitHub release verified
+Completed So Far: 556 guarded tests, silent packaged data generation, ZIP integrity, live HTTPS and offline cache reuse, verified publication
+Remaining Work: Native visual and listening acceptance remain deferred
+Current Blockers: None for approved delivery
+Next Step: Use the new practice mode from the published developer build
 
 ## Approved outcome
 
@@ -51,13 +51,13 @@ Update the new QA snapshot, README in Korean and English, developer handoff, fun
 
 ## Scoreboard
 
-Current score: 44/100
+Current score: 49/100
 Score source: provisional
-Last updated: 2026-11-23 19:37:21 Asia/Seoul
-Rationale: The complete implementation passed independent review and the guarded regression suite; package and remote delivery are pending.
-What improved: The approval scope is implemented and silent waveform, export and device-arbitration checks pass.
-What remains unsatisfactory: Packaged verification and delivery are not complete.
-Next score-maintenance action: Check the exact package in frozen diagnostics, then publish and read back its assets.
+Last updated: 2026-11-23 19:51:27 Asia/Seoul
+Rationale: The approved workflow is implemented and the published package was checked against actual public bytes.
+What improved: Chart validation, transport boundaries and PCM/audio exports are exercised in guarded source and frozen diagnostics.
+What remains unsatisfactory: Native layout, listening and actual-song accuracy have not been measured.
+Next score-maintenance action: Preserve immutable release evidence and accept later authorized feedback.
 
 Score history:
 
@@ -65,7 +65,10 @@ Score history:
 
 - 2026-11-23 19:37:21 Asia/Seoul — 44 provisional: guarded source tests passed and independent review complete.
 
+- 2026-11-23 19:51:27 Asia/Seoul — 49 provisional: published package and download readback passed. Native and listening acceptance remain deferred.
+
 ## Progress log
 
 - 2026-11-22 20:21:38 Asia/Seoul — User explicitly approved v0.1.12 practice accompaniment, testing without window or audio playback, a developer ZIP and GitHub release.
 - 2026-11-23 19:37:21 Asia/Seoul — Implemented chart parsing, offline prompt handoff, seven arrangements, playback/mix, persisted projects and audio exports. Independent review covered input bounds and child/worker lifecycle. All 556 guarded tests passed in 96.41 seconds. The remaining work is packaged and public verification.
+- 2026-11-23 19:51:27 Asia/Seoul — Published v0.1.12, verified actual GitHub bytes and preserved previous tags/releases. 357,408,597 bytes, 5,510 manifest files.

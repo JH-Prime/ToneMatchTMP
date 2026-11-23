@@ -1,5 +1,7 @@
 # ToneMatch TMP 0.1.12 — practice accompaniment
 
+The [v0.1.12 developer ZIP](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.12) is published. All 556 guarded tests, packaged diagnostics and three unauthenticated download checks passed. This is an unsigned developer release.
+
 Open **Practice backing…** to paste or write a 4/4 chord chart. Enter a song title
 and optional key to prepare a question for ChatGPT or Claude. Submit it in the
 browser and review the returned chart before playing. The app generates the question locally.

@@ -1,6 +1,6 @@
 {
   "app_version": "0.1.12",
-  "status": "source_verified_pending_distribution",
+  "status": "unsigned_developer_release_verified",
   "source_date_kst": "2026-11-22",
   "scope": "Local practice charts, AI prompt preparation, transposition, seven synthesized styles, part mixer and audio export",
   "native_ui_tested": false,
@@ -29,5 +29,93 @@
     "finite_pcm": true,
     "mp3_export": true,
     "audible_output_tested": false
-  }
+  },
+  "source_commit": "66002ab36e804942623efff3c9d2f55054bd7416",
+  "archive_verification": {
+    "ok": true,
+    "app_version": "0.1.12",
+    "verified_at_kst": "2026-11-23T19:49:10.863817+09:00",
+    "source_commit": "66002ab36e804942623efff3c9d2f55054bd7416",
+    "source_inputs": 133,
+    "headless_tests": 556,
+    "headless_receipt_sha256": "d387d5f2ef8c08d4aa2aaf9cfd6889bbed125e59619f6716ec4ff617453a8386",
+    "headless_source_hashes_match": true,
+    "manifest_files": 5510,
+    "manifest_complete": true,
+    "sha256sums_entries_verified": 5,
+    "fresh_exe_self_test": true,
+    "embedded_executable_version_matches": true,
+    "practice_accompaniment_frozen_diagnostic": true,
+    "practice_frozen_sources_verified": true,
+    "native_parity": true,
+    "native_abi_version": 2,
+    "private_paths_absent": true,
+    "media_weights_absent": true,
+    "development_jit_caches_absent": true,
+    "local_account_configs_absent": true,
+    "auto_update_full_archive_install": true,
+    "auto_update_cached_reopen": true,
+    "auto_update_offline_diagnostic": true,
+    "original_portable_data_preserved": true,
+    "auto_update_frozen_tls_context_verified": true,
+    "auto_update_frozen_https_live_verified": true,
+    "auto_update_frozen_https_release_version": "0.1.11",
+    "certificate_distrust_resource_sha256": "c916ce1b14ed8ca69e9b5c9fab22799a900dd610d6d4ec9b1347f4fd48e53718",
+    "network_accessed": true,
+    "native_ui_tested": false,
+    "audible_output_tested": false,
+    "real_song_accuracy_measured": false,
+    "signature": "unsigned",
+    "public_signing_verified": false,
+    "store_certified": false,
+    "validation_directory": "work/v112-5zmbzmd1",
+    "archive_bytes": 357408597,
+    "archive_sha256": "a55ba8a46b465fa35f056cf544932a58c82215dee13bb4e1762ca947a22bb83c",
+    "manifest_sha256": "7382dc37a4a71eca39a7abb37c6a2860f3b847a545de73700d841bad675658cc",
+    "executable_sha256": "80c0c1ecb2f1df13223e6092f0f6d962549941ff5c4a67bf6a0743f4f79d2e60"
+  },
+  "public_delivery": {
+    "ok": true,
+    "unauthenticated": true,
+    "actual_downloads_verified": true,
+    "frozen_exe_https_verified_after_publication": true,
+    "checked_at_kst": "2026-11-23T19:51:16.185332+09:00",
+    "url": "https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.12",
+    "published_at": "2026-11-23T10:50:09Z",
+    "tag_commit": "66002ab36e804942623efff3c9d2f55054bd7416",
+    "assets": [
+      {
+        "name": "ToneMatchTMP-v0.1.12-ARCHIVE-VERIFICATION.json",
+        "size": 1857,
+        "digest": "sha256:ec307cd3758e4d3c4d590b58ac22a5c416d7debf407ef5cc1d2eae91683c6516",
+        "browser_download_url": "https://github.com/JH-Prime/ToneMatchTMP/releases/download/v0.1.12/ToneMatchTMP-v0.1.12-ARCHIVE-VERIFICATION.json",
+        "downloaded_bytes": 1857,
+        "downloaded_sha256": "sha256:ec307cd3758e4d3c4d590b58ac22a5c416d7debf407ef5cc1d2eae91683c6516"
+      },
+      {
+        "name": "ToneMatchTMP-v0.1.12-SHA256SUMS.txt",
+        "size": 595,
+        "digest": "sha256:8ca6cab5b4ef6545cad083fbca63d62ead4dc3deb308703079def9866b8816a8",
+        "browser_download_url": "https://github.com/JH-Prime/ToneMatchTMP/releases/download/v0.1.12/ToneMatchTMP-v0.1.12-SHA256SUMS.txt",
+        "downloaded_bytes": 595,
+        "downloaded_sha256": "sha256:8ca6cab5b4ef6545cad083fbca63d62ead4dc3deb308703079def9866b8816a8"
+      },
+      {
+        "name": "ToneMatchTMP-v0.1.12-Windows-x64-Portable-Dev.zip",
+        "size": 357408597,
+        "digest": "sha256:a55ba8a46b465fa35f056cf544932a58c82215dee13bb4e1762ca947a22bb83c",
+        "browser_download_url": "https://github.com/JH-Prime/ToneMatchTMP/releases/download/v0.1.12/ToneMatchTMP-v0.1.12-Windows-x64-Portable-Dev.zip",
+        "downloaded_bytes": 357408597,
+        "downloaded_sha256": "sha256:a55ba8a46b465fa35f056cf544932a58c82215dee13bb4e1762ca947a22bb83c"
+      }
+    ]
+  },
+  "previous_version_preservation": {
+    "old_release_metadata_and_assets_preserved": true,
+    "old_tag_refs_preserved": true,
+    "previous_assets": 49,
+    "prior_releases": 20,
+    "prior_tag_refs": 39
+  },
+  "build_warning_count": 17
 }

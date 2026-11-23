@@ -13,6 +13,8 @@ device monitoring and stem playback.
 합성 코드표를 이조·저장·재열기하고, WAV와 MP3를 생성해 장치 출력 없이 검증합니다.
 테스트 결과와 개발자 ZIP의 검증 내역은 [v0.1.12 QA](QA_REPORT_v0.1.12.json)를 확인하세요.
 
+[v0.1.12](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.12) published 2026-11-23 19:50:09 Asia/Seoul. The 556 guarded cases, real packaged HTTPS, silent practice diagnostic, ZIP install/offline cache, and three public-byte hashes passed. The immutable archive carries its source-acceptance QA snapshot.
+
 ## v0.1.11 updater repair history
 
 ## Portable HTTPS repair / 포터블 HTTPS 복구
