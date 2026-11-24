@@ -1,5 +1,7 @@
 # ToneMatch TMP 0.1.13 — 2–5–1 practice accompaniment
 
+v0.1.13 adds ii–V–I practice and stability fixes. All 574 guarded tests passed. Public bytes and hashes for the unsigned developer ZIP were verified. [Download](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.13)
+
 In **Practice backing…**, choose a starting key and Major or Minor in the
 **2–5–1** controls. Generate four bars in one key, or 48 bars that visit all
 twelve keys in ascending fourths. In C, the major exercise uses

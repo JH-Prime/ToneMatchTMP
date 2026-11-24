@@ -1,5 +1,7 @@
 # ToneMatch TMP v0.1.13 — 개발 인수인계 / Developer Handoff
 
+v0.1.13 published 2026-11-24 19:59:02 Asia/Seoul. The 574 guarded cases, frozen cadence diagnostics, live HTTPS, isolated cache installation, repair, and offline reuse passed. Verified three public downloads. [Developer release](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.13)
+
 ## 2–5–1 연습 반주 / Practice cadences
 
 2–5–1 연습은 기존 4/4 프로젝트의 마디로 생성합니다. 한 키는 4마디,

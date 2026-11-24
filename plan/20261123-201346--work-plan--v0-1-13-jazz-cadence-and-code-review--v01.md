@@ -3,15 +3,15 @@
 Plan Type: Work plan
 Workstream: ToneMatchTMP practice accompaniment and application stability
 Version: v01 for v0.1.13
-Status: In progress
+Status: Approved implementation and developer delivery complete
 Created: 2026-11-23 20:13:46 Asia/Seoul
-Last Updated: 2026-11-24 19:42:39 Asia/Seoul
+Last Updated: 2026-11-24 20:00:05 Asia/Seoul
 Related Plan: The completed v0.1.12 accompaniment delivery
-Current Completion State: Source changes and guarded regressions passed.
-Completed So Far: Reviewed current code paths, implemented the cadence and confirmed fixes, passed 574 guarded tests.
-Remaining Work: Build, verify the archive, publish and check public downloads.
-Current Blockers: None identified at planning.
-Next Step: Build and independently verify the unsigned developer package from the accepted source.
+Current Completion State: Source, frozen cadence workflow and GitHub release verified.
+Completed So Far: 574 guarded tests, package integrity, live HTTPS, cache repair and verified publication.
+Remaining Work: Native visual and listening acceptance remain deferred.
+Current Blockers: None for the approved delivery.
+Next Step: The developer release is ready for download.
 
 ## Objective and assumptions
 
@@ -49,16 +49,20 @@ Use a fresh version tag and a new public prerelease. Keep already published tags
 
 ## Scoreboard
 
-Current score: 44/100 provisional.
-Last updated: 2026-11-24 19:42:39 Asia/Seoul
-Rationale: Cadence and stability changes passed source verification.
-What improved: Targeted regressions cover the reproduced issues.
-What remains unsatisfactory: Verification of frozen and public bytes is pending. Native and listening acceptance remain deferred.
-Next action: Verify the exact build and public downloads.
+Current score: 49/100 provisional.
+Last updated: 2026-11-24 20:00:05 Asia/Seoul
+Rationale: Source and package checks passed and public delivery is verified.
+What improved: The packaged practice workflow and update cache are covered by regression checks.
+What remains unsatisfactory: Native layout, listening and actual-song accuracy remain unmeasured.
+Next action: Preserve the immutable developer release and evidence.
 Score history:
 - 2026-11-23 20:13:46 Asia/Seoul — 32 provisional, approved scope recorded and reviews begun.
 - 2026-11-24 19:42:39 Asia/Seoul — 44 provisional, reviewed changes passed 574 guarded tests.
 
+- 2026-11-24 20:00:05 Asia/Seoul — 49 provisional, verified the actual public assets.
+
 ## Progress log
 
 - 2026-11-24 19:42:39 Asia/Seoul — Source implementation and audit complete. Passed 574 guarded checks.
+
+- 2026-11-24 20:00:05 Asia/Seoul — Published v0.1.13 and verified all public downloads. 357,432,185 bytes, 5,510 manifest files.

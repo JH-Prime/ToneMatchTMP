@@ -35,6 +35,15 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
 
+## v0.1.13 ii–V–I practice and stability
+
+Published 2026-11-24 19:59:02 Asia/Seoul. Tagged source `52439fbcababc9753a6e10add7de395e128546f6`. [Developer release](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.13)
+
+- The ZIP contains 357,432,185 bytes, 5,510 manifest files. SHA-256 `133d2a45b0106e6e7f633b38f86ad365d3846fdb304e857d234c7100c16540d2`.
+- 574 guarded tests passed. Frozen diagnostics verified major and minor progressions and a full twelve-key chart round trip.
+- The previous tag’s updater installed the exact checked archive through a test transport. The current updater repaired a missing runtime file and reopened it offline. Live frozen HTTPS and all three public asset downloads passed.
+- This developer build is unsigned. Native layout, listening and actual-song accuracy remain unmeasured.
+
 ## v0.1.12 practice accompaniment
 
 Published 2026-11-23 19:50:09 Asia/Seoul. [Developer release](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.12). Tagged source: `66002ab36e804942623efff3c9d2f55054bd7416`.
