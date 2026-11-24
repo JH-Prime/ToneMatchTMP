@@ -29,6 +29,7 @@ from tkinter import filedialog, messagebox, font as tkfont
 import tkinter as tk
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
+from uuid import uuid4
 
 
 def _ensure_standard_streams() -> None:
@@ -325,9 +326,13 @@ class ToneMatchApp:
         path = self.data_root / "settings.json"
         try:
             settings = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, ValueError, TypeError):
+        except (OSError, ValueError, RecursionError):
             return
-        self.language = settings.get("language") if settings.get("language") in LANGUAGE_LABELS else self.language
+        if not isinstance(settings, dict):
+            return
+        language = settings.get("language")
+        if isinstance(language, str) and language in LANGUAGE_LABELS:
+            self.language = language
         candidate_device = str(settings.get("device_id", self.device_id))
         if any(item["id"] == candidate_device for item in DEVICE_PROFILES):
             self.device_id = candidate_device
@@ -1088,8 +1093,8 @@ class ToneMatchApp:
         practice = getattr(self, 'practice_window', None)
         practice_output = practice and practice.playback_active
         return not (self.closing or (mixer_output and not allow_mixer)
-                    or (practice_output and not allow_practice) or (self.worker and self.worker.is_alive())
-                    or (self.record_worker and self.record_worker.is_alive())
+                    or (practice_output and not allow_practice) or (self.worker is not None)
+                    or (self.record_worker is not None)
                     or self._stem_is_running() or self._spectrum_is_running() or self.hardware_probe_active)
 
     def _open_chord_editor(self):
@@ -2376,8 +2381,8 @@ class ToneMatchApp:
             self.reference_status_var.set(tr("status.reference_missing", self.language))
             return
         other_busy = bool(
-            (self.worker and self.worker.is_alive())
-            or (self.record_worker and self.record_worker.is_alive())
+            (self.worker is not None)
+            or (self.record_worker is not None)
             or self._stem_is_running()
             or self.hardware_probe_active
         )
@@ -2566,8 +2571,8 @@ class ToneMatchApp:
             return
         active = self._spectrum_is_running()
         other_busy = bool(
-            (self.worker and self.worker.is_alive())
-            or (self.record_worker and self.record_worker.is_alive())
+            (self.worker is not None)
+            or (self.record_worker is not None)
             or self._stem_is_running()
             or self.hardware_probe_active
         )
@@ -2612,8 +2617,8 @@ class ToneMatchApp:
         """선택값과 결과 수치를 보존한 채 전체 화면을 새 언어와 글꼴로 다시 만든다."""
         if (
             not self._suspend_playback()
-            or (self.worker and self.worker.is_alive())
-            or (self.record_worker and self.record_worker.is_alive())
+            or (self.worker is not None)
+            or (self.record_worker is not None)
             or self._stem_is_running()
             or self._spectrum_is_running()
         ):
@@ -2678,8 +2683,8 @@ class ToneMatchApp:
             return
         if (
             self.hardware_probe_active
-            or (self.worker and self.worker.is_alive())
-            or (self.record_worker and self.record_worker.is_alive())
+            or (self.worker is not None)
+            or (self.record_worker is not None)
             or self._stem_is_running()
             or self._spectrum_is_running()
         ):
@@ -2736,8 +2741,8 @@ class ToneMatchApp:
         if not hasattr(self, "compute_combo") or not self.compute_combo.winfo_exists():
             return
         busy = bool(
-            (self.worker and self.worker.is_alive())
-            or (self.record_worker and self.record_worker.is_alive())
+            (self.worker is not None)
+            or (self.record_worker is not None)
             or self._stem_is_running()
             or self._spectrum_is_running()
         )
@@ -2881,7 +2886,7 @@ class ToneMatchApp:
                 self.record_button.configure(state="disabled")
             return
         if (
-            (self.worker and self.worker.is_alive())
+            (self.worker is not None)
             or self._stem_is_running()
             or self._spectrum_is_running()
             or self.hardware_probe_active
@@ -2902,9 +2907,7 @@ class ToneMatchApp:
         limit = min(limit, float(MAX_RECORD_SECONDS))
         self.record_limit_var.set(f"{limit:g}")
         capture_root = self.data_root / "captures"
-        capture_root.mkdir(parents=True, exist_ok=True)
-        destination = capture_root / f"capture-{datetime.now():%Y%m%d-%H%M%S}.wav"
-        self.temporary_recordings.add(destination)
+        destination = capture_root / f"capture-{datetime.now():%Y%m%d-%H%M%S}-{uuid4().hex}.wav"
         self.record_stop_event.clear()
         self.record_button.configure(text=tr("ui.stop_record", self.language), style="Danger.TButton")
         self.analyze_button.configure(state="disabled")
@@ -2923,6 +2926,7 @@ class ToneMatchApp:
 
         try:
             duration = record_device_to_wav(self.capture_device_id, destination, limit, self.record_stop_event, progress, self.language)
+            self.temporary_recordings.add(destination)
             self.events.put(("record_done", destination, duration))
         except Exception as exc:
             self.events.put(("record_error", exc, traceback.format_exc()))
@@ -3231,8 +3235,8 @@ class ToneMatchApp:
         if self._stem_is_running():
             return
         other_busy = bool(
-            (self.worker and self.worker.is_alive())
-            or (self.record_worker and self.record_worker.is_alive())
+            (self.worker is not None)
+            or (self.record_worker is not None)
             or self._spectrum_is_running()
             or self.hardware_probe_active
         )
@@ -3321,8 +3325,8 @@ class ToneMatchApp:
             return
         active = self._stem_is_running()
         other_busy = bool(
-            (self.worker and self.worker.is_alive())
-            or (self.record_worker and self.record_worker.is_alive())
+            (self.worker is not None)
+            or (self.record_worker is not None)
             or self._spectrum_is_running()
             or self.hardware_probe_active
         )
@@ -3369,9 +3373,9 @@ class ToneMatchApp:
         """검증된 요청을 별도 스레드에서 시작하고 취소·내보내기 상태를 설정한다."""
         if not self._suspend_playback():
             return
-        if self.worker and self.worker.is_alive():
+        if self.worker is not None:
             return
-        if (self.record_worker and self.record_worker.is_alive()) or self._stem_is_running() or self._spectrum_is_running() or self.hardware_probe_active:
+        if (self.record_worker is not None) or self._stem_is_running() or self._spectrum_is_running() or self.hardware_probe_active:
             messagebox.showinfo(APP_NAME, tr("dialog.wait_for_task", self.language))
             return
         try:
@@ -3730,8 +3734,8 @@ class ToneMatchApp:
     def _update_analysis_availability(self) -> None:
         """장치 지원과 분석·녹음·스펙트럼 상태를 보고 공통 컨트롤을 갱신한다."""
         busy = (
-            (self.worker and self.worker.is_alive())
-            or (self.record_worker and self.record_worker.is_alive())
+            (self.worker is not None)
+            or (self.record_worker is not None)
             or self._stem_is_running()
             or self._spectrum_is_running()
             or self.hardware_probe_active
@@ -3771,8 +3775,8 @@ class ToneMatchApp:
             str(getattr(self, "changelog_tab", "")),
         }
         busy = bool(
-            (self.worker and self.worker.is_alive())
-            or (self.record_worker and self.record_worker.is_alive())
+            (self.worker is not None)
+            or (self.record_worker is not None)
             or self._stem_is_running()
         )
         has_content = bool(self.result) or selected_tab in developer_tabs
@@ -3985,14 +3989,14 @@ class ToneMatchApp:
         self._finish_close_after_stem_cleanup()
 
     def _finish_close_after_stem_cleanup(self) -> None:
-        """악기 제거 작업이 임시 음원을 정리할 때까지 숨은 메인 루프를 유지한다."""
-        worker = getattr(self, "stem_worker", None)
+        """백그라운드 작업이 임시 음원과 장치를 해제할 때까지 기다린다."""
+        workers = (getattr(self, name, None) for name in (
+            'worker', 'record_worker', 'stem_worker', 'spectrum_worker', 'pdf_worker'))
         playback = getattr(self, 'playback', None)
         mixer = getattr(self, 'mixer', None)
         practice = getattr(self, 'practice_window', None)
-        pdf_worker = getattr(self, 'pdf_worker', None)
-        if ((worker is not None and worker.is_alive()) or (playback and not playback.is_closed())
-                or (mixer and not mixer.is_closed()) or (pdf_worker and pdf_worker.is_alive())
+        if (any(worker is not None and worker.is_alive() for worker in workers)
+                or (playback and not playback.is_closed()) or (mixer and not mixer.is_closed())
                 or (practice and not practice.wait_closed())):
             self.root.after(80, self._finish_close_after_stem_cleanup)
             return

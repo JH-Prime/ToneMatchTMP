@@ -1,4 +1,14 @@
-# ToneMatch TMP v0.1.12 — 개발 인수인계 / Developer Handoff
+# ToneMatch TMP v0.1.13 — 개발 인수인계 / Developer Handoff
+
+## 2–5–1 연습 반주 / Practice cadences
+
+2–5–1 연습은 기존 4/4 프로젝트의 마디로 생성합니다. 한 키는 4마디,
+12키는 완전4도 순환 48마디입니다. 현재 프로젝트 설정을 이어받고 기존 코드표를
+교체하기 전에 확인합니다. EXE 자체 진단에서 장·단조와 12키 저장·복원을 확인합니다.
+
+Cadence generation uses normal 4/4 project bars. The existing chart, save and
+renderer paths handle both four-bar exercises and 48-bar cycles.
+See the [source review](parent-session-runs/v0-1-13/review.md) and [QA](QA_REPORT_v0.1.13.json).
 
 ## Practice accompaniment / 연습 반주
 

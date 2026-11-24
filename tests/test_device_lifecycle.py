@@ -1,5 +1,7 @@
 """Real completion/availability handlers with no Tk windows or audio devices."""
 import queue
+import json
+import tempfile
 from pathlib import Path
 import types
 import unittest
@@ -66,6 +68,43 @@ def chord_result():
 
 
 class DeviceLifecycleTests(unittest.TestCase):
+    def test_invalid_saved_settings_leave_valid_fields_and_defaults_available(self):
+        with tempfile.TemporaryDirectory() as folder:
+            app = types.SimpleNamespace(data_root=Path(folder), language='ko',
+                                        device_id='tone_master_pro', compute_backend_code='auto')
+            for payload in ([], None, {'language': [], 'compute_backend': 'cpu'}):
+                (app.data_root / 'settings.json').write_text(json.dumps(payload), encoding='utf-8')
+                ToneMatchApp._load_settings(app)
+                self.assertEqual(app.language, 'ko')
+            self.assertEqual(app.compute_backend_code, 'cpu')
+
+    def test_analysis_terminal_event_keeps_ownership_until_consumed(self):
+        view = application(True)
+        view.worker = Mock()
+        view.worker.is_alive.return_value = False
+        view._update_analysis_availability()
+        self.assertEqual(view.device_combo['state'], 'disabled')
+        ToneMatchApp._start_analysis(view)
+        view._parse_inputs.assert_not_called()
+        view.events.put(('done', chord_result()))
+        view._drain_events()
+        self.assertEqual(view.device_combo['state'], 'readonly')
+
+    def test_close_waits_for_capture_and_analysis_to_release_private_files(self):
+        with tempfile.TemporaryDirectory() as folder:
+            for field in ('record_worker', 'worker'):
+                with self.subTest(field=field):
+                    view = types.SimpleNamespace(root=Mock(), _save_settings=Mock(), data_root=Path(folder),
+                                                 temporary_recordings=set(), _finish_close_after_stem_cleanup=Mock())
+                    worker = Mock()
+                    setattr(view, field, worker)
+                    worker.is_alive.return_value = True
+                    ToneMatchApp._finish_close_after_stem_cleanup(view)
+                    view.root.destroy.assert_not_called()
+                    worker.is_alive.return_value = False
+                    ToneMatchApp._finish_close_after_stem_cleanup(view)
+                    view.root.destroy.assert_called_once()
+
     def test_recording_restart_waits_for_pending_terminal_event(self):
         for kind in ('record_done', 'record_error'):
             with self.subTest(event=kind), patch('app.messagebox.showerror'), \

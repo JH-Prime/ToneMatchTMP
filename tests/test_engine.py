@@ -225,6 +225,34 @@ class EngineAnalysisTests(unittest.TestCase):
         with self.assertRaisesRegex(engine.AnalysisError, "무음"):
             engine.extract_features(silent, self.sample_rate)
 
+    def test_opposite_stereo_polarity_preserves_tone_features(self):
+        mono = self.base[:, 0]
+        phase_safe = engine.extract_features(np.column_stack((mono, -mono)), self.sample_rate)
+        original = engine.extract_features(np.column_stack((mono, mono)), self.sample_rate)
+        self.assertAlmostEqual(phase_safe.spectral_centroid_hz, original.spectral_centroid_hz)
+        self.assertAlmostEqual(phase_safe.rms_dbfs, original.rms_dbfs)
+        self.assertGreater(phase_safe.stereo_width, .98)
+        with self.assertRaises(engine.AnalysisError):
+            engine.extract_features(np.tile([.25, -.25], (self.sample_rate, 1)), self.sample_rate)
+
+    def test_weak_reference_keeps_tone_chords_and_warns_in_both_languages(self):
+        from i18n import tr
+        from chord_edits import load_result
+        axis = np.arange(3 * self.sample_rate) / self.sample_rate
+        note = (1e-4 * np.sin(2 * np.pi * 220 * axis)).astype(np.float32)
+        pcm = np.column_stack((note, note))
+        with patch.object(engine, 'decode_segment', return_value=(pcm, self.sample_rate, 3.0)):
+            result = engine.analyze_file('synth.wav', 0, 3, 'unknown', 'isolated', 'frfr', chord_method='fft')
+        self.assertTrue(result['recipes'])
+        self.assertEqual(result['chord_voicing']['method_id'], 'fft')
+        self.assertIsNone(result['reference_spectrum'])
+        self.assertIn(tr('warning.reference_unavailable', 'ko'), result['warnings'])
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'analysis.json'
+            engine.save_json(result, path)
+            reopened = load_result(path, 'en')
+        self.assertIn(tr('warning.reference_unavailable', 'en'), reopened['warnings'])
+
     def test_bright_and_body_profiles_have_expected_relative_order(self) -> None:
         """고역 강조 신호와 중저역 강조 신호의 상대 특징 순서를 검증한다."""
         bright_features = engine.extract_features(self.bright, self.sample_rate)

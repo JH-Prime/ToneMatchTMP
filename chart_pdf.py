@@ -164,6 +164,7 @@ def save_chart_pdf(result, destination, *, cancel_requested=None):
         raise FileExistsError("Choose a new PDF filename; existing files are protected")
     _font()
     analysis = effective_voicing(result)
+    analysis.setdefault("source_start_seconds", result.get("source", {}).get("start_seconds", 0.0))
     if len(analysis.get("events", [])) > 10000:
         raise ValueError("Too many PDF events")
     settings = initial_chart_settings(result)

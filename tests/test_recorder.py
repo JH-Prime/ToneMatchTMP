@@ -96,6 +96,17 @@ def _fake_soundcard(
 
 
 class RecorderTests(unittest.TestCase):
+    def test_existing_destination_survives_capture_attempt(self):
+        capture = _FakeRecorder(lambda n: np.zeros((n, 2), dtype=np.float32),
+                                failure=RuntimeError("device disconnected"))
+        soundcard, _ = _fake_soundcard(_FakeMicrophone(capture))
+        with tempfile.TemporaryDirectory() as folder, mock.patch.dict(sys.modules, {"soundcard": soundcard}):
+            destination = Path(folder) / 'capture.wav'
+            destination.write_bytes(b'previous capture')
+            with self.assertRaises(recorder.RecordingError):
+                recorder.record_device_to_wav("test", destination, 3, threading.Event())
+            self.assertEqual(destination.read_bytes(), b'previous capture')
+
     """채널 정규화와 실시간 장치 수명 주기의 회귀를 검사한다."""
 
     def test_normalize_capture_block_makes_stereo_float32(self) -> None:

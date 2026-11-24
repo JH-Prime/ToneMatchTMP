@@ -8,6 +8,7 @@ import re
 
 from chord_chart import UNCERTAINTY_REASONS, build_chord_chart, initial_chart_settings
 from catalog import APP_VERSION, TARGET_FIRMWARE, MODEL_GUIDE_REVISION
+from reference_compare import restore_reference_profile
 from voicing import CHORD_INTERVALS, CHORD_SUFFIX
 
 
@@ -108,9 +109,32 @@ def _validate_tree(value, depth=0):
         raise ValueError('Analysis number is invalid')
 
 
+def _separation_diagnostics(separation):
+    """기존 보고서의 분리 측정값을 복원하고 파일 경로를 가져오지 않는다."""
+    if not isinstance(separation, dict) or type(separation.get('used', False)) is not bool:
+        raise ValueError('Invalid tone separation metadata')
+    diagnostics = {'used': separation.get('used', False)}
+    optional_fields = {
+        ('mode', 'model', 'backend', 'requested_device', 'resolved_device'): (str, type(None)),
+        ('guitar_rms_dbfs', 'guitar_peak_dbfs', 'source_duration_seconds',
+         'inference_total_seconds', 'inference_seconds_per_chunk', 'realtime_factor'): (int, float),
+        ('sample_rate', 'processed_chunks'): (int,),
+        ('peak_gpu_memory_bytes',): (int, type(None)),
+        ('model_downloaded_during_run',): (bool,),
+    }
+    for keys, types in optional_fields.items():
+        for key in keys:
+            if key in separation:
+                value = separation[key]
+                if type(value) not in types:
+                    raise ValueError('Invalid tone separation metadata')
+                diagnostics[key] = value
+    return diagnostics
+
+
 def load_result(path, language='ko'):
     """검증된 분석 JSON만 다시 열고 파일 경로·명령·임의 재생 요청은 가져오지 않는다."""
-    from engine import ToneFeatures, TEMPLATES, relocalize_result
+    from engine import ANALYSIS_SCHEMA, ToneFeatures, TEMPLATES, relocalize_result
 
     try:
         with Path(path).open('rb') as stream:
@@ -121,6 +145,8 @@ def load_result(path, language='ko'):
         _validate_tree(incoming)
         if not isinstance(incoming, dict):
             raise ValueError('Analysis must be an object')
+        if incoming.get('schema', ANALYSIS_SCHEMA) != ANALYSIS_SCHEMA:
+            raise ValueError('Unsupported analysis schema')
         kind = incoming.get('analysis_kind', 'tone')
         if kind not in {'tone', 'chords'}:
             raise ValueError('Invalid analysis purpose')
@@ -153,17 +179,23 @@ def load_result(path, language='ko'):
         chord_method_id(analysis)
         result = {key: incoming[key] for key in ('features', 'input_profile', 'recipes', 'chord_voicing',
                   'chord_corrections', 'chord_chart_settings', 'device_id', 'app_version') if key in incoming}
+        result['schema'] = ANALYSIS_SCHEMA
+        if not chord_only:
+            raw_features = incoming.get('raw_features')
+            if raw_features is not None:
+                if not isinstance(raw_features, dict) or not all(type(value) in (int, float) for value in raw_features.values()):
+                    raise ValueError('Invalid raw tone features')
+                if raw_features:
+                    ToneFeatures(**raw_features)
+                    result['raw_features'] = raw_features
+            if 'reference_spectrum' in incoming:
+                profile = incoming['reference_spectrum']
+                result['reference_spectrum'] = None if profile is None else restore_reference_profile(profile)
         result['analysis_kind'] = kind
         result['source'] = {'file_name': Path(str(source.get('file_name', 'analysis'))).name,
                             'start_seconds': start, 'end_seconds': start + duration, 'duration_seconds': duration}
         separation = incoming.get('source_separation', {'used': analysis.get('analysis_source') == 'guitar_stem'})
-        if not isinstance(separation, dict) or type(separation.get('used', False)) is not bool:
-            raise ValueError('Invalid tone separation metadata')
-        result['source_separation'] = {'used': separation.get('used', False)}
-        if 'guitar_rms_dbfs' in separation:
-            if type(separation['guitar_rms_dbfs']) not in (int, float):
-                raise ValueError('Invalid tone level')
-            result['source_separation']['guitar_rms_dbfs'] = separation['guitar_rms_dbfs']
+        result['source_separation'] = _separation_diagnostics(separation)
         for key, default in (('app_version', APP_VERSION), ('target_firmware', TARGET_FIRMWARE), ('model_guide', MODEL_GUIDE_REVISION)):
             value = incoming.get(key, default)
             if not isinstance(value, str):

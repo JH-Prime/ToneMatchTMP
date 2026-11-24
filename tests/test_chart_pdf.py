@@ -28,6 +28,16 @@ def pdf_result(language="ko", dense=False):
 
 
 class ChartPdfTests(unittest.TestCase):
+    def test_legacy_pdf_details_use_the_selected_source_offset(self):
+        from chart_pdf import save_chart_pdf
+        result = pdf_result("en")
+        del result["chord_voicing"]["source_start_seconds"]
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "legacy.pdf"
+            save_chart_pdf(result, path)
+            text = PdfReader(path).pages[0].extract_text()
+        self.assertIn("30.00-31.00s | #1", text)
+
     def test_method_identity_is_visible_on_every_page(self):
         from chart_pdf import save_chart_pdf
         with tempfile.TemporaryDirectory() as folder:

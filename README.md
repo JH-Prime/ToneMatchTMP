@@ -1,6 +1,13 @@
-# ToneMatch TMP 0.1.12 — practice accompaniment
+# ToneMatch TMP 0.1.13 — 2–5–1 practice accompaniment
 
-The [v0.1.12 developer ZIP](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.12) is published. All 556 guarded tests, packaged diagnostics and three unauthenticated download checks passed. This is an unsigned developer release.
+In **Practice backing…**, choose a starting key and Major or Minor in the
+**2–5–1** controls. Generate four bars in one key, or 48 bars that visit all
+twelve keys in ascending fourths. In C, the major exercise uses
+`Dm7 | G7 | Cmaj7 | Cmaj7` and the minor exercise uses
+`Dm7b5 | G7 | Cm7 | Cm7`. For continuous practice, turn on the loop. The
+generated bars can be edited, saved, transposed and exported like other charts.
+
+## Practice backing
 
 Open **Practice backing…** to paste or write a 4/4 chord chart. Enter a song title
 and optional key to prepare a question for ChatGPT or Claude. Submit it in the

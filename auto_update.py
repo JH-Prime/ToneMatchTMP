@@ -444,6 +444,47 @@ def _cached(root: Path, current_version: str, cancel, progress) -> Path | None:
     return target / ('ToneMatchTMP-v' + version + '.exe')
 
 
+def _repair_activated_files(root: Path, target: Path, fresh: Path, version: str,
+                            manifest_digest: str, cancel) -> None:
+    """Restore only authenticated files in this installation's activated version."""
+    state = _read_json(root / 'current.json', 4096)
+    if state != {'version': version, 'manifest_sha256': manifest_digest}:
+        raise UpdateError('Existing directory is not the activated release')
+    _ordinary(target)
+
+    def walk_failure(error):
+        raise error
+
+    # Check the complete existing layout before touching anything. Leave
+    # unrecognized files and directories intact, including a user's additions.
+    for directory, dirs, files in os.walk(target, onerror=walk_failure):
+        _cancelled(cancel)
+        parent = Path(directory)
+        reference = fresh / parent.relative_to(target)
+        for name in dirs:
+            _ordinary(parent / name)
+            if not (reference / name).is_dir():
+                raise UpdateError('Unrecognized directory in activated release')
+        for name in files:
+            _ordinary(parent / name)
+            if not (parent / name).is_file() or not (reference / name).is_file():
+                raise UpdateError('Unrecognized file in activated release')
+    manifest = _read_json(fresh / 'MANIFEST.json', MAX_MANIFEST_BYTES)
+    manifest_row = {'path': 'MANIFEST.json', 'bytes': (fresh / 'MANIFEST.json').stat().st_size,
+                    'sha256': manifest_digest}
+    for row in [*manifest['files'], manifest_row]:
+        _cancelled(cancel)
+        relative = _relative_parts(row['path'])
+        path = target.joinpath(*relative)
+        if (path.exists() and path.stat().st_size == row['bytes']
+                and _digest_file(path, cancel) == row['sha256'].lower()):
+            continue
+        path.parent.mkdir(parents=True, exist_ok=True)
+        # Both files share the cache filesystem. An interrupted or locked
+        # replacement leaves the original pointer and a retryable directory.
+        os.replace(fresh.joinpath(*relative), path)
+
+
 def prepare_update(current_version: str, installation_root: Path, cache_root: Path,
                    cancel, progress) -> Path | None:
     """Prepare a newer verified executable, falling back safely on any I/O failure.
@@ -497,7 +538,15 @@ def prepare_update(current_version: str, installation_root: Path, cache_root: Pa
                     # A crash can leave a complete directory without its
                     # pointer. Its own manifest is not provenance: bind it to
                     # the freshly authenticated archive before accepting it.
-                    if verify_installation(target, release.version, cancel, progress) != manifest_digest:
+                    try:
+                        installed_digest = verify_installation(target, release.version, cancel, progress)
+                    except (OSError, ValueError, UpdateError):
+                        _cancelled(cancel)
+                        installed_digest = None
+                    if installed_digest != manifest_digest:
+                        _repair_activated_files(root, target, extracted, release.version, manifest_digest, cancel)
+                        installed_digest = verify_installation(target, release.version, cancel, progress)
+                    if installed_digest != manifest_digest:
                         raise UpdateError('Existing installation differs from verified release')
                 else:
                     os.replace(extracted, target)

@@ -20,12 +20,30 @@ from quad_cortex import load_catalog, recipes
 def run_practice_self_test():
     """합성 반주를 생성하고 프레임·이조·내보내기를 장치 출력 없이 확인한다."""
     from practice_audio import MixSettings, render_practice
-    from practice_chart import PracticeProject, load_project, parse_chart, save_project, transpose_chart
+    from practice_chart import PracticeProject, cadence_chart, load_project, parse_chart, save_project, transpose_chart
 
     bars = transpose_chart(parse_chart("[A] | D/F# A7 | Bm - |"), 2)
     project = PracticeProject(bars, bpm=140, style='Funk')
+    major = cadence_chart('C Major')
+    minor = cadence_chart('C Minor')
+    cadence_symbols = tuple(bar.chords[0] for bar in (*major, *minor))
+    cycle = PracticeProject(cadence_chart('C Major', cycle=True), key='C Major', style='Jazz Swing')
     with tempfile.TemporaryDirectory(prefix='tonematch-practice-check-') as folder:
         directory = Path(folder)
+        save_project(cycle, directory / 'cycle.practice.json')
+        restored_cycle = load_project(directory / 'cycle.practice.json')
+        tonics = tuple(bar.chords[0] for bar in restored_cycle.bars[2::4])
+        cycle_ok = restored_cycle == cycle and tonics == (
+            'Cmaj7', 'Fmaj7', 'Bbmaj7', 'Ebmaj7', 'Abmaj7', 'Dbmaj7',
+            'Gbmaj7', 'Bmaj7', 'Emaj7', 'Amaj7', 'Dmaj7', 'Gmaj7')
+        cadence_audio = render_practice(PracticeProject(major + minor, bpm=240, count_in=0, style='Jazz Swing'))
+        try:
+            with cadence_audio.open_mix(lambda: MixSettings(solo='chords')) as source:
+                cadence_pcm_ok = len(cadence_audio.bar_starts) == 8 and all(
+                    np.any(read_pcm_block(source, frame, frame + 4096))
+                    for frame in cadence_audio.bar_starts)
+        finally:
+            cadence_audio.close()
         save_project(project, directory / 'practice.json')
         restored = load_project(directory / 'practice.json')
         audio = render_practice(restored)
@@ -47,6 +65,9 @@ def run_practice_self_test():
             audio.close()
     transpose = bars[0].chords == ('E/G#', 'B7') and bars[1].chords == ('C#m', '-')
     checks = {'project_roundtrip': restored == project, 'slash_bass_transposed': transpose,
+              'cadence_major_minor': cadence_pcm_ok and cadence_symbols == (
+                  'Dm7', 'G7', 'Cmaj7', 'Cmaj7', 'Dm7b5', 'G7', 'Cm7', 'Cm7'),
+              'cadence_cycle_roundtrip': cycle_ok,
               'aligned_frames': frames and aligned_export and count_in,
               'finite_pcm': pcm, 'mp3_export': mp3_export}
     return {'ok': all(checks.values()), **checks, 'audible_output_tested': False}

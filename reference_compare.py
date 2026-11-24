@@ -37,6 +37,10 @@ class ReferenceCompareError(ValueError):
     """기준 프로필 생성이나 실시간 비교 입력이 유효하지 않을 때 발생한다."""
 
 
+class InsufficientReferenceSignal(ReferenceCompareError):
+    """선택된 PCM 구간에 기준 스펙트럼을 만들 만한 신호가 없다."""
+
+
 def _checked_integer(value: object, name: str, minimum: int, maximum: int | None = None) -> int:
     """불리언을 제외한 정수 설정값과 허용 범위를 검증한다."""
 
@@ -92,7 +96,7 @@ def _sample_frames(pcm: np.ndarray, fft_size: int, max_frames: int) -> tuple[np.
     rms = np.sqrt(np.mean(np.square(framed), axis=(1, 2), dtype=np.float64))
     peak_rms = float(np.max(rms))
     if peak_rms <= SILENCE_RMS:
-        raise ReferenceCompareError("reference PCM is silent or below the -75 dBFS comparison threshold")
+        raise InsufficientReferenceSignal("reference PCM is silent or below the -75 dBFS comparison threshold")
     active = rms >= max(SILENCE_RMS, peak_rms * 0.01)
     return framed[active], int(len(starts))
 
@@ -155,6 +159,8 @@ def _normalize_power(power: np.ndarray, label: str) -> np.ndarray:
         raise ReferenceCompareError(f"{label} spectrum contains invalid power values")
     peak = float(np.max(values, initial=0.0))
     if peak <= 1e-24:
+        if label == "reference":
+            raise InsufficientReferenceSignal("reference spectrum is silent")
         raise ReferenceCompareError(f"{label} spectrum is silent")
     scaled = values / peak
     total = float(np.sum(scaled, dtype=np.float64))
@@ -291,21 +297,25 @@ def build_reference_profile(
         _rebin_power(frequencies_hz, power, target_edges_hz),
         "reference",
     )
-    relative_db = _power_to_relative_db(normalized_power)
+    return _reference_profile(checked_rate, checked_fft_size, sampled_frames, len(frames),
+                              target_edges_hz, target_centers_hz, normalized_power)
 
+
+def _reference_profile(rate, size, sampled_frames, active_frames, edges, centers, power):
+    """측정값을 기준으로 표시 대역과 dB 배열을 동일하게 구성한다."""
     return {
         "schema": REFERENCE_PROFILE_SCHEMA,
-        "sample_rate_hz": checked_rate,
-        "fft_size": checked_fft_size,
+        "sample_rate_hz": rate,
+        "fft_size": size,
         "sampled_frames": sampled_frames,
-        "active_frames": int(len(frames)),
+        "active_frames": active_frames,
         "minimum_rms_dbfs": MIN_INPUT_RMS_DBFS,
         "spectral_dynamic_range_db": SPECTRAL_DYNAMIC_RANGE_DB,
-        "frequencies_hz": target_centers_hz.tolist(),
-        "frequency_edges_hz": target_edges_hz.tolist(),
-        "normalized_power": normalized_power.tolist(),
-        "relative_db": relative_db.tolist(),
-        "bands": _single_band_rows(normalized_power, target_edges_hz),
+        "frequencies_hz": centers.tolist(),
+        "frequency_edges_hz": edges.tolist(),
+        "normalized_power": power.tolist(),
+        "relative_db": _power_to_relative_db(power).tolist(),
+        "bands": _single_band_rows(power, edges),
     }
 
 
@@ -333,6 +343,20 @@ def _profile_arrays(reference_profile: Mapping[str, Any]) -> tuple[np.ndarray, n
     if not np.all((frequencies > edges[:-1]) & (frequencies < edges[1:])):
         raise ReferenceCompareError("reference_profile centers must lie inside their cells")
     return frequencies, edges, _normalize_power(power, "reference")
+
+
+def restore_reference_profile(profile: Mapping[str, Any]) -> dict[str, Any]:
+    """저장한 기준 측정값을 검증하고 표시용 파생 정보는 다시 계산한다."""
+    centers, edges, power = _profile_arrays(profile)
+    rate = _checked_integer(profile.get("sample_rate_hz"), "sample_rate_hz", 8000)
+    size = _checked_integer(profile.get("fft_size"), "fft_size", 128)
+    sampled = _checked_integer(profile.get("sampled_frames"), "sampled_frames", 1, MAX_REFERENCE_FRAMES)
+    active = _checked_integer(profile.get("active_frames"), "active_frames", 1, sampled)
+    expected_edges, expected_centers = _log_grid(min(rate / 2, MAX_FREQUENCY_HZ))
+    if not (np.allclose(edges, expected_edges, rtol=1e-10, atol=0) and
+            np.allclose(centers, expected_centers, rtol=1e-10, atol=0)):
+        raise ReferenceCompareError("reference frequency grid does not match the sample rate")
+    return _reference_profile(rate, size, sampled, active, expected_edges, expected_centers, power)
 
 
 def _frame_arrays(frame: SpectrumFrame) -> tuple[np.ndarray, np.ndarray]:

@@ -492,13 +492,10 @@ def _pcm16_chunk(raw: bytes, channels: int) -> np.ndarray:
     return np.ascontiguousarray(values.T)
 
 
-def _tensor_to_pcm16(waveform: object) -> tuple[bytes, float, float, int]:
-    """분리된 PyTorch 텐서를 클리핑한 PCM과 레벨 통계로 변환한다."""
-    # torch는 큰 선택 의존성이므로 모듈을 불러올 때가 아니라 실제 분리 시점에만 쓴다.
-    array = waveform.detach().to("cpu").numpy().T.astype(np.float32, copy=False)
-    if array.ndim == 1:
-        array = np.column_stack((array, array))
-    peak = float(np.max(np.abs(array))) if array.size else 0.0
+def _stereo_to_pcm16(stereo: np.ndarray) -> tuple[bytes, float, float, int]:
+    """검증된 스테레오 배열을 인터리브 PCM과 레벨 통계로 변환한다."""
+    array = stereo.T
+    peak = float(np.max(np.abs(array)))
     square_sum = float(np.sum(np.square(array, dtype=np.float64)))
     sample_count = int(array.size)
     pcm = np.round(np.clip(array, -0.999, 0.999) * 32767.0).astype("<i2")
@@ -859,7 +856,15 @@ def separate_guitar_wav(
                         except Exception as exc:
                             raise SeparationError(tr("error.separation_failed", language, detail=exc)) from exc
                         _check_cancelled(cancel_requested, language)
-                        pcm, chunk_square, chunk_peak, chunk_samples = _tensor_to_pcm16(stems["guitar"])
+                        if "guitar" not in stems:
+                            raise SeparationError(tr("error.separator_no_guitar", language))
+                        stereo = _tensor_to_stereo_array(stems["guitar"])
+                        if stereo.shape[1] != chunk_frames:
+                            raise SeparationError(
+                                "기타 stem 길이가 입력 조각과 다릅니다. "
+                                "/ Guitar stem length does not match the input chunk."
+                            )
+                        pcm, chunk_square, chunk_peak, chunk_samples = _stereo_to_pcm16(stereo)
                         output.writeframes(pcm)
                         square_sum += chunk_square
                         peak = max(peak, chunk_peak)

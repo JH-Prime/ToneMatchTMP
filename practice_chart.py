@@ -14,6 +14,7 @@ from voicing import CHORD_SUFFIX
 
 
 STYLES = ("Rock", "Pop", "Ballad", "Funk", "Blues Shuffle", "Bossa Nova", "Jazz Swing")
+CADENCE_TONICS = ("C", "C#", "Db", "D", "D#", "Eb", "E", "F", "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Bb", "B")
 MAX_BARS = 128
 MAX_CHART_CHARS = 24_576
 MAX_PROJECT_BYTES = 128 * 1024
@@ -22,6 +23,11 @@ _DEFAULT_BEATS = ((), (4,), (2, 2), (2, 1, 1), (1, 1, 1, 1))
 _SHARPS = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
 _FLATS = ("C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B")
 _KEY = re.compile(r"([A-G][#b]?) *(major|minor|maj|min|m)?", re.IGNORECASE)
+_CADENCE_SECTION = "2–5–1 "
+_CIRCLE_TONICS = {
+    "Major": _FLATS,
+    "Minor": ("C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B"),
+}
 
 
 class ChartError(ValueError):
@@ -113,6 +119,40 @@ class PracticeProject:
     def unresolved_bars(self) -> tuple[int, ...]:
         """Return one-based bar numbers requiring confirmation before rendering."""
         return tuple(number for number, bar in enumerate(self.bars, 1) if "?" in bar.chords)
+
+
+def _cadence_degree(tonic: str, pitch_class: int, letter_steps: int) -> str:
+    """Give the degree its diatonic letter when a single accidental suffices."""
+    letters = "CDEFGAB"
+    letter = letters[(letters.index(tonic[0]) + letter_steps) % len(letters)]
+    accidental = (pitch_class - parse_symbol(letter)["root_pc"]) % 12
+    if accidental in (0, 1, 11):
+        return letter + {0: "", 1: "#", 11: "b"}[accidental]
+    notes = _FLATS if tonic.endswith("b") else _SHARPS
+    return notes[pitch_class]
+
+
+def cadence_chart(key: str, *, cycle: bool = False) -> tuple[Bar, ...]:
+    """Build a four-bar jazz cadence or a series through all keys by ascending fourths."""
+    normalized = normalize_key(key)
+    if not normalized:
+        raise ValueError("2–5–1의 시작 키를 선택하세요. / Choose a starting key for 2–5–1.")
+    tonic, mode = normalized.split()
+    starting_pc = parse_symbol(tonic)["root_pc"]
+    second_suffix, tonic_suffix = ("m7b5", "m7") if mode == "Minor" else ("m7", "maj7")
+    bars = []
+    for step in range(12 if cycle else 1):
+        root = (starting_pc + 5 * step) % 12
+        center = _CIRCLE_TONICS[mode][root] if step else tonic
+        second = _cadence_degree(center, (root + 2) % 12, 1)
+        fifth = _cadence_degree(center, (root + 7) % 12, 4)
+        bars.extend((
+            Bar(f"{_CADENCE_SECTION}{center} {mode}", (second + second_suffix,), (4,)),
+            Bar(None, (fifth + "7",), (4,)),
+            Bar(None, (center + tonic_suffix,), (4,)),
+            Bar(None, (center + tonic_suffix,), (4,)),
+        ))
+    return tuple(bars)
 
 
 def _parse_bar(text: str, section: str | None) -> Bar:
@@ -214,7 +254,14 @@ def transpose_chart(bars: tuple[Bar, ...], semitones: int, prefer_flats: bool = 
             if parsed["bass_pc"] is not None:
                 chord += "/" + notes[(parsed["bass_pc"] + semitones) % 12]
             moved.append(chord)
-        result.append(Bar(bar.section, tuple(moved), bar.beats))
+        section = bar.section
+        if section and section.startswith(_CADENCE_SECTION):
+            parts = _KEY.fullmatch(section[len(_CADENCE_SECTION):])
+            if parts and parts[2] in _CIRCLE_TONICS:
+                tonic, mode = parts.groups()
+                root = parse_symbol(tonic.capitalize())["root_pc"]
+                section = f"{_CADENCE_SECTION}{notes[(root + semitones) % 12]} {mode}"
+        result.append(Bar(section, tuple(moved), bar.beats))
     return tuple(result)
 
 

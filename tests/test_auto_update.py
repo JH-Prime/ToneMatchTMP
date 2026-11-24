@@ -182,6 +182,59 @@ class UpdateTests(unittest.TestCase):
         target.write_bytes(b'changed')
         self.assertIsNone(self.prepare(fail=OSError('offline')))
 
+    def test_missing_file_in_activated_version_recovers_online_then_offline(self):
+        target = self.prepare()
+        library = target.parent / '_internal/library.dll'
+        library.unlink()
+        self.assertIsNone(self.prepare(fail=OSError('offline')))
+        pointer = next(self.cache.rglob('current.json'))
+        before = pointer.read_bytes()
+        self.assertEqual(self.prepare(), target)
+        self.assertEqual(library.read_bytes(), b'runtime')
+        self.assertEqual(pointer.read_bytes(), before)
+        self.assertEqual(self.prepare(fail=OSError('offline')), target)
+
+    def test_failed_repair_preserves_pointer_and_allows_retry(self):
+        target = self.prepare()
+        library = target.parent / '_internal/library.dll'
+        library.write_bytes(b'damaged')
+        pointer = next(self.cache.rglob('current.json'))
+        before = pointer.read_bytes()
+        original_replace = updater.os.replace
+        def locked(source, destination):
+            if Path(destination) == library:
+                raise PermissionError('in use')
+            return original_replace(source, destination)
+        with patch.object(updater.os, 'replace', side_effect=locked):
+            self.assertIsNone(self.prepare())
+        self.assertEqual(pointer.read_bytes(), before)
+        self.assertEqual(library.read_bytes(), b'damaged')
+        self.assertEqual(self.prepare(), target)
+
+    def test_repair_replaces_a_valid_manifest_with_the_authenticated_bytes(self):
+        target = self.prepare()
+        manifest = target.parent / 'MANIFEST.json'
+        original = manifest.read_bytes()
+        manifest.write_bytes(original + b'\n')
+        self.assertEqual(self.prepare(), target)
+        self.assertEqual(manifest.read_bytes(), original)
+
+    def test_repair_requires_matching_activation_receipt_and_preserves_extra_files(self):
+        target = self.prepare()
+        pointer = next(self.cache.rglob('current.json'))
+        before = pointer.read_bytes()
+        library = target.parent / '_internal/library.dll'
+        library.unlink()
+        pointer.write_text(json.dumps(dict(version=VERSION, manifest_sha256='0' * 64)))
+        self.assertIsNone(self.prepare())
+        self.assertFalse(library.exists())
+        pointer.write_bytes(before)
+        notes = target.parent / 'personal-notes.txt'
+        notes.write_bytes(b'keep')
+        self.assertIsNone(self.prepare())
+        self.assertEqual(notes.read_bytes(), b'keep')
+        self.assertFalse(library.exists())
+
     def test_unreferenced_directory_must_match_verified_download(self):
         managed = updater.installation_cache(self.install, self.cache)
         versions = managed / 'versions'

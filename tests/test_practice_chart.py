@@ -16,6 +16,50 @@ from practice_chart import (
 
 
 class PracticeChartTests(unittest.TestCase):
+    def test_cadence_voicings_and_bar_lengths_in_major_and_minor(self):
+        from practice_chart import cadence_chart
+
+        for key, expected in (
+            ("C Major", ("Dm7", "G7", "Cmaj7", "Cmaj7")),
+            ("C Minor", ("Dm7b5", "G7", "Cm7", "Cm7")),
+            ("F# Minor", ("G#m7b5", "C#7", "F#m7", "F#m7")),
+            ("Gb Major", ("Abm7", "Db7", "Gbmaj7", "Gbmaj7")),
+            ("D# Minor", ("E#m7b5", "A#7", "D#m7", "D#m7")),
+        ):
+            with self.subTest(key=key):
+                phrase = cadence_chart(key)
+                self.assertEqual(tuple(bar.chords[0] for bar in phrase), expected)
+                self.assertTrue(all(bar.beats == (4,) for bar in phrase))
+                self.assertIn(key, phrase[0].section)
+        for key in ("", "H Minor", "C Minor Minor"):
+            with self.assertRaises(ValueError):
+                cadence_chart(key)
+
+    def test_cadence_cycle_uses_all_twelve_fourths_and_roundtrips_as_chart(self):
+        from practice_chart import cadence_chart
+
+        for key in ("Gb Major", "F# Minor"):
+            with self.subTest(key=key):
+                bars = cadence_chart(key, cycle=True)
+                self.assertEqual(len(bars), 48)
+                centers = []
+                for start in range(0, 48, 4):
+                    roots = [parse_symbol(bar.chords[0])["root_pc"] for bar in bars[start:start + 4]]
+                    ii, dominant, tonic, repeat = roots
+                    self.assertEqual((ii, dominant, repeat), ((tonic + 2) % 12, (tonic + 7) % 12, tonic))
+                    self.assertIn(key.split()[1], bars[start].section)
+                    self.assertTrue(all(not bar.section for bar in bars[start + 1:start + 4]))
+                    centers.append(tonic)
+                self.assertEqual(centers, [(6 + 5 * step) % 12 for step in range(12)])
+                self.assertEqual((centers[-1] + 5) % 12, centers[0])
+                self.assertEqual(parse_chart(format_chart(bars)), bars)
+                transposed = transpose_chart(bars, 2)
+                self.assertNotEqual(transposed[0].section, bars[0].section)
+                for start in range(0, 48, 4):
+                    tonic = transposed[start].section.split()[-2]
+                    self.assertEqual(parse_symbol(tonic)["root_pc"],
+                                     parse_symbol(transposed[start + 2].chords[0])["root_pc"])
+
     def test_fenced_chart_preserves_sections_rests_and_timing(self):
         bars = parse_chart(
             "  ```text\n[인트로]\n| D A | Bm F#m G |\n\n"

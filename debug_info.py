@@ -111,7 +111,7 @@ PIPELINE_BLOCKS: list[dict] = [
             ("separator.py", "resolve_compute_device"),
             ("separator.py", "separator_runtime_status"),
             ("separator.py", "_pcm16_chunk"),
-            ("separator.py", "_tensor_to_pcm16"),
+            ("separator.py", "_stereo_to_pcm16"),
             ("separator.py", "separate_guitar_wav"),
         ],
         "progress": (18, 69),

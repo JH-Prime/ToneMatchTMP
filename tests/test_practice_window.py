@@ -2,7 +2,7 @@
 
 from types import SimpleNamespace
 from unittest import TestCase
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from practice_ui import PracticeWindow, _PracticeSession
 
@@ -73,8 +73,44 @@ class PracticeSessionTests(TestCase):
         self.assertEqual(arguments.kwargs['part'], 'chords')
         self.player_factory.assert_not_called()
 
+    def test_stop_after_export_commits_still_reports_saved(self):
+        self.session.export(project(), 'mix.wav')
+        self.session._job.thread.join(timeout=2)
+        self.rendered.export.assert_called_once()
+        self.session.cancel()
+        self.session.poll()
+        self.assertEqual(self.session.notice, 'exported')
+        self.player_factory.assert_not_called()
+
 
 class PracticeDraftTests(TestCase):
+    def test_cadence_replacement_preserves_draft_on_cancel_and_settings_on_accept(self):
+        window = PracticeWindow.__new__(PracticeWindow)
+        window.language = 'en'
+        window.window = Mock()
+        window._session = Mock()
+        window._show_project = Mock()
+        window.chart = Mock()
+        window.chart.compare.return_value = True
+        window.tabs, window.chart_tab = Mock(), Mock()
+        for name, value in (('cadence_tonic', 'Gb'), ('title', 'Practice'),
+                            ('bpm', '144'), ('style', 'Jazz Swing'), ('count_in', '2'), ('loop', False)):
+            setattr(window, name, Mock(get=Mock(return_value=value)))
+        window.cadence_minor = Mock(get=Mock(return_value=True))
+        window.cadence_cycle = Mock(get=Mock(return_value=True))
+        with patch('practice_ui.messagebox.askyesno', return_value=False) as confirm:
+            window._apply_cadence()
+            confirm.assert_called_once()
+            window._show_project.assert_not_called()
+            window._session.cancel.assert_not_called()
+        with patch('practice_ui.messagebox.askyesno', return_value=True):
+            window._apply_cadence()
+            generated = window._show_project.call_args.args[0]
+            self.assertEqual((generated.key, generated.title, generated.bpm, generated.style),
+                             ('Gb Minor', 'Practice', 144, 'Jazz Swing'))
+            self.assertEqual((len(generated.bars), generated.count_in, generated.loop), (48, 2, False))
+        window._session.play.assert_not_called()
+
     def test_invalid_paste_cannot_replace_the_previous_project_or_preview(self):
         window = PracticeWindow.__new__(PracticeWindow)
         window.project = previous = object()

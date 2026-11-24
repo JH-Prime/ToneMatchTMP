@@ -22,7 +22,7 @@ import numpy as np
 from catalog import APP_VERSION, MODEL_GUIDE_REVISION, TARGET_FIRMWARE, TEMPLATES
 from devices import device_by_id, device_label, is_supported_device
 from i18n import choice_code, choice_label, tr
-from reference_compare import build_reference_profile
+from reference_compare import InsufficientReferenceSignal, build_reference_profile
 from separator import (
     SEPARATOR_SAMPLE_RATE,
     SeparationError,
@@ -37,6 +37,7 @@ SAMPLE_RATE = 22_050
 MAX_ANALYSIS_SECONDS = 20 * 60.0
 MIN_ANALYSIS_SECONDS = 3.0
 MAX_ENVELOPE_FRAMES = 6_000
+ANALYSIS_SCHEMA = "tonematch-tmp-recipe/v1"
 
 
 def clamp(value: float, low: float = 0.0, high: float = 1.0) -> float:
@@ -303,12 +304,15 @@ def extract_features(samples: np.ndarray, sample_rate: int = SAMPLE_RATE, langua
     mid = np.mean(samples[:, :2], axis=1, dtype=np.float32)
     side = (samples[:, 0] - samples[:, 1]) * 0.5
     mid -= float(np.mean(mid))
+    side -= float(np.mean(side))
     mid_rms = float(np.sqrt(np.mean(np.square(mid, dtype=np.float64)) + 1e-12))
     side_rms = float(np.sqrt(np.mean(np.square(side, dtype=np.float64)) + 1e-12))
     stereo_width = clamp(side_rms / (mid_rms + side_rms + 1e-12))
-    if mid_rms < 1e-5:
+    if max(mid_rms, side_rms) < 1e-5:
         raise AnalysisError(tr("error.silence", language))
-    normalized = mid / max(float(np.max(np.abs(mid))), 1e-9)
+    # Opposite-polarity channels cancel in the mid signal but retain tone in the side.
+    tone = side if mid_rms < 1e-5 else mid
+    normalized = tone / max(float(np.max(np.abs(tone))), 1e-9)
 
     frame_length = 2048
     # 5~20분 전체 곡도 일정한 메모리에서 다루도록 최대 프레임 수를 제한한다.
@@ -859,7 +863,7 @@ def _chords_only(source, start, end, language, progress, cancel_requested, chord
     samples, rate, duration = decode_segment(source, start, end, progress, language)
     chords = _analyze_chords(samples, rate, start, language, progress, cancel_requested, 20, 75, chord_method)
     result = {
-        'schema': 'tonematch-tmp-recipe/v1', 'app_version': APP_VERSION,
+        'schema': ANALYSIS_SCHEMA, 'app_version': APP_VERSION,
         'analysis_kind': 'chords', 'device_id': 'none', 'features': {}, 'raw_features': {},
         'recipes': [], 'source_separation': {'used': False, 'mode': 'not_requested'},
         'source': {'file_name': Path(source).name, 'start_seconds': float(start),
@@ -963,7 +967,10 @@ def analyze_file(
         progress(70, tr("progress.decode_done", language))
         progress(72, tr("progress.features", language))
     raw_features = extract_features(samples, sample_rate, language)
-    reference_spectrum = build_reference_profile(samples, sample_rate)
+    try:
+        reference_spectrum = build_reference_profile(samples, sample_rate)
+    except InsufficientReferenceSignal:
+        reference_spectrum = None
     if progress:
         progress(80, tr("progress.features_done", language))
         progress(82, tr("progress.chord_method", language, method=chord_method.upper()))
@@ -1000,13 +1007,15 @@ def analyze_file(
         warnings.append(tr("warning.full_mix", language))
     if raw_features.clipping_percent > 0.5:
         warnings.append(tr("warning.clipping", language))
+    if reference_spectrum is None:
+        warnings.append(tr("warning.reference_unavailable", language))
     if duration < 8:
         warnings.append(tr("warning.short", language))
     if progress:
         progress(97, tr("progress.assembling", language))
     profile = device_by_id(device_id)
     result = {
-        "schema": "tonematch-tmp-recipe/v1",
+        "schema": ANALYSIS_SCHEMA,
         "app_version": APP_VERSION,
         "analysis_kind": analysis_kind,
         "language": language,
@@ -1091,8 +1100,10 @@ def relocalize_result(result: dict, language: str) -> dict:
             warnings.append(tr("warning.weak_guitar", language))
     elif features.mix_contamination > 0.52:
         warnings.append(tr("warning.full_mix", language))
-    if result.get("raw_features", {}).get("clipping_percent", 0.0) > 0.5:
+    if result.get("raw_features", {}).get("clipping_percent", features.clipping_percent) > 0.5:
         warnings.append(tr("warning.clipping", language))
+    if "reference_spectrum" in result and result["reference_spectrum"] is None:
+        warnings.append(tr("warning.reference_unavailable", language))
     if result["source"].get("duration_seconds", 0.0) < 8.0:
         warnings.append(tr("warning.short", language))
     pickup_code = profile["pickup"]

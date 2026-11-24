@@ -146,30 +146,34 @@ def record_device_to_wav(
         raise RecordingError(tr("error.record_device_missing", language))
 
     destination_path = Path(destination_wav)
-    destination_path.parent.mkdir(parents=True, exist_ok=True)
     written_frames = 0
+    owns_destination = False
     try:
-        with wave.open(str(destination_path), "wb") as output:
-            output.setnchannels(2)
-            output.setsampwidth(2)
-            output.setframerate(RECORD_SAMPLE_RATE)
-            with microphone.recorder(
-                samplerate=RECORD_SAMPLE_RATE,
-                channels=2,
-                blocksize=RECORD_BLOCK_FRAMES,
-            ) as recorder:
-                while not stop_event.is_set() and written_frames < int(duration_limit * RECORD_SAMPLE_RATE):
-                    remaining = int(duration_limit * RECORD_SAMPLE_RATE) - written_frames
-                    frame_count = min(RECORD_BLOCK_FRAMES, remaining)
-                    block = _normalize_capture_block(recorder.record(numframes=frame_count))
-                    pcm = np.round(np.clip(block, -0.999, 0.999) * 32767.0).astype("<i2")
-                    output.writeframes(pcm.tobytes())
-                    written_frames += len(block)
-                    elapsed = written_frames / RECORD_SAMPLE_RATE
-                    if progress:
-                        progress(elapsed, tr("progress.recording", language, elapsed=elapsed, limit=duration_limit))
+        destination_path.parent.mkdir(parents=True, exist_ok=True)
+        with destination_path.open("xb") as file:
+            owns_destination = True
+            with wave.open(file, "wb") as output:
+                output.setnchannels(2)
+                output.setsampwidth(2)
+                output.setframerate(RECORD_SAMPLE_RATE)
+                with microphone.recorder(
+                    samplerate=RECORD_SAMPLE_RATE,
+                    channels=2,
+                    blocksize=RECORD_BLOCK_FRAMES,
+                ) as recorder:
+                    while not stop_event.is_set() and written_frames < int(duration_limit * RECORD_SAMPLE_RATE):
+                        remaining = int(duration_limit * RECORD_SAMPLE_RATE) - written_frames
+                        frame_count = min(RECORD_BLOCK_FRAMES, remaining)
+                        block = _normalize_capture_block(recorder.record(numframes=frame_count))
+                        pcm = np.round(np.clip(block, -0.999, 0.999) * 32767.0).astype("<i2")
+                        output.writeframes(pcm.tobytes())
+                        written_frames += len(block)
+                        elapsed = written_frames / RECORD_SAMPLE_RATE
+                        if progress:
+                            progress(elapsed, tr("progress.recording", language, elapsed=elapsed, limit=duration_limit))
     except Exception as exc:
-        destination_path.unlink(missing_ok=True)
+        if owns_destination:
+            destination_path.unlink(missing_ok=True)
         if isinstance(exc, RecordingError):
             raise
         raise RecordingError(tr("error.record_failed", language, detail=exc)) from exc

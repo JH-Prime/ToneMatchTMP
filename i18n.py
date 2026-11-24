@@ -273,6 +273,7 @@ TEXT: dict[str, dict[str, str]] = {
     "warning.manual_apply": {"ko": "프리셋 자동 쓰기 API가 공개되지 않아 Pro Control 또는 본체에서 값을 수동 입력해야 합니다.", "en": "Because no public preset-writing API is available, enter the values manually in Pro Control or on the unit."},
     "warning.full_mix": {"ko": "드럼·베이스·심벌 등 풀믹스의 영향 가능성이 감지되었습니다. 기타가 단독으로 들리는 10–30초 구간을 쓰면 정확도가 올라갑니다.", "en": "Possible influence from drums, bass, cymbals, or the full mix was detected. A 10–30 second isolated-guitar passage will improve accuracy."},
     "warning.clipping": {"ko": "원본 클리핑이 감지되어 포화도 추정 오차가 커질 수 있습니다.", "en": "Source clipping was detected and may increase saturation-estimation error."},
+    "warning.reference_unavailable": {"ko": "선택한 구간에서 기준 스펙트럼을 만들 신호가 부족해 실시간 톤 비교를 사용할 수 없습니다.", "en": "The selected passage has too little spectral signal for live tone comparison."},
     "warning.short": {"ko": "분석 구간이 매우 짧습니다. 여러 코드와 어택이 포함된 더 긴 구간을 권장합니다.", "en": "The analyzed range is very short. Use a longer passage containing varied chords and attacks."},
     "step.new_preset": {"ko": "Tone Master Pro 또는 Pro Control에서 새 프리셋을 만듭니다.", "en": "Create a new preset on Tone Master Pro or in Pro Control."},
     "step.series": {"ko": "Instrument Series 경로에 추천 블록을 위에서부터 순서대로 추가합니다.", "en": "Add the recommended blocks from top to bottom in an Instrument Series path."},

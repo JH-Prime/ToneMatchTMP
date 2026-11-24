@@ -7,6 +7,8 @@ import tempfile
 import unittest
 from unittest.mock import Mock, patch
 
+import numpy as np
+
 from test_chord_chart_ui import chart_result
 from chord_chart import build_chord_chart
 from chord_edits import parse_symbol, set_correction, effective_voicing, load_result
@@ -16,6 +18,48 @@ from report import save_html
 
 class ChordEditTests(unittest.TestCase):
     """확장화음·역위·미확정·복원·파일 입력을 실제 모델로 검사한다."""
+
+    def test_tone_reopen_preserves_clipping_warning_and_reference_comparison(self):
+        from engine import save_json
+        from i18n import tr
+        from reference_compare import build_reference_profile, compare_live_frame
+        from spectrum import analyze_spectrum_frame
+
+        tone = np.sin(2 * np.pi * 220 * np.arange(8000) / 8000) * .25
+        original = chart_result('original_mix')
+        original['features']['clipping_percent'] = 2.5
+        original['raw_features'] = dict(original['features'])
+        original['reference_spectrum'] = build_reference_profile(tone, 8000)
+        frame = analyze_spectrum_frame(tone, 8000)
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'analysis.json'
+            save_json(original, path)
+            reopened = load_result(path, 'en')
+            self.assertIn(tr('warning.clipping', 'en'), reopened['warnings'])
+            self.assertEqual(reopened['raw_features'], original['raw_features'])
+            saved_bands = reopened['reference_spectrum']['bands']
+            self.assertEqual([row['id'] for row in saved_bands], [row['id'] for row in original['reference_spectrum']['bands']])
+            before = compare_live_frame(original['reference_spectrum'], frame)
+            after = compare_live_frame(reopened['reference_spectrum'], frame)
+            np.testing.assert_allclose(after['delta_db'], before['delta_db'], atol=1e-10)
+            del original['raw_features'], original['reference_spectrum']
+            save_json(original, path)
+            legacy = load_result(path, 'en')
+            self.assertIn(tr('warning.clipping', 'en'), legacy['warnings'])
+            self.assertNotIn('reference_spectrum', legacy)
+
+    def test_invalid_persisted_reference_is_rejected_before_use(self):
+        from engine import save_json
+        from reference_compare import build_reference_profile
+        tone = np.sin(2 * np.pi * 220 * np.arange(8000) / 8000)
+        result = chart_result('original_mix')
+        result['reference_spectrum'] = build_reference_profile(tone, 8000)
+        result['reference_spectrum']['normalized_power'].pop()
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'analysis.json'
+            save_json(result, path)
+            with self.assertRaises(ValueError):
+                load_result(path)
 
     def test_missing_or_empty_symbols_are_rejected_even_when_corrected(self):
         """필수 표시 기호가 없는 원본은 수동 수정으로 가려져도 수락하지 않는다."""
@@ -79,12 +123,21 @@ class ChordEditTests(unittest.TestCase):
     def test_reopened_full_mix_chords_keep_independent_tone_separation_metadata(self):
         """코드 출처가 전체 음원이어도 기타 톤 분리 여부는 따로 보존한다."""
         result = chart_result("original_mix")
-        result["source_separation"] = {"used": True, "guitar_rms_dbfs": -65.0}
+        result["schema"] = "tonematch-tmp-recipe/v1"
+        diagnostics = {
+            "used": True, "mode": "auto", "guitar_rms_dbfs": -65.0,
+            "model": "fixture-model", "backend": "PyTorch CUDA",
+            "requested_device": "auto", "resolved_device": "cuda",
+            "inference_total_seconds": 2.5, "inference_seconds_per_chunk": 1.25,
+            "realtime_factor": .125, "peak_gpu_memory_bytes": 4096,
+        }
+        result["source_separation"] = {**diagnostics, "temporary_audio_path": "private.wav"}
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "analysis.json"
             path.write_text(json.dumps(result), encoding="utf-8")
             loaded = load_result(path)
-        self.assertEqual(loaded["source_separation"], result["source_separation"])
+        self.assertEqual(loaded["schema"], result["schema"])
+        self.assertEqual(loaded["source_separation"], diagnostics)
 
     def test_all_supported_chords_and_six_nine_inversion_parse(self):
         """기존 41종과 12근음을 수정 입력에서도 빠짐없이 지원한다."""

@@ -8,17 +8,33 @@
 from __future__ import annotations
 
 
-APP_VERSION = "0.1.12"
+APP_VERSION = "0.1.13"
 TARGET_FIRMWARE = "1.8.58"
 MODEL_GUIDE_REVISION = "Rev. J (2026-07)"
-BUILD_DATE = "2026-11-22"
+BUILD_DATE = "2026-11-24"
 
 
 # 앱 내부의 변경 기록 화면과 배포 문서가 함께 사용하는 단일 원본이다.
 # 기능 버전 0.1.01 이후 수정 릴리스는 0.1.02부터 올리며 공개 산출물을 덮어쓰지 않는다.
 CHANGELOG: list[dict] = [
     {
-        "version": "0.1.12", "date": BUILD_DATE,
+        "version": "0.1.13", "date": BUILD_DATE,
+        "status": "미서명 개발자 프리릴리스", "status_en": "Unsigned developer prerelease",
+        "changes": [
+            "연습 반주에서 장·단조 2–5–1 코드표 생성, 한 키와 12키 순환 지원",
+            "녹음 파일 충돌 방지, 백그라운드 작업 종료 및 기타 stem 출력 검증 보완",
+            "톤 결과를 다시 열 때 레퍼런스 스펙트럼과 클리핑 경고 보존",
+        ],
+        "changes_en": [
+            "Generate major and minor 2–5–1 charts in one key or through all twelve",
+            "Protect recordings, wait for background cleanup and validate guitar stem output",
+            "Retain reference spectra and clipping warnings when reopening tone results",
+        ],
+        "known_issues": ["실제 창 배치·청감·곡별 코드 정확도 미검증"],
+        "known_issues_en": ["Native layout, listening and per-song chord accuracy remain unverified"],
+    },
+    {
+        "version": "0.1.12", "date": "2026-11-22",
         "status": "미서명 개발자 프리릴리스", "status_en": "Unsigned developer prerelease",
         "changes": [
             "곡 제목과 키로 AI용 질문을 만들고 붙여넣은 코드표를 마디별로 확인하고 이조",

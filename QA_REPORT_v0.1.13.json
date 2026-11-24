@@ -1,0 +1,27 @@
+{
+  "app_version": "0.1.13",
+  "status": "source_acceptance_verified",
+  "source_date_kst": "2026-11-24",
+  "scope": "Major and minor ii–V–I, one or twelve keys, and current source stability review",
+  "signed": false,
+  "store_certified": false,
+  "native_ui_tested": false,
+  "audible_output_tested": false,
+  "real_song_accuracy_measured": false,
+  "headless": {
+    "ok": true,
+    "tests": 574,
+    "seconds": 82.144,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "gui_creation_guard": true,
+    "audio_output_guard": true,
+    "deferred_gui_tests": 92,
+    "source_files_verified": 114,
+    "receipt_sha256": "cf10d96708b60ac020c2888ac1389134405eb3be992aae34236b0567d2e780cf"
+  },
+  "static_python_sources_parsed_and_compiled": 115,
+  "focused_cadence_transposition_checks": 170,
+  "source_review": "parent-session-runs/v0-1-13/review.md"
+}

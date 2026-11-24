@@ -6,13 +6,13 @@ from pathlib import Path
 from queue import Queue
 import threading
 import tkinter as tk
-from tkinter import filedialog, ttk
+from tkinter import filedialog, messagebox, ttk
 import webbrowser
 
 from playback import WavPlayer
 from practice_audio import MixSettings, PARTS, render_practice
 from practice_chart import (
-    MAX_CHART_CHARS, STYLES, PracticeProject, build_prompt, format_chart, load_project,
+    CADENCE_TONICS, MAX_CHART_CHARS, STYLES, PracticeProject, build_prompt, cadence_chart, format_chart, load_project,
     parse_chart, save_project, transpose_chart, transpose_key,
 )
 
@@ -64,14 +64,16 @@ class _PracticeSession:
 
         def work():
             rendered = None
+            exported = False
             try:
                 if not cancel.is_set() and cached is None:
                     rendered = self._render(project, cancel_requested=cancel.is_set)
                 if not cancel.is_set() and kind == 'export':
                     (cached or rendered).export(destination, mix, part=part, cancel_requested=cancel.is_set)
-                results.put((rendered, None))
+                    exported = True
+                results.put((rendered, None, exported))
             except Exception as exc:
-                results.put((rendered, exc))
+                results.put((rendered, exc, False))
 
         thread = threading.Thread(target=work, name='ToneMatchPractice', daemon=True)
         thread.start()
@@ -142,11 +144,13 @@ class _PracticeSession:
         if job is None or job.thread.is_alive():
             return
         self._job = None
-        rendered, failure = job.result.get_nowait()
+        rendered, failure, exported = job.result.get_nowait()
         if job.cancel.is_set() or self.closing or failure:
             if rendered:
                 rendered.close()
-            if job.cancel.is_set() or self.closing:
+            if exported:
+                self.notice, self.error = 'exported', ''
+            elif job.cancel.is_set() or self.closing:
                 self.notice, self.error = 'cancelled', ''
             else:
                 self.notice, self.error = '', str(failure)
@@ -252,6 +256,7 @@ class PracticeWindow:
         self.tabs = ttk.Notebook(body)
         self.tabs.grid(row=1, column=0, sticky='nsew', padx=(0, 12))
         self._build_chart_tab()
+        self._build_cadence_tab()
         self._build_prompt_tab()
         self._build_mix(body)
 
@@ -311,7 +316,7 @@ class PracticeWindow:
         self.table = ttk.Treeview(table_frame, columns=('number', 'section', 'chords'), show='headings', height=6)
         for name, title, width, stretch in (
             ('number', self._text('마디', 'Bar'), 47, False),
-            ('section', self._text('구간', 'Section'), 91, False),
+            ('section', self._text('구간', 'Section'), 122, False),
             ('chords', self._text('코드와 박자', 'Chords and beats'), 235, True),
         ):
             self.table.heading(name, text=title)
@@ -323,6 +328,61 @@ class PracticeWindow:
         self.table.configure(yscrollcommand=scroll.set)
         self.table.bind('<Double-1>', self._seek_bar)
         self.table.bind('<Return>', self._seek_bar)
+
+    def _build_cadence_tab(self):
+        tab = ttk.Frame(self.tabs, padding=12, style='Alt.TFrame')
+        self.tabs.add(tab, text=self._text('2–5–1 반주', '2–5–1 backing'))
+        tab.columnconfigure(0, weight=1)
+        style = ttk.Style(self.window)
+        style.configure('Alt.TRadiobutton', background=self.colors['panel_alt'],
+                        foreground=self.colors['text'], font=(self.font, 10))
+        style.map('Alt.TRadiobutton', background=[('active', self.colors['panel_alt'])],
+                  foreground=[('selected', self.colors['accent'])])
+        self.cadence_tonic = tk.StringVar(self.window, value='C')
+        self.cadence_minor = tk.BooleanVar(self.window, value=False)
+        self.cadence_cycle = tk.BooleanVar(self.window, value=False)
+
+        controls = ttk.Frame(tab, style='Alt.TFrame')
+        controls.grid(row=0, sticky='w', pady=(0, 10))
+        self._label(controls, self._text('시작 키', 'Starting key')).pack(side='left', padx=(0, 8))
+        ttk.Combobox(controls, values=CADENCE_TONICS, textvariable=self.cadence_tonic,
+                     state='readonly', width=5, font=(self.font, 10)).pack(side='left')
+        ttk.Radiobutton(controls, text=self._text('장조', 'Major'), variable=self.cadence_minor,
+                        value=False, style='Alt.TRadiobutton').pack(side='left', padx=(12, 8))
+        ttk.Radiobutton(controls, text=self._text('단조', 'Minor'), variable=self.cadence_minor,
+                        value=True, style='Alt.TRadiobutton').pack(side='left')
+
+        modes = ttk.Frame(tab, style='Alt.TFrame')
+        modes.grid(row=1, sticky='w', pady=(0, 10))
+        ttk.Radiobutton(modes, text=self._text('한 키', 'One key'), variable=self.cadence_cycle,
+                        value=False, style='Alt.TRadiobutton').pack(side='left', padx=(0, 8))
+        ttk.Radiobutton(modes, text=self._text('완전4도씩 12키 순환', '12-key cycle by fourths'),
+                        variable=self.cadence_cycle, value=True, style='Alt.TRadiobutton').pack(side='left')
+        self._label(tab, self._text('키마다 4마디입니다. 2도와 5도를 한 마디씩, 1도를 두 마디 연주합니다.',
+                                   'Four bars per key. One bar each on ii and V, then two on the tonic.'),
+                    wraplength=385).grid(row=2, sticky='w', pady=(0, 9))
+        self._button(tab, self._text('코드표 만들기', 'Create chord chart'), self._apply_cadence,
+                     idle_only=True).grid(row=3, sticky='w')
+
+    def _apply_cadence(self):
+        def apply():
+            mode = 'Minor' if self.cadence_minor.get() else 'Major'
+            key = f'{self.cadence_tonic.get()} {mode}'
+            bars = cadence_chart(key, cycle=self.cadence_cycle.get())
+            generated = PracticeProject(bars, title=self.title.get(), key=key, bpm=float(self.bpm.get()),
+                                        style=self.style.get(), count_in=int(self.count_in.get()),
+                                        loop=self.loop.get())
+            if self.chart.compare('end-1c', '>', '1.0') and not messagebox.askyesno(
+                self._text('2–5–1 코드표', '2–5–1 chord chart'),
+                self._text('현재 코드표를 2–5–1 코드표로 바꿀까요?',
+                           'Replace the current chart with the 2–5–1 chart?'),
+                parent=self.window,
+            ):
+                return
+            self._session.cancel()
+            self._show_project(generated, restore_editor=True)
+            self.tabs.select(self.chart_tab)
+        self._report(apply)
 
     def _build_prompt_tab(self):
         tab = self.prompt_tab = ttk.Frame(self.tabs, padding=8, style='Alt.TFrame')

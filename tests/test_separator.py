@@ -431,6 +431,20 @@ class SeparatorMultiStemTests(unittest.TestCase):
 
 
 class SeparatorProgressTests(unittest.TestCase):
+    def test_invalid_guitar_output_cannot_publish_a_partial_or_nonfinite_wav(self):
+        with tempfile.TemporaryDirectory() as folder:
+            source, target = Path(folder) / "source.wav", Path(folder) / "guitar.wav"
+            _write_test_wav(source, frames=4410)
+            for values in (np.ones((2, 2205)), np.full((2, 4410), np.nan)):
+                with self.subTest(shape=values.shape), (
+                    patch.dict(sys.modules, _fake_separation_modules())
+                ), patch.object(separator, "separator_model_is_cached", return_value=True), patch.object(
+                    _FakeSeparator, "separate_tensor", return_value=(None, {"guitar": _FakeTensor(values)})
+                ):
+                    with self.assertRaises(separator.SeparationError):
+                        separator.separate_guitar_wav(source, target)
+                    self.assertFalse(target.exists())
+
     """실제 다운로드·추론 이벤트만 반영하고 실패·취소의 원인을 보존하는지 검증한다."""
 
     def test_truncated_guitar_input_is_rejected_and_partial_output_removed(self) -> None:
