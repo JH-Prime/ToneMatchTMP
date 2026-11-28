@@ -8,6 +8,7 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 
 | 버전 | 상태 | 범위 |
 |---|---|---|
+| `0.1.14` | 전체 믹스 화성 분석 | 경계와 3음·5음·7음 판별, 불확실한 음정과 대안, 동일 입력 전후 검증 |
 | `0.1.13` | 2–5–1 연습 반주 및 안정성 | 장·단조, 한 키 또는 12키, 녹음·분리·결과 복원·업데이트 복구 |
 | `0.1.12` | 연습 반주 모드 | 코드표와 AI 질문, 반음 이조, 7가지 반주 스타일, 프로젝트 저장, WAV·MP3 |
 | `0.1.11` | 자동 업데이트 복구 패치 | TLS 런타임 파일 포함, EXE HTTPS 진단, 개인정보를 제외한 실패 기록 |
@@ -34,6 +35,11 @@ This append-only record tracks source scope, verification, and artifact hashes. 
 | `0.0.03` | 포터블 개발 프리뷰 빌드 완료 | 포터블 개발 ZIP, 한·영 handoff, 로그·빌드 이력, NumPy 코드/보이싱 분석(실험) |
 | `0.0.02` | 기능 통합 이정표, 0.0.03으로 승계 | 한국어/English, 장치 선택, 최대 20분, Demucs guitar stem, PC 재생음/입력 녹음, 취소 |
 | `0.0.01` | 검증된 최초 비공개 프리뷰 | 짧은 로컬 오디오 DSP, TMP 추천 3개, JSON/HTML, 개발자 코드 뷰 |
+
+## v0.1.14 full-mix chord boundaries and evidence
+
+- The CQT path tracks upper-register changes over a sustained bass. Both analyzers report competing thirds, fifths and sevenths with alternatives. Event details preserve fractional seconds.
+- 580 guarded tests passed. Paired measurements cover two annotated full mixes, 180 GuitarSet comping recordings, and fragments from 77 of 78 inspected private scores. The score fragments were rendered in two practice styles. [QA and measurement scope](QA_REPORT_v0.1.14.json)
 
 ## v0.1.13 ii–V–I practice and stability
 

@@ -83,6 +83,11 @@ def _render(analysis: dict, language: str = "ko", result: dict | None = None) ->
 class VoicingDisplayTests(unittest.TestCase):
     """보조 믹스 분석이 실제 기타 운지나 확정 코드로 오인되지 않도록 검사한다."""
 
+    def test_short_chord_interval_keeps_both_boundaries_across_a_minute(self):
+        row = dict(_known_event(), start_seconds=.975, end_seconds=1.125)
+        widget = _render({"source_start_seconds": 59., "events": [row]}, "en")
+        self.assertIn("00:59.975–01:00.125", widget.text("event"))
+
     def test_legacy_template_tones_are_not_relabelled_as_observed(self) -> None:
         """근거 필드가 없는 구형 코드 구성음은 검출음으로 바꿔 부르지 않는다."""
         for language in ("ko", "en"):

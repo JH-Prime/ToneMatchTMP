@@ -75,6 +75,24 @@ class UncertaintyDisplayTests(unittest.TestCase):
         self.assertIn("<b>?</b>", text)
         self.assertNotIn("<b>Cmaj7</b>", text)
 
+    def test_interval_conflicts_show_reason_and_both_readings_in_each_output(self):
+        conflicts = (
+            ("conflicting_third", "3음", "third", ("C", "Cm")),
+            ("conflicting_fifth", "5음", "fifth", ("Fm7", "Fm7b5")),
+            ("conflicting_seventh", "7음", "seventh", ("C7", "Cmaj7")),
+        )
+        for reason, korean, english, candidates in conflicts:
+            for language, term in (("ko", korean), ("en", english)):
+                with self.subTest(reason=reason, language=language):
+                    result = uncertain_result(language, reason)
+                    row = result["chord_voicing"]["events"][0]
+                    row["alternatives"] = [{"symbol": symbol} for symbol in candidates]
+                    for render in (ui_text, html_text, pdf_detail_text):
+                        text = render(result)
+                        self.assertIn(term, text)
+                        for symbol in candidates:
+                            self.assertIn(symbol, text)
+
     def test_weak_match_reason_is_consistent_in_all_details(self):
         result = uncertain_result()
         expected = "Chord candidates have weak or competing evidence."

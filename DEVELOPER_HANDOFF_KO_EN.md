@@ -1,4 +1,8 @@
-# ToneMatch TMP v0.1.13 — 개발 인수인계 / Developer Handoff
+# ToneMatch TMP v0.1.14 · 개발 인수인계 / Developer Handoff
+
+코드 변화 위치, 구성음 단서 및 불확실한 후보의 표시를 검증합니다. The release QA separates paired public recording measurements, score-derived controls and guarded software checks. [v0.1.14 QA](QA_REPORT_v0.1.14.json)
+
+## v0.1.13 release record
 
 v0.1.13 published 2026-11-24 19:59:02 Asia/Seoul. The 574 guarded cases, frozen cadence diagnostics, live HTTPS, isolated cache installation, repair, and offline reuse passed. Verified three public downloads. [Developer release](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.13)
 

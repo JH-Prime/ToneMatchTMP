@@ -136,6 +136,7 @@ try {
         Copy-Item -LiteralPath (Join-Path $ProjectDir $Name) -Destination $DocsRoot -Force
     }
     Copy-Item -LiteralPath (Join-Path $ProjectDir "licenses") -Destination $DocsRoot -Recurse -Force
+    Copy-Item -LiteralPath $QaPath -Destination $DocsRoot -Force
 
     foreach ($Name in @(
         "app.py", "auto_update.py", "update_startup.py", "package_runtime.py", "catalog.py", "debug_info.py", "devices.py", "engine.py",

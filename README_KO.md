@@ -1,4 +1,10 @@
-# ToneMatch TMP 0.1.13 — 2–5–1 연습 반주
+# ToneMatch TMP 0.1.14 · 전체 믹스 코드 분석
+
+코드 분석에서 **CQT** 또는 **FFT**를 선택합니다. 코드 상세에는 변화 시각과 관측음이 표시됩니다. 3음·5음·7음의 근거가 충돌하는 구간은 미확정으로 표시하고 그 아래에서 이유와 후보를 확인할 수 있습니다. 직접 수정한 코드도 재생 위치, 코드표 및 내보내기에 반영됩니다.
+
+[v0.1.14 개발자 ZIP과 체크섬](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.14) · [검증 결과](QA_REPORT_v0.1.14.json)
+
+## v0.1.13 · 2–5–1 연습 반주
 
 2–5–1 연습 반주와 안정성 수정이 포함된 v0.1.13를 게시했습니다. 가드를 적용한 테스트 574개와 미서명 개발자 ZIP의 공개 해시를 확인했습니다. [다운로드](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.13)
 
@@ -73,7 +79,7 @@ GUI 테스트 92개는 보류했습니다. 독립 검토에서 발견한 mainloo
 
 이후 모든 버전에 적용할 SignPath 무료 서명과 Microsoft Store MSIX 배포 절차를 준비합니다.
 **Foundation 승인·실제 서명·Store 앱 식별자·Store 인증은 대기 중**입니다.
-현재 게시된 최신 릴리스는 아래의 v0.1.08이며 기존 파일은 바꾸지 않습니다.
+이 기록을 작성했을 때의 최신 릴리스는 v0.1.08이었습니다.
 
 [배포 절차](DISTRIBUTION_KO.md), [Code signing policy](CODE_SIGNING_POLICY.md),
 [개인정보 안내](PRIVACY.md), [현행 QA](QA_REPORT_v0.1.09.json)를 확인하세요.

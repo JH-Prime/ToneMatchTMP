@@ -89,6 +89,17 @@ def run_music_self_test():
               and all(not event['candidate_shapes'] for event in fft_analysis['events']))
     fft_edited = set_correction({'chord_voicing': fft_analysis}, 0, 'Dm9')
     fft_ok = fft_ok and effective_voicing(fft_edited)['events'][0]['symbol'] == 'Dm9'
+    # Keep the bass fixed while a quiet upper seventh moves by one semitone.
+    def tone(midi):
+        return np.sin(2 * np.pi * 440 * 2 ** ((midi - 69) / 12) * axis)
+
+    seventh = np.where(axis < 1.5, tone(71), tone(70))
+    pedal = .55 * tone(36) + .035 * (tone(60) + tone(64) + tone(67) + seventh)
+    pedal_events = analyze_song_chords(np.column_stack((pedal, -pedal)), rate)['events']
+    def matches_at(seconds, symbol):
+        return any(row['start_seconds'] <= seconds < row['end_seconds'] and row['symbol'] == symbol
+                   for row in pedal_events)
+    guide_tones_ok = matches_at(.75, 'Cmaj7') and matches_at(2.25, 'C7')
     # Distinct single notes must stay unknown while retaining their own evidence.
     note_axis = np.arange(rate * 2, dtype=np.float64) / rate
     note_changes = np.concatenate([
@@ -245,6 +256,7 @@ def run_music_self_test():
               "fft_harmonic_rejection": bool(harmonic_ok), "omitted_fifth_reopen": bool(omitted_ok),
               "cqt_harmonic_rejection": bool(cqt_harmonic_ok), "cqt_power_preservation": bool(power_ok),
               "uncertain_note_changes_preserved": bool(evidence_ok),
+              "pedal_seventh_change": bool(guide_tones_ok),
               "invalid_symbol_rejected": bool(invalid_symbol_ok)}
     return {"ok": all(checks.values()), **checks, "audible_output_tested": False,
             "real_song_accuracy_measured": False}

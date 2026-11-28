@@ -1,0 +1,261 @@
+{
+  "app_version": "0.1.14",
+  "status": "source_acceptance_verified",
+  "source_date_kst": "2026-11-28",
+  "scope": "Full-mix chord boundaries and evidence for thirds, fifths and sevenths; expose candidates and reasons for uncertain passages.",
+  "signed": false,
+  "store_certified": false,
+  "native_ui_tested": false,
+  "audible_output_tested": false,
+  "real_song_accuracy_measured": true,
+  "headless": {
+    "ok": true,
+    "tests": 580,
+    "seconds": 104.14,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "gui_creation_guard": true,
+    "audio_output_guard": true,
+    "deferred_gui_tests": 92,
+    "source_files_verified": 115,
+    "receipt_sha256": "db145340cc832e40101c476c8d7e86769b616b6294ee0296af37f37f0c6a4dfd"
+  },
+  "focused_dsp_and_display_tests_passed": 111,
+  "real_recordings": {
+    "baseline_tag": "v0.1.13",
+    "baseline_source_commit": "52439fbcababc9753a6e10add7de395e128546f6",
+    "recordings": 182,
+    "report": "parent-session-runs/v0-1-14/real-summary.json",
+    "report_sha256": "d32fff20e9373ab920e008c33357ef87c5d600078c4cefbec8d72f3e8a01a125",
+    "protocol": {
+      "sample": "Two complete multitrack mix recordings plus all 180 GuitarSet v1.1.0 solo acoustic guitar microphone comping takes, six players x 30 arrangements; soloing takes excluded. Two reference label views of each take, not independent recordings.",
+      "time": "Track-wide analysis of identical full-mix stereo PCM decoded once by the v0.1.13 application's FFmpeg at 22050 Hz. Intersect time intervals before rounding. Clip ends to recording/reference duration; no tolerance for chord accuracy. Unannotated and N/X times are excluded.",
+      "strict": "Root, sounded set of chord intervals and effective bass (implicit root). Enharmonics equivalent. Exclude reference sets absent in application's chord vocabulary from exact denominator. Include unknown predictions in denominator. Wrong distinguishes an incorrect displayed name from abstention.",
+      "root": "Use all tonal reference intervals, including unsupported sets. Both guitar references derive the root and segmentation from the same lead sheet.",
+      "guide_tones": "Use only reference triad/seventh interval sets equivalent to major, minor, maj7, dominant 7, minor 7 or half-diminished 7. Each degree is independently scored only when present in that reference (therefore no seventh denominator for ordinary triads). The estimated root and same named third/fifth/seventh must both match; omitted, competing and unknown readings receive no credit. Ignore bass for this metric. Treat spelled #9, #11 and b13 as extensions rather than thirds/fifths.",
+      "boundary": "All distinct adjacent known identities (root, interval set, bass) strictly inside track, excluding N/X/? interfaces. Greedy one-to-one match within +/-200 ms, pooled micro F1. A different spelling of the same pitch classes is the same chord.",
+      "errata": "Official known timing errata for two comping takes: see https://github.com/marl/GuitarSet/issues/5. Unmodified official data used; sensitivity groups exclude those two takes."
+    },
+    "groups": {
+      "mirex": {
+        "recordings": 2,
+        "cqt": {
+          "before": {
+            "supported_seconds": 523.4947,
+            "third_evaluated_seconds": 510.2847,
+            "fifth_evaluated_seconds": 510.2847,
+            "seventh_evaluated_seconds": 263.225,
+            "root_correct_pct": 24.1341,
+            "exact_correct_pct": 7.1252,
+            "exact_wrong_pct": 48.8167,
+            "exact_unknown_pct": 44.0581,
+            "boundary_f1_pct": 12.4431,
+            "third_root_and_degree_correct_pct": 18.0813,
+            "fifth_root_and_degree_correct_pct": 22.7689,
+            "seventh_root_and_degree_correct_pct": 4.9479
+          },
+          "after": {
+            "supported_seconds": 523.4947,
+            "third_evaluated_seconds": 510.2847,
+            "fifth_evaluated_seconds": 510.2847,
+            "seventh_evaluated_seconds": 263.225,
+            "root_correct_pct": 25.0779,
+            "exact_correct_pct": 8.9827,
+            "exact_wrong_pct": 46.2237,
+            "exact_unknown_pct": 44.7936,
+            "boundary_f1_pct": 14.0351,
+            "third_root_and_degree_correct_pct": 19.5052,
+            "fifth_root_and_degree_correct_pct": 23.8488,
+            "seventh_root_and_degree_correct_pct": 5.0048
+          }
+        },
+        "fft": {
+          "before": {
+            "supported_seconds": 523.4947,
+            "third_evaluated_seconds": 510.2847,
+            "fifth_evaluated_seconds": 510.2847,
+            "seventh_evaluated_seconds": 263.225,
+            "root_correct_pct": 43.1378,
+            "exact_correct_pct": 20.1645,
+            "exact_wrong_pct": 43.199,
+            "exact_unknown_pct": 36.6365,
+            "boundary_f1_pct": 9.6257,
+            "third_root_and_degree_correct_pct": 41.8551,
+            "fifth_root_and_degree_correct_pct": 42.7261,
+            "seventh_root_and_degree_correct_pct": 20.6135
+          },
+          "after": {
+            "supported_seconds": 523.4947,
+            "third_evaluated_seconds": 510.2847,
+            "fifth_evaluated_seconds": 510.2847,
+            "seventh_evaluated_seconds": 263.225,
+            "root_correct_pct": 43.1838,
+            "exact_correct_pct": 20.1912,
+            "exact_wrong_pct": 42.9698,
+            "exact_unknown_pct": 36.839,
+            "boundary_f1_pct": 9.0909,
+            "third_root_and_degree_correct_pct": 41.7022,
+            "fifth_root_and_degree_correct_pct": 42.5732,
+            "seventh_root_and_degree_correct_pct": 20.7199
+          }
+        }
+      },
+      "guitarset_performed": {
+        "recordings": 180,
+        "cqt": {
+          "before": {
+            "supported_seconds": 4302.9043,
+            "third_evaluated_seconds": 3456.09,
+            "fifth_evaluated_seconds": 3456.09,
+            "seventh_evaluated_seconds": 995.4854,
+            "root_correct_pct": 45.3614,
+            "exact_correct_pct": 16.4177,
+            "exact_wrong_pct": 57.4198,
+            "exact_unknown_pct": 26.1625,
+            "boundary_f1_pct": 18.7304,
+            "third_root_and_degree_correct_pct": 36.2642,
+            "fifth_root_and_degree_correct_pct": 51.9629,
+            "seventh_root_and_degree_correct_pct": 24.9828
+          },
+          "after": {
+            "supported_seconds": 4302.9043,
+            "third_evaluated_seconds": 3456.09,
+            "fifth_evaluated_seconds": 3456.09,
+            "seventh_evaluated_seconds": 995.4854,
+            "root_correct_pct": 44.6666,
+            "exact_correct_pct": 16.2952,
+            "exact_wrong_pct": 56.6829,
+            "exact_unknown_pct": 27.0219,
+            "boundary_f1_pct": 18.121,
+            "third_root_and_degree_correct_pct": 35.6499,
+            "fifth_root_and_degree_correct_pct": 51.0514,
+            "seventh_root_and_degree_correct_pct": 24.9077
+          }
+        },
+        "fft": {
+          "before": {
+            "supported_seconds": 4302.9043,
+            "third_evaluated_seconds": 3456.09,
+            "fifth_evaluated_seconds": 3456.09,
+            "seventh_evaluated_seconds": 995.4854,
+            "root_correct_pct": 49.8863,
+            "exact_correct_pct": 24.7711,
+            "exact_wrong_pct": 39.3321,
+            "exact_unknown_pct": 35.8967,
+            "boundary_f1_pct": 16.4621,
+            "third_root_and_degree_correct_pct": 48.3331,
+            "fifth_root_and_degree_correct_pct": 56.1425,
+            "seventh_root_and_degree_correct_pct": 30.0579
+          },
+          "after": {
+            "supported_seconds": 4302.9043,
+            "third_evaluated_seconds": 3456.09,
+            "fifth_evaluated_seconds": 3456.09,
+            "seventh_evaluated_seconds": 995.4854,
+            "root_correct_pct": 48.9811,
+            "exact_correct_pct": 24.551,
+            "exact_wrong_pct": 38.4808,
+            "exact_unknown_pct": 36.9682,
+            "boundary_f1_pct": 15.5593,
+            "third_root_and_degree_correct_pct": 47.42,
+            "fifth_root_and_degree_correct_pct": 55.174,
+            "seventh_root_and_degree_correct_pct": 28.4521
+          }
+        }
+      }
+    }
+  },
+  "score_derived_synthetic": {
+    "inventory_files": 78,
+    "input_formats": {
+      "pdf": 77,
+      "docx": 1
+    },
+    "inspected_files": 78,
+    "files_with_usable_reference": 77,
+    "distinct_compositions_used_by_title": 69,
+    "excluded_files": {
+      "unlabelled_tablature_with_altered_tuning_and_capo": 1
+    },
+    "score_label_occurrences": 260,
+    "file_renders_scored": 154,
+    "distinct_pcm_inputs": 148,
+    "render_styles": [
+      "Ballad",
+      "Pop"
+    ],
+    "stimulus": "Short chart symbols and unambiguous tablature-derived fragments were read from each usable score. At 120 BPM each pair of successive labels occupies one four-beat bar; a final unpaired label occupies four beats. Single-bar fragments are repeated once to meet the normal three-second input minimum. Both practice styles use the normal drum, bass and chord mix and no count-in. These are printed-key synthetic controls with standardized timing; they do not measure performance on commercial recordings.",
+    "metric": "Time-weighted agreement of root, pitch-class set and slash bass. Unknown includes unreported time. Boundary F1 uses one-to-one 200 ms matching between changes of adjacent known chords; adjacent identical chords are merged.",
+    "source_scores_or_audio_distributed": false,
+    "report": "parent-session-runs/v0-1-14/drive-summary.json",
+    "report_sha256": "a9b9aa654956648c9230f7f55b3891d6683da8ccae940e322dd678721846a3ca",
+    "unique_pcm_renders": {
+      "cqt": {
+        "before": {
+          "seconds": 596.0,
+          "unknown": 572.794,
+          "ref_changes": 408,
+          "est_changes": 8,
+          "wrong": 20.311,
+          "root_correct": 11.358,
+          "correct": 2.895,
+          "boundary_matches": 8,
+          "correct_pct": 0.48574,
+          "wrong_pct": 3.40789,
+          "unknown_pct": 96.10638,
+          "root_correct_pct": 1.9057,
+          "boundary_f1_pct": 3.84615
+        },
+        "after": {
+          "seconds": 596.0,
+          "unknown": 403.983,
+          "wrong": 48.804,
+          "correct": 143.213,
+          "root_correct": 163.205,
+          "ref_changes": 408,
+          "est_changes": 92,
+          "boundary_matches": 87,
+          "correct_pct": 24.02903,
+          "wrong_pct": 8.18859,
+          "unknown_pct": 67.78238,
+          "root_correct_pct": 27.38339,
+          "boundary_f1_pct": 34.8
+        }
+      },
+      "fft": {
+        "before": {
+          "seconds": 596.0,
+          "unknown": 382.4,
+          "wrong": 76.2,
+          "correct": 137.4,
+          "root_correct": 162.7,
+          "ref_changes": 408,
+          "est_changes": 59,
+          "boundary_matches": 37,
+          "correct_pct": 23.05369,
+          "wrong_pct": 12.78523,
+          "unknown_pct": 64.16107,
+          "root_correct_pct": 27.29866,
+          "boundary_f1_pct": 15.84582
+        },
+        "after": {
+          "seconds": 596.0,
+          "unknown": 387.2,
+          "wrong": 74.6,
+          "correct": 134.2,
+          "root_correct": 158.9,
+          "ref_changes": 408,
+          "est_changes": 57,
+          "boundary_matches": 35,
+          "correct_pct": 22.51678,
+          "wrong_pct": 12.51678,
+          "unknown_pct": 64.96644,
+          "root_correct_pct": 26.66107,
+          "boundary_f1_pct": 15.05376
+        }
+      }
+    },
+    "matching_original_recordings_evaluated": 0
+  }
+}

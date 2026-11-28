@@ -118,11 +118,25 @@ def _harmonic_change_times(audio, sample_rate):
                            n_fft=size, hop_length=hop)
     magnitude = np.sqrt(np.mean(np.abs(spectrum) ** 2, axis=0))
     frequencies = np.fft.rfftfreq(size, 1 / sample_rate)
-    magnitude = magnitude[(frequencies >= 50) & (frequencies <= 4000)]
+    band = (frequencies >= 50) & (frequencies <= 4000)
+    magnitude = magnitude[band]
     norm = np.linalg.norm(magnitude, axis=0)
     normalized = magnitude / np.maximum(norm, 1e-12)
     novelty = np.zeros(len(norm))
     novelty[2:-2] = np.clip(1 - np.sum(normalized[:, :-4] * normalized[:, 4:], axis=0), 0, 1)
+    # A held bass can hide a new third or seventh above it. Compare the upper
+    # register on its own only where it is audible and both sides are bass-led.
+    upper = magnitude[frequencies[band] >= 180]
+    upper_norm = np.linalg.norm(upper, axis=0)
+    bass_led = (norm > 1e-4) & (upper_norm > .035 * norm) & (upper_norm < .50 * norm)
+    upper = upper / np.maximum(upper_norm, 1e-12)
+    upper_change = 1 - np.sum(upper[:, :-8] * upper[:, 8:], axis=0)
+    novelty[4:-4] = np.maximum(novelty[4:-4], upper_change * (bass_led[:-8] & bass_led[8:]))
+    # Edge frames contain centered STFT padding; its disappearing spectral
+    # leakage must not create a tiny first/last chord on a held input.
+    edge = math.ceil(size / (2 * hop))
+    novelty[:edge] = 0.
+    novelty[-edge:] = 0.
     novelty[np.maximum(np.roll(norm, 2), np.roll(norm, -2)) < 1e-4] = 0
     peaks, _ = find_peaks(novelty, height=.12, prominence=.08,
                           distance=max(1, round(.12 * sample_rate / hop)))
@@ -139,7 +153,7 @@ def _bounded_evidence(center, width, changes, duration):
     return start, min(right, start + width)
 
 
-def _classify_cqt_profile(profile, midi, rms):
+def _classify_cqt_profile(profile, midi, rms, clip=None, sample_rate=None):
     """Require resolved notes before octave folding an aggregate CQT profile."""
     # Check diffuseness before peak picking removes the noise floor: otherwise
     # random maxima can look like a sparse tonal spectrum.
@@ -157,27 +171,34 @@ def _classify_cqt_profile(profile, midi, rms):
     salience = np.maximum(0, salience - float(np.median(salience)))
     # Weak onset/edge responses across octaves must not sum to a new pitch
     # class. Apply the classifier's presence floor before octave folding.
-    salience[salience < .12 * float(np.max(salience))] = 0
-    chroma = np.bincount(midi % 12, weights=salience, minlength=12)
+    retained = np.where(salience >= .12 * float(np.max(salience)), salience, 0)
+    chroma = np.bincount(midi % 12, weights=retained, minlength=12)
+    bass_note = int(midi[np.argmax(retained)])
+    if (clip is not None and not diffuse and bass_note < 48 and np.count_nonzero(chroma) == 1
+            and len(clip) >= sample_rate * .25):
+        upper = np.where(midi >= 48, salience, 0.)
+        peak = float(upper.max())
+        upper[upper < max(.15 * peak, .006 * retained.max())] = 0.
+        upper_chroma = np.bincount(midi % 12, weights=upper, minlength=12)
+        if np.count_nonzero(upper_chroma) >= 3 and _independent_upper_tones(
+                clip, sample_rate, bass_note, upper_chroma):
+            # The original bass still determines the inversion. Avoid counting
+            # its upper-register duplicate twice in the harmonic template.
+            chroma = upper_chroma
+            if not chroma[bass_note % 12]:
+                chroma[bass_note % 12] = peak
     total = float(np.sum(chroma))
     if total:
         chroma /= total
     flatness = float(np.exp(np.mean(np.log(np.maximum(chroma, 1e-12))))) / max(float(np.mean(chroma)), 1e-12)
     if diffuse or flatness > .85:
         chroma[:] = 0
-    return _classify_window(chroma, salience, salience, rms, midi=midi)
+    return _classify_window(chroma, retained, retained, rms, midi=midi)
 
 
-def _harmonic_fifth_only(clip, sample_rate, root_pc):
-    """Withhold a fifth supported only by one precisely coherent partial series.
-
-    This is a conservative identity check, not general note transcription.
-    Unresolved/inharmonic evidence keeps its original CQT decision. Exact
-    harmonic coincidence cannot reveal how many instruments produced it.
-    """
+def _spectral_peak_frequencies(clip, sample_rate, relative_floor):
+    """Interpolate resolved spectral peaks without summing opposite-phase channels."""
     from scipy.signal import find_peaks, resample_poly
-    if len(clip) < sample_rate * .45:
-        return False
     stride = max(1, sample_rate // 22050)
     if stride > 1:
         clip = resample_poly(clip, 1, stride, axis=0)
@@ -188,15 +209,38 @@ def _harmonic_fifth_only(clip, sample_rate, root_pc):
     amplitude = np.sqrt(np.mean(np.abs(spectrum) ** 2, axis=1))
     peaks = find_peaks(amplitude)[0]
     peaks = peaks[(peaks * sample_rate / size >= 30) & (peaks * sample_rate / size <= 4000)]
-    peaks = peaks[amplitude[peaks] > .04 * float(np.max(amplitude))]
+    peaks = peaks[amplitude[peaks] > relative_floor * float(np.max(amplitude))]
     if not len(peaks):
-        return False
+        return np.empty(0)
     logarithm = np.log(np.maximum(amplitude, 1e-20))
     curvature = logarithm[peaks - 1] - 2 * logarithm[peaks] + logarithm[peaks + 1]
     if np.any(curvature >= -1e-12):
-        return False
+        return np.empty(0)
     offset = .5 * (logarithm[peaks - 1] - logarithm[peaks + 1]) / curvature
-    frequencies = (peaks + offset) * sample_rate / size
+    return (peaks + offset) * sample_rate / size
+
+
+def _independent_upper_tones(clip, sample_rate, bass_note, upper_chroma):
+    """Require two resolved pitch classes that one bass harmonic series cannot explain."""
+    frequencies = _spectral_peak_frequencies(clip, sample_rate, .035)
+    notes = 69 + 12 * np.log2(frequencies / 440)
+    bass = frequencies[np.abs(notes - bass_note) < .45]
+    if len(bass) != 1:
+        return False
+    ratios = frequencies / bass[0]
+    nearest = np.maximum(1., np.rint(ratios))
+    tuned_notes = bass_note + 12 * np.log2(ratios)
+    resolved = ((notes >= 47.5) & (ratios <= 12) & (np.abs(tuned_notes - np.rint(tuned_notes)) < .30)
+                & (np.abs(1200 * np.log2(ratios / nearest)) > 8.))
+    independent = np.unique(np.rint(tuned_notes[resolved]).astype(int) % 12)
+    return np.count_nonzero(upper_chroma[independent[independent != bass_note % 12]]) >= 2
+
+
+def _harmonic_fifth_only(clip, sample_rate, root_pc):
+    """Withhold a fifth supported only by one precisely coherent partial series."""
+    if len(clip) < sample_rate * .45:
+        return False
+    frequencies = _spectral_peak_frequencies(clip, sample_rate, .04)
     pitch_classes = np.rint(69 + 12 * np.log2(frequencies / 440)).astype(int) % 12
     roots = frequencies[pitch_classes == root_pc]
     fifths = frequencies[pitch_classes == (root_pc + 7) % 12]
@@ -221,7 +265,7 @@ def _classify_cqt_region(audio, magnitude, midi, sample_rate, region):
         last = min(magnitude.shape[1], max(first + 1, math.ceil(region_end * sample_rate / 512)))
         if first < last:
             frames = magnitude[:, first:last]
-            primary = _classify_cqt_profile(np.median(frames, axis=1), midi, rms)
+            primary = _classify_cqt_profile(np.median(frames, axis=1), midi, rms, clip, sample_rate)
             evidence = primary['evidence']
             # Transform bleed from neighboring audio must not rescue silence.
             if evidence.get('uncertainty_reason') == 'low_signal':

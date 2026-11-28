@@ -1,4 +1,10 @@
-# ToneMatch TMP 0.1.13 — 2–5–1 practice accompaniment
+# ToneMatch TMP 0.1.14 · Full-mix chord analysis
+
+Select **CQT** or **FFT** in chord analysis. Open the chord details to see timing and observed notes. When the evidence for a third, fifth or seventh conflicts, the details show the unresolved chord, competing readings and the reason. Manual edits carry through to the synchronized chart and exports.
+
+[v0.1.14 developer ZIP and checksums](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.14) · [QA results](QA_REPORT_v0.1.14.json)
+
+## v0.1.13 · ii–V–I practice
 
 v0.1.13 adds ii–V–I practice and stability fixes. All 574 guarded tests passed. Public bytes and hashes for the unsigned developer ZIP were verified. [Download](https://github.com/JH-Prime/ToneMatchTMP/releases/tag/v0.1.13)
 
@@ -71,7 +77,7 @@ The following status and results belong to v0.1.09; its follow-up wording is his
 
 Current work prepares free SignPath signing and Microsoft Store MSIX distribution for
 this and future versions. **Foundation approval, real signing, Store identity and Store
-certification remain pending.** The latest published release is still v0.1.08 below.
+certification remain pending.** The published version at the time of this entry was v0.1.08.
 
 Read [distribution instructions](DISTRIBUTION_KO.md), [Code signing policy](CODE_SIGNING_POLICY.md),
 [privacy](PRIVACY.md), and [current QA](QA_REPORT_v0.1.09.json). The default build now creates

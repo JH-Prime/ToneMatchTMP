@@ -474,6 +474,23 @@ def _classify_window(chroma: np.ndarray, salience: np.ndarray, fundamentals: np.
         candidate["alternatives"] = alternative_rows
         candidate["evidence"]["ambiguous"] = bool(alternative_rows)
     result = dict(evidenced[0])
+    # Compare competing variants of the same chord. An added or altered
+    # extension with its own complete template does not swap two guide tones.
+    best_intervals = frozenset(CHORD_INTERVALS[result['chord_type']])
+    for other in evidenced[1:]:
+        if result['_score'] - other['_score'] > .040:
+            break
+        if other['root_pc'] != result['root_pc']:
+            continue
+        other_intervals = frozenset(CHORD_INTERVALS[other['chord_type']])
+        if len(best_intervals) != len(other_intervals):
+            continue
+        disputed = best_intervals ^ other_intervals
+        reason = {frozenset((3, 4)): 'conflicting_third', frozenset((6, 7)): 'conflicting_fifth',
+                  frozenset((7, 8)): 'conflicting_fifth', frozenset((10, 11)): 'conflicting_seventh'}.get(disputed)
+        if reason and all((result['root_pc'] + degree) % 12 in observed for degree in disputed):
+            alternative = {key: other[key] for key in ('root_pc', 'chord_type', 'symbol')}
+            return _unknown_window(dict(result, alternatives=(alternative,)), reason)
     result["_candidates"] = [candidate for candidate in evidenced if candidate["_score"] >= best_score - 0.040]
     # 순간 멜로디가 만든 확장화음 하나가 기존 화음의 국소 증거를 목록에서
     # 지워서는 안 된다. 시간 추적에는 같은 절대 근거 기준을 통과한 모든

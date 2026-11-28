@@ -3679,8 +3679,8 @@ class ToneMatchApp:
             if hasattr(widget, "mark_set"):
                 widget.mark_set(f"chart_event_{event_index}", "end-1c")
                 widget.mark_gravity(f"chart_event_{event_index}", "left")
-            start = self._format_time(offset + float(event["start_seconds"]))
-            end = self._format_time(offset + float(event["end_seconds"]))
+            start = self._format_time(offset + float(event["start_seconds"]), precise=True)
+            end = self._format_time(offset + float(event["end_seconds"]), precise=True)
             if event.get('manual_edit'):
                 widget.insert('end', tr('edit.manual', self.language) + ' · '
                               + tr('edit.original', self.language, symbol=event.get('original_symbol', '?')) + '\n', 'warning')
@@ -3725,8 +3725,12 @@ class ToneMatchApp:
             self._render_chord_chart(analysis)
 
     @staticmethod
-    def _format_time(seconds: float) -> str:
+    def _format_time(seconds: float, *, precise: bool = False) -> str:
         """초 단위 위치를 긴 곡에서도 읽기 쉬운 분:초 문자열로 바꾼다."""
+        if precise:
+            total, fraction = divmod(max(0, round(seconds * 1000)), 1000)
+            minutes, whole = divmod(total, 60)
+            return f"{minutes:02d}:{whole:02d}" + (f".{fraction:03d}".rstrip("0") if fraction else "")
         total = max(0, int(round(seconds)))
         minutes, remainder = divmod(total, 60)
         return f"{minutes:02d}:{remainder:02d}"

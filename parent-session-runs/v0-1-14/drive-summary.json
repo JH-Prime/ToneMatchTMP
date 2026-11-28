@@ -1,0 +1,247 @@
+{
+  "schema": "tonematch-score-derived-benchmark/v1",
+  "baseline_tag": "v0.1.13",
+  "candidate": "v0.1.14",
+  "inventory_files": 78,
+  "input_formats": {
+    "pdf": 77,
+    "docx": 1
+  },
+  "inspected_files": 78,
+  "files_with_usable_reference": 77,
+  "distinct_compositions_in_inventory_by_title": 70,
+  "distinct_compositions_used_by_title": 69,
+  "title_deduplication": "Grouped matching composition titles across parts, versions, file formats and different performers. This is a catalog estimate.",
+  "excluded_files": {
+    "unlabelled_tablature_with_altered_tuning_and_capo": 1
+  },
+  "score_label_occurrences": 260,
+  "unique_symbol_sequences": 75,
+  "file_renders_scored": 154,
+  "unique_symbol_sequence_style_inputs": 150,
+  "single_bar_files_repeated": 17,
+  "distinct_pcm_inputs": 148,
+  "render_styles": [
+    "Ballad",
+    "Pop"
+  ],
+  "app_versions_compared": 2,
+  "methods": [
+    "cqt",
+    "fft"
+  ],
+  "stimulus": "Short chart symbols and unambiguous tablature-derived fragments were read from each usable score. At 120 BPM each pair of successive labels occupies one four-beat bar; a final unpaired label occupies four beats. Single-bar fragments are repeated once to meet the normal three-second input minimum. Both practice styles use the normal drum, bass and chord mix and no count-in. These are printed-key synthetic controls with standardized timing; they do not measure performance on commercial recordings.",
+  "counting": "all_file_renders counts each readable file in each style. unique_input_renders collapses duplicate symbol sequences within a style. unique_pcm_renders also collapses short fragments that become identical to a longer fragment after the single-bar repeat. These duplicates have identical reference timing and metrics. Every pair passed a sample-identical PCM SHA-256 check.",
+  "metric": "Time-weighted agreement of root, pitch-class set and slash bass. Unknown includes unreported time. Boundary F1 uses one-to-one 200 ms matching between changes of adjacent known chords; adjacent identical chords are merged.",
+  "source_sha256": {
+    "before": {
+      "song_chords": "442b18f661ac98be7dabb58f28943a3b6e4aacf33c4603c1de4cfa9523cf64bd",
+      "voicing": "c863ccb640234a0d799f6fe72075999f576ff805ae14b877d2a6290b47fb1dbc"
+    },
+    "after": {
+      "song_chords": "2459c77cec0a7a0079605a943ae7d3f7108252ce87e320c0539835a47ae0fb74",
+      "voicing": "655e86149c39aa9ef42d7989fffdb2e6754f87fbd6f2b87309f29cebdc841633"
+    }
+  },
+  "metrics": {
+    "all_file_renders": {
+      "cqt": {
+        "before": {
+          "seconds": 620.0,
+          "unknown": 596.594,
+          "ref_changes": 426,
+          "est_changes": 8,
+          "wrong": 20.511,
+          "root_correct": 11.384,
+          "correct": 2.895,
+          "boundary_matches": 8,
+          "correct_pct": 0.46694,
+          "wrong_pct": 3.30823,
+          "unknown_pct": 96.22484,
+          "root_correct_pct": 1.83613,
+          "boundary_f1_pct": 3.68664
+        },
+        "after": {
+          "seconds": 620.0,
+          "unknown": 422.503,
+          "wrong": 50.682,
+          "correct": 146.815,
+          "root_correct": 167.434,
+          "ref_changes": 426,
+          "est_changes": 92,
+          "boundary_matches": 87,
+          "correct_pct": 23.67984,
+          "wrong_pct": 8.17452,
+          "unknown_pct": 68.14565,
+          "root_correct_pct": 27.00548,
+          "boundary_f1_pct": 33.59073
+        }
+      },
+      "fft": {
+        "before": {
+          "seconds": 620.0,
+          "unknown": 398.0,
+          "wrong": 79.6,
+          "correct": 142.4,
+          "root_correct": 168.7,
+          "ref_changes": 426,
+          "est_changes": 59,
+          "boundary_matches": 37,
+          "correct_pct": 22.96774,
+          "wrong_pct": 12.83871,
+          "unknown_pct": 64.19355,
+          "root_correct_pct": 27.20968,
+          "boundary_f1_pct": 15.25773
+        },
+        "after": {
+          "seconds": 620.0,
+          "unknown": 402.8,
+          "wrong": 78.0,
+          "correct": 139.2,
+          "root_correct": 164.9,
+          "ref_changes": 426,
+          "est_changes": 57,
+          "boundary_matches": 35,
+          "correct_pct": 22.45161,
+          "wrong_pct": 12.58065,
+          "unknown_pct": 64.96774,
+          "root_correct_pct": 26.59677,
+          "boundary_f1_pct": 14.49275
+        }
+      }
+    },
+    "unique_input_renders": {
+      "cqt": {
+        "before": {
+          "seconds": 604.0,
+          "unknown": 580.794,
+          "ref_changes": 414,
+          "est_changes": 8,
+          "wrong": 20.311,
+          "root_correct": 11.358,
+          "correct": 2.895,
+          "boundary_matches": 8,
+          "correct_pct": 0.4793,
+          "wrong_pct": 3.36275,
+          "unknown_pct": 96.15795,
+          "root_correct_pct": 1.88046,
+          "boundary_f1_pct": 3.79147
+        },
+        "after": {
+          "seconds": 604.0,
+          "unknown": 408.857,
+          "wrong": 50.006,
+          "correct": 145.137,
+          "root_correct": 165.406,
+          "ref_changes": 414,
+          "est_changes": 92,
+          "boundary_matches": 87,
+          "correct_pct": 24.0293,
+          "wrong_pct": 8.27914,
+          "unknown_pct": 67.69156,
+          "root_correct_pct": 27.3851,
+          "boundary_f1_pct": 34.38735
+        }
+      },
+      "fft": {
+        "before": {
+          "seconds": 604.0,
+          "unknown": 386.6,
+          "wrong": 77.0,
+          "correct": 140.4,
+          "root_correct": 165.7,
+          "ref_changes": 414,
+          "est_changes": 59,
+          "boundary_matches": 37,
+          "correct_pct": 23.24503,
+          "wrong_pct": 12.74834,
+          "unknown_pct": 64.00662,
+          "root_correct_pct": 27.43377,
+          "boundary_f1_pct": 15.64482
+        },
+        "after": {
+          "seconds": 604.0,
+          "unknown": 391.4,
+          "wrong": 75.4,
+          "correct": 137.2,
+          "root_correct": 161.9,
+          "ref_changes": 414,
+          "est_changes": 57,
+          "boundary_matches": 35,
+          "correct_pct": 22.71523,
+          "wrong_pct": 12.48344,
+          "unknown_pct": 64.80132,
+          "root_correct_pct": 26.80464,
+          "boundary_f1_pct": 14.862
+        }
+      }
+    },
+    "unique_pcm_renders": {
+      "cqt": {
+        "before": {
+          "seconds": 596.0,
+          "unknown": 572.794,
+          "ref_changes": 408,
+          "est_changes": 8,
+          "wrong": 20.311,
+          "root_correct": 11.358,
+          "correct": 2.895,
+          "boundary_matches": 8,
+          "correct_pct": 0.48574,
+          "wrong_pct": 3.40789,
+          "unknown_pct": 96.10638,
+          "root_correct_pct": 1.9057,
+          "boundary_f1_pct": 3.84615
+        },
+        "after": {
+          "seconds": 596.0,
+          "unknown": 403.983,
+          "wrong": 48.804,
+          "correct": 143.213,
+          "root_correct": 163.205,
+          "ref_changes": 408,
+          "est_changes": 92,
+          "boundary_matches": 87,
+          "correct_pct": 24.02903,
+          "wrong_pct": 8.18859,
+          "unknown_pct": 67.78238,
+          "root_correct_pct": 27.38339,
+          "boundary_f1_pct": 34.8
+        }
+      },
+      "fft": {
+        "before": {
+          "seconds": 596.0,
+          "unknown": 382.4,
+          "wrong": 76.2,
+          "correct": 137.4,
+          "root_correct": 162.7,
+          "ref_changes": 408,
+          "est_changes": 59,
+          "boundary_matches": 37,
+          "correct_pct": 23.05369,
+          "wrong_pct": 12.78523,
+          "unknown_pct": 64.16107,
+          "root_correct_pct": 27.29866,
+          "boundary_f1_pct": 15.84582
+        },
+        "after": {
+          "seconds": 596.0,
+          "unknown": 387.2,
+          "wrong": 74.6,
+          "correct": 134.2,
+          "root_correct": 158.9,
+          "ref_changes": 408,
+          "est_changes": 57,
+          "boundary_matches": 35,
+          "correct_pct": 22.51678,
+          "wrong_pct": 12.51678,
+          "unknown_pct": 64.96644,
+          "root_correct_pct": 26.66107,
+          "boundary_f1_pct": 15.05376
+        }
+      }
+    }
+  },
+  "source_scores_or_audio_distributed": false
+}

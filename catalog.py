@@ -8,17 +8,27 @@
 from __future__ import annotations
 
 
-APP_VERSION = "0.1.13"
+APP_VERSION = "0.1.14"
 TARGET_FIRMWARE = "1.8.58"
 MODEL_GUIDE_REVISION = "Rev. J (2026-07)"
-BUILD_DATE = "2026-11-24"
+BUILD_DATE = "2026-11-27"
 
 
 # 앱 내부의 변경 기록 화면과 배포 문서가 함께 사용하는 단일 원본이다.
 # 기능 버전 0.1.01 이후 수정 릴리스는 0.1.02부터 올리며 공개 산출물을 덮어쓰지 않는다.
 CHANGELOG: list[dict] = [
     {
-        "version": "0.1.13", "date": BUILD_DATE,
+        "version": "0.1.14", "date": BUILD_DATE,
+        "status": "미서명 개발자 프리릴리스", "status_en": "Unsigned developer prerelease",
+        "changes": ["전체 믹스의 코드 전환과 3음·5음·7음 판별을 보완",
+                    "해석이 갈리는 음정과 코드 후보를 코드 상세와 내보내기에 표시"],
+        "changes_en": ["Refine full-mix chord boundaries and evidence for thirds, fifths and sevenths",
+                       "Show competing intervals and chord candidates in the chart details and exports"],
+        "known_issues": ["녹음과 편곡에 따라 코드 추정 결과가 다를 수 있음", "실제 창과 청감 검증 보류"],
+        "known_issues_en": ["Chord estimates vary by recording and arrangement", "Native layout and listening remain unverified"],
+    },
+    {
+        "version": "0.1.13", "date": "2026-11-24",
         "status": "미서명 개발자 프리릴리스", "status_en": "Unsigned developer prerelease",
         "changes": [
             "연습 반주에서 장·단조 2–5–1 코드표 생성, 한 키와 12키 순환 지원",
